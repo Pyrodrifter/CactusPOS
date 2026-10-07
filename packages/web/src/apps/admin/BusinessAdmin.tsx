@@ -14,7 +14,7 @@ export function BusinessAdmin() {
 
   const field = (k: keyof Business, label: string, hint?: string) => (
     <label>{label}
-      <input value={b[k]} onChange={(e) => { setMsg(''); setB({ ...b, [k]: e.target.value }); }} />
+      <input value={b[k] ?? ''} onChange={(e) => { setMsg(''); setB({ ...b, [k]: e.target.value }); }} />
       {hint && <small className="muted">{hint}</small>}
     </label>
   );
@@ -23,7 +23,7 @@ export function BusinessAdmin() {
     try {
       const saved = await api<Business>('/admin/business', { method: 'PUT', body: b });
       const s = getSession();
-      if (s) setSession({ ...s, business: { name: saved.name, currency: saved.currency } });
+      if (s) setSession({ ...s, business: { name: saved.name, currency: saved.currency, brandColor: saved.brandColor } });
       setMsg(t('admin.saved'));
     } catch (e) { setErr(errText(e)); }
   };
@@ -44,6 +44,9 @@ export function BusinessAdmin() {
         </label>
         {field('timezone', t('admin.timezone'))}
       </div>
+      <label>{t('admin.brandColor')}
+        <input type="color" value={b.brandColor ?? '#14506b'} onChange={(e) => { setMsg(''); setB({ ...b, brandColor: e.target.value }); }} />
+      </label>
       {err && <div className="error">{err}</div>}
       {msg && <div className="ok">{msg}</div>}
       <div className="actions"><button className="primary" onClick={() => void save()}>{t('admin.save')}</button></div>

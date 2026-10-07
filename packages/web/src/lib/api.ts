@@ -3,7 +3,7 @@ import type { Order } from '@cactus/shared';
 export interface Session {
   token: string;
   staff: { id: string; name: string; role: 'owner' | 'staff' };
-  business: { name: string; currency: string };
+  business: { name: string; currency: string; brandColor?: string };
 }
 const KEY = 'cactus.session';
 

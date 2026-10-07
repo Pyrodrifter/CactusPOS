@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  computeTotals, formatMoney, type MenuCategory, type MenuItem, type ModifierGroup, type Order, type TaxCategory,
+  computeTotals, formatMoney, parseMoney, type MenuCategory, type MenuItem, type ModifierGroup, type Order, type TaxCategory,
 } from '@cactus/shared';
 import { api, ApiError, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
 
 interface Menu { categories: MenuCategory[]; items: MenuItem[]; taxCategories: TaxCategory[] }
-interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string }
+interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
 
 const money = (c: number) => formatMoney(c);
 const today = () => new Date().toISOString().slice(0, 10);
 
 function lineUnit(l: CartLine): number {
   const mods = l.item.modifierGroups.flatMap((g) => g.options).filter((o) => l.optionIds.includes(o.id));
-  return l.item.priceCents + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
+  return (l.item.openPrice ? l.priceCents ?? 0 : l.item.priceCents) + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
 }
 
 export function Pos() {
@@ -49,16 +49,16 @@ export function Pos() {
     return computeTotals(cart.map((l) => ({ taxCategoryId: l.item.taxCategoryId, grossCents: lineUnit(l) * l.qty })), menu.taxCategories, today());
   }, [cart, menu]);
 
-  const add = (item: MenuItem, optionIds: string[] = []) => {
+  const add = (item: MenuItem, optionIds: string[] = [], priceCents?: number) => {
     setCart((c) => {
-      const key = `${item.id}|${[...optionIds].sort().join(',')}`;
+      const key = `${item.id}|${[...optionIds].sort().join(',')}|${priceCents ?? ''}`;
       const hit = c.find((l) => l.key === key);
-      return hit ? c.map((l) => (l === hit ? { ...l, qty: l.qty + 1 } : l)) : [...c, { key, item, qty: 1, optionIds }];
+      return hit ? c.map((l) => (l === hit ? { ...l, qty: l.qty + 1 } : l)) : [...c, { key, item, qty: 1, optionIds, priceCents }];
     });
   };
   const tap = (item: MenuItem) => {
     if (!item.available) return;
-    if (item.modifierGroups.length) setPicking(item); else add(item);
+    if (item.modifierGroups.length || item.openPrice) setPicking(item); else add(item);
   };
   const bump = (key: string, d: number) => setCart((c) => c.map((l) => (l.key === key ? { ...l, qty: l.qty + d } : l)).filter((l) => l.qty > 0));
 
@@ -66,7 +66,7 @@ export function Pos() {
     setError('');
     try {
       const order = await api<Order>('/orders', {
-        body: { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note })), note: note || undefined },
+        body: { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents })), note: note || undefined },
       });
       setCart([]); setNote('');
       return order;
@@ -94,7 +94,7 @@ export function Pos() {
               {items.map((i) => (
                 <button key={i.id} className="item" disabled={!i.available} onClick={() => tap(i)}>
                   <span>{i.name}</span>
-                  <b>{i.available ? money(i.priceCents) : t('soldout')}</b>
+                  <b>{!i.available ? t('soldout') : i.openPrice ? t('pos.market') : money(i.priceCents)}</b>
                 </button>
               ))}
             </div>
@@ -136,7 +136,7 @@ export function Pos() {
         <OrdersList orders={[...orders].reverse()} onPay={(order) => setPaying({ order })} />
       )}
 
-      {picking && <ModifierSheet item={picking} onCancel={() => setPicking(null)} onAdd={(ids) => { add(picking, ids); setPicking(null); }} />}
+      {picking && <ModifierSheet item={picking} onCancel={() => setPicking(null)} onAdd={(ids, price) => { add(picking, ids, price); setPicking(null); }} />}
       {paying && (
         <PaySheet
           total={'order' in paying ? paying.order.totalCents : paying.cartTotal}
@@ -154,9 +154,12 @@ export function Pos() {
   );
 }
 
-function ModifierSheet({ item, onAdd, onCancel }: { item: MenuItem; onAdd: (ids: string[]) => void; onCancel: () => void }) {
+function ModifierSheet({ item, onAdd, onCancel }: { item: MenuItem; onAdd: (ids: string[], priceCents?: number) => void; onCancel: () => void }) {
   const { t } = useLang();
   const [sel, setSel] = useState<string[]>([]);
+  const [price, setPrice] = useState('');
+  const typed = parseMoney(price);
+  const priceMissing = item.openPrice && !typed;
   const toggle = (g: ModifierGroup, id: string) => setSel((s) => {
     if (s.includes(id)) return s.filter((x) => x !== id);
     const others = g.multi ? s : s.filter((x) => !g.options.some((o) => o.id === x));
@@ -167,6 +170,12 @@ function ModifierSheet({ item, onAdd, onCancel }: { item: MenuItem; onAdd: (ids:
     <div className="sheet-bg" onClick={onCancel}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <h2>{item.name}</h2>
+        {item.description && <small className="muted">{item.description}</small>}
+        {item.openPrice && (
+          <label>{t('pos.enterPrice')}
+            <input inputMode="decimal" autoFocus placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </label>
+        )}
         {item.modifierGroups.map((g) => (
           <div key={g.id} className="group">
             <h3>{g.name}{g.required && <small> · {t('mods.required')}</small>}</h3>
@@ -181,7 +190,7 @@ function ModifierSheet({ item, onAdd, onCancel }: { item: MenuItem; onAdd: (ids:
         ))}
         <div className="actions">
           <button className="ghost" onClick={onCancel}>{t('pay.cancel')}</button>
-          <button className="primary" disabled={missing} onClick={() => onAdd(sel)}>{t('mods.add')}</button>
+          <button className="primary" disabled={missing || priceMissing} onClick={() => onAdd(sel, item.openPrice ? typed ?? undefined : undefined)}>{t('mods.add')}</button>
         </div>
       </div>
     </div>
