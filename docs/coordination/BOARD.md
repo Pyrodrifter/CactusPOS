@@ -6,8 +6,8 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 ## M0 — Foundations
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
-| T00 | ops | Monorepo scaffold: npm workspaces (`shared, server, web, receipt, printer, books-bridge`), tsconfig base, eslint, vitest, `npm run dev/typecheck/test` (done on master by claude; codex claim superseded) | - | review | claude · 2026-10-07 | `npm run typecheck && npm test` pass on empty packages; `npm run dev` starts server + web |
-| T00A | ops | Complete foundation tooling on the current walking skeleton: missing workspaces, ESLint, supervised dev processes and setup docs; preserve implemented screens/server | - | review | codex · 2026-10-07 | All six workspaces typecheck; lint/tests/build pass; dev starts and stops both services; independent review |
+| T00 | ops | Monorepo scaffold: npm workspaces (`shared, server, web, receipt, printer, books-bridge`), tsconfig base, eslint, vitest, `npm run dev/typecheck/test` (done on master by claude; codex claim superseded) | - | done | claude · 2026-10-07 | `npm run typecheck && npm test` pass on empty packages; `npm run dev` starts server + web |
+| T00A | ops | Complete foundation tooling on the current walking skeleton: missing workspaces, ESLint, supervised dev processes and setup docs; preserve implemented screens/server | - | done | codex · 2026-10-07 | All six workspaces typecheck; lint/tests/build pass; dev starts and stops both services; independent review |
 | T01 | shared | Money (integer cents) + ABB tax engine: categories, rates with `validFrom`, tax-inclusive extraction per line and per receipt, deterministic rounding. Reuse/mirror PBK `packages/core/src/tax` | T00 | review | claude · 2026-10-07 | Unit tests: 6%/8%/exempt/mixed carts, rounding, effective-date change, inclusive price round-trip |
 | T02 | shared | Domain contracts (zod): MenuItem, Modifier, TaxCategory, Order, OrderLine, Payment, Receipt, Device, Staff; HTTP route + WS event schemas; documented in `contracts/` | T00 | review | claude · 2026-10-07 | Schemas exported, contract docs written, server + web can import types |
 | T03 | server | SQLite schema + migrations, append-only `order_events`, projections, gapless receipt counter, seed command with Cactus Blue sample menu | T02 | review | claude · 2026-10-07 | `npm run seed` builds a DB; tests prove no order/payment row can be deleted and numbers are gapless under concurrency |
@@ -72,3 +72,4 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 - **Wave 2:** T03, T04, T05, T13
 - **Wave 3:** T10, T12, T14, T20, T21, T32 (spike)
 - Suggested split: **Claude** takes shared/server/books (T01-T04, T32-T34) and architecture review; **Codex** takes web UI/ops/firmware (T05, T10-T12, T20-T26, T40-T43). Swap freely, but claim on the board.
+
