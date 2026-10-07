@@ -71,3 +71,69 @@ describe('http + auth', () => {
     expect((await app.inject({ method: 'GET', url: `/api/orders/${id}/receipt`, headers: h })).body).toContain('Cactus Blue');
   });
 });
+
+describe('admin', () => {
+  const login = async (app: ReturnType<typeof buildApp>['app'], pin: string) =>
+    ({ 'x-token': (await app.inject({ method: 'POST', url: '/api/login', payload: { pin } })).json().token as string });
+
+  it('PINs are stored hashed and sessions survive a restart', async () => {
+    const pins = (db.prepare('SELECT pin FROM staff').all() as { pin: string }[]).map((r) => r.pin);
+    expect(pins.every((p) => p.startsWith('s1:'))).toBe(true);
+    const a = buildApp(db, { webDist: '/nonexistent' }).app;
+    const h = await login(a, '1111');
+    const b = buildApp(db, { webDist: '/nonexistent' }).app;
+    expect((await b.inject({ method: 'GET', url: '/api/menu', headers: h })).statusCode).toBe(200);
+  });
+
+  it('upgrades plain PINs from older databases', () => {
+    db.prepare("INSERT INTO staff(id, name, pin, role) VALUES ('old','Old','7777','staff')").run();
+    expect(new PosService(db).auth.findByPin('7777')?.id).toBe('old');
+  });
+
+  it('staff cannot use admin routes; owner can edit the menu and prices apply to new orders', async () => {
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    const staffH = await login(app, '1111');
+    const ownerH = await login(app, '1234');
+    const item = { categoryId: 'sides', name: 'Onion Rings', priceCents: 650, taxCategoryId: 'service_6', station: 'kitchen', available: true, modifierGroups: [] };
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/menu/items/rings', headers: staffH, payload: item })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/menu/items/rings', headers: ownerH, payload: item })).statusCode).toBe(200);
+    const o = await app.inject({ method: 'POST', url: '/api/orders', headers: staffH, payload: { lines: [{ itemId: 'rings', qty: 2 }] } });
+    expect(o.json().totalCents).toBe(1300);
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/menu/items/bad', headers: ownerH, payload: { ...item, taxCategoryId: 'nope' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'DELETE', url: '/api/admin/menu/categories/sides', headers: ownerH })).statusCode).toBe(409);
+    // any staff member may mark an item sold out
+    expect((await app.inject({ method: 'POST', url: '/api/menu/items/rings/available', headers: staffH, payload: { available: false } })).json().available).toBe(false);
+    expect((await app.inject({ method: 'GET', url: '/api/admin/audit', headers: ownerH })).json().length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('staff management: unique PINs, last owner protected, deactivation ends sessions', async () => {
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    const ownerH = await login(app, '1234');
+    const staffH = await login(app, '1111');
+    const put = (id: string, payload: object) => app.inject({ method: 'PUT', url: `/api/admin/staff/${id}`, headers: ownerH, payload });
+    expect((await app.inject({ method: 'POST', url: '/api/admin/staff', headers: ownerH, payload: { name: 'Mom', role: 'staff', pin: '1111' } })).statusCode).toBe(409);
+    expect((await app.inject({ method: 'POST', url: '/api/admin/staff', headers: ownerH, payload: { name: 'Mom', role: 'staff', pin: '2468' } })).statusCode).toBe(201);
+    expect((await put('owner', { name: 'Owner', role: 'staff', active: true })).statusCode).toBe(409);
+    expect((await put('staff1', { name: 'Staff', role: 'staff', active: false })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/menu', headers: staffH })).statusCode).toBe(401);
+    expect(JSON.stringify((await app.inject({ method: 'GET', url: '/api/admin/staff', headers: ownerH })).json())).not.toContain('s1:');
+  });
+
+  it('business details show on the receipt and bad timezones are rejected', async () => {
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    const h = await login(app, '1234');
+    const biz = { name: 'Kas di Kuminda', crib: '123456789', address: 'Rincon', phone: '', timezone: 'America/Kralendijk', currency: 'USD', locale: 'nl', receiptFooter: 'Danki!' };
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/business', headers: h, payload: biz })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'PUT', url: '/api/admin/business', headers: h, payload: { ...biz, timezone: 'Mars/Phobos' } })).statusCode).toBe(400);
+    const o = (await app.inject({ method: 'POST', url: '/api/orders', headers: h, payload: { lines: [{ itemId: 'fries', qty: 1 }] } })).json();
+    const html = (await app.inject({ method: 'GET', url: `/api/orders/${o.id}/receipt`, headers: h })).body;
+    expect(html).toContain('Kas di Kuminda');
+    expect(html).toContain('CRIB 123456789');
+  });
+
+  it('locks out after repeated wrong PINs', async () => {
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    for (let i = 0; i < 5; i++) await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '0000' } });
+    expect((await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '1111' } })).statusCode).toBe(429);
+  });
+});

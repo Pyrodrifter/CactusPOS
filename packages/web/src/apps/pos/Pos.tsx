@@ -3,7 +3,7 @@ import {
   computeTotals, formatMoney, type MenuCategory, type MenuItem, type ModifierGroup, type Order, type TaxCategory,
 } from '@cactus/shared';
 import { api, ApiError, printReceipt } from '../../lib/api';
-import { useOrders } from '../../lib/live';
+import { MENU_CHANGED, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
 
 interface Menu { categories: MenuCategory[]; items: MenuItem[]; taxCategories: TaxCategory[] }
@@ -29,7 +29,20 @@ export function Pos() {
   const [error, setError] = useState('');
   const { orders, online } = useOrders('today');
 
-  useEffect(() => { void api<Menu>('/menu').then((m) => { setMenu(m); setCat(m.categories[0]?.id ?? ''); }); }, []);
+  useEffect(() => {
+    const load = () => void api<Menu>('/menu').then((m) => {
+      setMenu(m);
+      setCat((c) => (m.categories.some((x) => x.id === c) ? c : m.categories[0]?.id ?? ''));
+      // Drop cart lines whose item was removed or sold out while the order was being built.
+      setCart((lines) => lines.flatMap((l) => {
+        const item = m.items.find((i) => i.id === l.item.id);
+        return item && item.available ? [{ ...l, item }] : [];
+      }));
+    });
+    load();
+    window.addEventListener(MENU_CHANGED, load);
+    return () => window.removeEventListener(MENU_CHANGED, load);
+  }, []);
 
   const totals = useMemo(() => {
     if (!menu || cart.length === 0) return null;
