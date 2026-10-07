@@ -1,11 +1,28 @@
 import { resolve } from 'node:path';
 import { networkInterfaces } from 'node:os';
+import { createServer } from 'node:net';
 import { openDb } from './db.js';
 import { buildApp } from './app.js';
 import { seedSample } from './seedData.js';
 
 const dbPath = process.env.CACTUS_DB ?? resolve(process.cwd(), 'data/cactus.sqlite');
-const port = Number(process.env.PORT ?? 3000);
+const wanted = Number(process.env.PORT ?? 3000);
+
+const isFree = (p: number) => new Promise<boolean>((done) => {
+  const probe = createServer();
+  probe.once('error', () => done(false));
+  probe.once('listening', () => probe.close(() => done(true)));
+  probe.listen(p, '0.0.0.0');
+});
+/** Another copy (or another program) may hold the port; step up rather than die with a stack trace. */
+let port = wanted;
+while (!(await isFree(port))) {
+  if (port - wanted >= 10) { console.error(`Ports ${wanted}-${port} are all in use. Close the other program or set PORT.`); process.exit(1); }
+  port++;
+}
+if (port !== wanted) console.warn(`
+!! Port ${wanted} is already in use (is CactusPOS already running?). Using ${port} instead.
+`);
 const db = openDb(dbPath);
 if (!db.prepare('SELECT 1 FROM tax_categories LIMIT 1').get()) {
   seedSample(db);
@@ -15,4 +32,5 @@ const { app } = buildApp(db);
 await app.listen({ port, host: '0.0.0.0' });
 const ips = Object.values(networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n!.address);
 console.log(`CactusPOS running. DB: ${dbPath}`);
-for (const ip of ips) console.log(`  http://${ip}:${port}`);
+console.log(`  http://localhost:${port}   (this computer)`);
+for (const ip of ips) console.log(`  http://${ip}:${port}   (phones and tablets on the same WiFi)`);
