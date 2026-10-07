@@ -4,6 +4,8 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 import { api, getSession, setSession, type Session } from './lib/api';
 import { setLang, useLang } from './i18n';
 import { Login } from './ui/Login';
+import { PwaStatus } from './ui/PwaStatus';
+import { initializePwa } from './lib/pwa';
 import { Pos } from './apps/pos/Pos';
 import { Kitchen } from './apps/kitchen/Kitchen';
 import { Pickup } from './apps/pickup/Pickup';
@@ -43,13 +45,17 @@ function App() {
   const [session, setS] = useState<Session | null>(getSession());
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/pickup" element={<Pickup />} />
-        <Route path="/login" element={session ? <Navigate to="/pos" replace /> : <Login onDone={(s) => { setSession(s); setS(s); }} />} />
-        <Route path="*" element={session ? <Shell session={session} /> : <Navigate to="/login" replace />} />
-      </Routes>
+      <div className="app-frame">
+        <PwaStatus />
+        <Routes>
+          <Route path="/pickup" element={<Pickup />} />
+          <Route path="/login" element={session ? <Navigate to="/pos" replace /> : <Login onDone={(s) => { setSession(s); setS(s); }} />} />
+          <Route path="*" element={session ? <Shell session={session} /> : <Navigate to="/login" replace />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
 
+initializePwa(import.meta.env.PROD);
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

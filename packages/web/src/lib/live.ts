@@ -39,7 +39,11 @@ export function useOrders(scope: 'active' | 'today' = 'active') {
       if (!token || closed) return;
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       ws = new WebSocket(`${proto}://${location.host}/ws?token=${token}`);
-      ws.onopen = () => { attempt = 0; setOnline(true); void load(); };
+      ws.onopen = () => {
+        attempt = 0; setOnline(true); void load();
+        // A failed initial menu fetch also recovers when the local server returns.
+        window.dispatchEvent(new Event(MENU_CHANGED));
+      };
       ws.onmessage = (m) => {
         const ev = readEvent(m.data);
         if (!ev) return;
