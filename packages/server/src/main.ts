@@ -7,6 +7,11 @@ import { seedSample } from './seedData.js';
 
 const dbPath = process.env.CACTUS_DB ?? resolve(process.cwd(), 'data/cactus.sqlite');
 const wanted = Number(process.env.PORT ?? 3000);
+if (!Number.isInteger(wanted) || wanted < 1 || wanted > 65535) {
+  console.error('PORT must be an integer between 1 and 65535.');
+  process.exit(1);
+}
+const strictPort = process.env.CACTUS_STRICT_PORT === '1';
 
 const isFree = (p: number) => new Promise<boolean>((done) => {
   const probe = createServer();
@@ -17,7 +22,11 @@ const isFree = (p: number) => new Promise<boolean>((done) => {
 /** Another copy (or another program) may hold the port; step up rather than die with a stack trace. */
 let port = wanted;
 while (!(await isFree(port))) {
-  if (port - wanted >= 10) { console.error(`Ports ${wanted}-${port} are all in use. Close the other program or set PORT.`); process.exit(1); }
+  if (strictPort) {
+    console.error(`Port ${wanted} is already in use. Close the other program or set PORT (CACTUS_STRICT_PORT=1).`);
+    process.exit(1);
+  }
+  if (port - wanted >= 10 || port === 65535) { console.error(`Ports ${wanted}-${port} are all in use. Close the other program or set PORT.`); process.exit(1); }
   port++;
 }
 if (port !== wanted) console.warn(`

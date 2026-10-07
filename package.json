@@ -7,6 +7,8 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "lan:setup": "node scripts/lan/setup.mjs",
+    "dev:lan": "node scripts/lan/dev.mjs",
     "build": "npm run build --workspace @cactus/web",
     "start": "npm run build && npm run start --workspace @cactus/server",
     "seed": "npm run seed --workspace @cactus/server",
@@ -25,6 +27,7 @@
     "concurrently": "^9.2.4",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
+    "multicast-dns": "^7.2.5",
     "typescript-eslint": "^8.71.1"
   },
   "overrides": {

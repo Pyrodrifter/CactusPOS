@@ -1,0 +1,12 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+https://{$CACTUS_HOSTNAME}:{$CACTUS_HTTPS_PORT}, https://{$CACTUS_LAN_IP}:{$CACTUS_HTTPS_PORT} {
+	tls "{$CACTUS_TLS_CERT}" "{$CACTUS_TLS_KEY}"
+	# Preserve request paths; Vite forwards /api and upgrades /ws to port 3000.
+	# Caddy also forwards Vite's hot-reload WebSocket on this same origin.
+	reverse_proxy 127.0.0.1:5173
+}

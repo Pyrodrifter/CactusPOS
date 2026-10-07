@@ -34,6 +34,10 @@ the API. `start.bat` is the Windows convenience launcher. Development and local
 service operation require no cloud account; the initial dependency installation
 requires access to npm.
 
+To test HTTPS from a phone on the same WiFi, follow the [LAN setup guide](ops/lan.md).
+It covers `npm run lan:setup`, `npm run dev:lan`, `cactus.local`, the IP fallback,
+and one-time local CA installation on each device.
+
 ## Data and configuration
 
 `CACTUS_DB` sets the SQLite file path. Use an absolute path when configuring it.
