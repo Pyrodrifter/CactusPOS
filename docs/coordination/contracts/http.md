@@ -1,6 +1,6 @@
 # HTTP + WebSocket contract (v1)
 
-Schemas are authoritative in `packages/shared/src/domain.ts`. All bodies are JSON. Money is integer cents.
+Schemas are authoritative in `packages/shared/src/domain.ts` (`LoginResponse`, `MenuResponse`, `Order`, `OrderList`, `PickupBoard`, `HealthResponse`, `ErrorResponse`, `OrdersQuery`, `IdParams` and the request bodies named below); a test parses real server responses against them. All bodies are JSON. Money is integer cents.
 Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` with a 4xx status.
 
 ## Public

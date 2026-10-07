@@ -4,6 +4,7 @@ import { PosService, type Staff } from './service.js';
 import { seedSample } from './seedData.js';
 import { buildApp } from './app.js';
 import { applyProfile } from './seedProfile.js';
+import { HealthResponse, LoginResponse, MenuResponse, Order, OrderList, PickupBoard, ServerEventSchema, ErrorResponse } from '@cactus/shared';
 
 const staff: Staff = { id: 'staff1', name: 'Staff', role: 'staff' };
 let svc: PosService;
@@ -16,7 +17,8 @@ describe('orders', () => {
   it('prices with modifiers and extracts ABB from the inclusive total', () => {
     const o = svc.createOrder(burger(2, ['cheese']), staff);
     expect(o.totalCents).toBe((1400 + 100) * 2);
-    expect(o.taxCents).toBe(Math.round((3000 * 600) / 10600));
+    expect(o.taxCents).toBe(170); // 3000 * 6/106 = 169.81
+    expect(o.lines[0]!.taxCents).toBe(170);
     expect(o.ticketNumber).toBe(1);
     expect(svc.createOrder(burger(), staff).ticketNumber).toBe(2);
   });
@@ -163,5 +165,49 @@ describe('seed profile + market price', () => {
   });
   it('rejects unknown profile names', () => {
     expect(() => applyProfile(db, '../etc')).toThrow(/Bad profile name/);
+  });
+});
+
+describe('wire contracts: real responses satisfy the shared schemas', () => {
+  it('login, menu, orders, pickup, health, errors', async () => {
+    applyProfile(db, 'cactus-blue');
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    const loginRes = (await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '1111' } })).json();
+    const session = LoginResponse.parse(loginRes);
+    const h = { 'x-token': session.token };
+    MenuResponse.parse((await app.inject({ method: 'GET', url: '/api/menu', headers: h })).json());
+    const created = Order.parse((await app.inject({ method: 'POST', url: '/api/orders', headers: h, payload: { lines: [
+      { itemId: 'cactus_double', qty: 1, modifierOptionIds: ['x_bacon'] },
+      { itemId: 'soda', qty: 2, modifierOptionIds: ['d_coke'] },
+    ] } })).json());
+    // per-line ABB adds up to the receipt ABB (same rounding as the books)
+    expect(created.lines.map((l) => l.taxCents)).toEqual([117, 31]); // 2075 and 550 at 6%
+    expect(created.taxCents).toBe(148);
+    expect(created.totalCents).toBe(2625);
+    Order.parse((await app.inject({ method: 'POST', url: `/api/orders/${created.id}/pay`, headers: h, payload: { method: 'cash', tenderedCents: 3000 } })).json());
+    expect(OrderList.parse((await app.inject({ method: 'GET', url: '/api/orders?scope=today', headers: h })).json())).toHaveLength(1);
+    PickupBoard.parse((await app.inject({ method: 'GET', url: '/api/pickup' })).json());
+    HealthResponse.parse((await app.inject({ method: 'GET', url: '/api/health' })).json());
+    const bad = await app.inject({ method: 'GET', url: '/api/orders?scope=everything', headers: h });
+    expect(bad.statusCode).toBe(400);
+    ErrorResponse.parse(bad.json());
+    ErrorResponse.parse((await app.inject({ method: 'GET', url: '/api/menu' })).json());
+  });
+  it('event schema accepts what the server sends and rejects junk', () => {
+    const o = svc.createOrder(burger(), staff);
+    expect(ServerEventSchema.safeParse({ type: 'order.changed', order: o }).success).toBe(true);
+    expect(ServerEventSchema.safeParse({ type: 'pickup.changed', ...svc.pickupBoard() }).success).toBe(true);
+    expect(ServerEventSchema.safeParse({ type: 'hello', serverTime: new Date().toISOString() }).success).toBe(true);
+    expect(ServerEventSchema.safeParse({ type: 'order.changed', order: { ...o, totalCents: 12.5 } }).success).toBe(false);
+    expect(ServerEventSchema.safeParse({ type: 'nope' }).success).toBe(false);
+  });
+  it('a sale the tax setup cannot price is refused, not sold untaxed', async () => {
+    const future = { id: 'service_6', name: 'ABB 6%', kind: 'taxed', rates: [{ validFrom: '2999-01-01', bps: 600 }] };
+    db.prepare("UPDATE tax_categories SET data = ? WHERE id = 'service_6'").run(JSON.stringify(future));
+    const { app } = buildApp(db, { webDist: '/nonexistent' });
+    const h = { 'x-token': (await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '1111' } })).json().token };
+    const res = await app.inject({ method: 'POST', url: '/api/orders', headers: h, payload: { lines: [{ itemId: 'fries', qty: 1 }] } });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/Tax setup problem/);
   });
 });

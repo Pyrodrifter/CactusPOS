@@ -1,100 +1,145 @@
-import { roundDiv, type Cents } from './money.js';
+import { z } from 'zod';
+import { assertCents, MoneyError, roundDiv, sumCents, type Cents } from './money.js';
 
 /**
  * ABB (Bonaire / Caribisch Nederland) model. Not a VAT:
  *  - consumer prices INCLUDE the tax,
  *  - "exempt" and "outside scope" are different things and reported separately,
  *  - rates are data with an effective date; add a row, never edit history.
- * See PyroBookKeeper docs/bonaire-tax.md. Rates here are defaults, flagged unverified until confirmed.
+ * See PyroBookKeeper docs/bonaire-tax.md. Defaults are flagged unverified until the owner confirms them.
  */
-export type TaxKind = 'taxed' | 'exempt' | 'outside_scope';
+export const TaxKind = z.enum(['taxed', 'exempt', 'outside_scope']);
+export type TaxKind = z.infer<typeof TaxKind>;
 
-export interface TaxRateRow {
-  /** ISO date (YYYY-MM-DD) the rate takes effect. */
-  validFrom: string;
-  /** Basis points: 600 = 6%. */
-  bps: number;
-}
+const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`))
+  && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
 
-export interface TaxCategory {
-  id: string;
-  name: string;
-  kind: TaxKind;
-  rates: TaxRateRow[];
+export const IsoDate = z.string().refine(isIsoDate, 'Expected a real date as YYYY-MM-DD');
+/** Basis points: 600 = 6%. Whole numbers from 0% to 100%. */
+export const Bps = z.number().int().min(0).max(10000);
+
+export const TaxRateRow = z.object({ validFrom: IsoDate, bps: Bps });
+export type TaxRateRow = z.infer<typeof TaxRateRow>;
+
+export const TaxCategorySchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().min(1).max(60),
+  kind: TaxKind,
+  rates: z.array(TaxRateRow),
   /** Legal ground, required for exempt / outside_scope. */
-  reason?: string;
+  reason: z.string().max(200).optional(),
   /** True until the owner/accountant confirmed this setup. */
-  unverified?: boolean;
+  unverified: z.boolean().optional(),
+}).superRefine((c, ctx) => {
+  const dates = c.rates.map((r) => r.validFrom);
+  if (new Set(dates).size !== dates.length) ctx.addIssue({ code: 'custom', message: 'Two rates start on the same date', path: ['rates'] });
+  if (c.kind === 'taxed' && c.rates.length === 0) ctx.addIssue({ code: 'custom', message: 'A taxed category needs at least one rate', path: ['rates'] });
+});
+export type TaxCategory = z.infer<typeof TaxCategorySchema>;
+
+export class TaxConfigError extends Error {}
+
+/**
+ * Rate in force on a date. Exempt and outside-scope categories are always 0.
+ * A taxed category with no rate covering the date is a configuration error, never a silent 0%:
+ * treating an uncovered sale as untaxed would under-declare.
+ */
+export function rateAt(cat: TaxCategory, isoDate: string): number {
+  if (!isIsoDate(isoDate)) throw new TaxConfigError(`Bad date ${isoDate}`);
+  if (cat.kind !== 'taxed') return 0;
+  let best: TaxRateRow | undefined;
+  const seen = new Set<string>();
+  for (const r of cat.rates) {
+    if (!isIsoDate(r.validFrom)) throw new TaxConfigError(`Tax category ${cat.id} has a bad date ${r.validFrom}`);
+    if (seen.has(r.validFrom)) throw new TaxConfigError(`Tax category ${cat.id} has two rates starting ${r.validFrom}`);
+    seen.add(r.validFrom);
+    assertBps(r.bps);
+    if (r.validFrom <= isoDate && (!best || r.validFrom > best.validFrom)) best = r;
+  }
+  if (!best) throw new TaxConfigError(`Tax category ${cat.id} has no rate for ${isoDate}`);
+  return best.bps;
 }
 
-export function rateAt(cat: TaxCategory, isoDate: string): number {
-  if (cat.kind !== 'taxed') return 0;
-  const rows = [...cat.rates].sort((a, b) => a.validFrom.localeCompare(b.validFrom));
-  let bps = 0;
-  for (const r of rows) if (r.validFrom <= isoDate) bps = r.bps;
+function assertBps(bps: number): number {
+  if (!Number.isInteger(bps) || bps < 0 || bps > 10000) throw new MoneyError(`Rate must be 0-10000 basis points, got ${bps}`);
   return bps;
 }
 
-/** Tax contained in a tax-inclusive gross amount. */
+/** Tax contained in a tax-inclusive gross amount. Exact; gross = net + tax always holds. */
 export function taxInGross(gross: Cents, bps: number): Cents {
-  return roundDiv(gross * bps, 10000 + bps);
+  return roundDiv(assertCents(gross, 'gross') * assertBps(bps), 10000 + bps);
 }
 
 export interface TaxableLine {
   taxCategoryId: string;
-  /** Line total incl. tax, incl. modifiers. */
+  /** Line total incl. tax, incl. modifiers (unit price x quantity). */
   grossCents: Cents;
 }
 
-export interface TaxBreakdownRow {
-  taxCategoryId: string;
-  name: string;
-  kind: TaxKind;
-  bps: number;
-  grossCents: Cents;
-  taxCents: Cents;
-  netCents: Cents;
-}
+export const TaxBreakdownRow = z.object({
+  taxCategoryId: z.string(), name: z.string(), kind: TaxKind, bps: Bps,
+  grossCents: z.number().int(), taxCents: z.number().int(), netCents: z.number().int(),
+});
+export type TaxBreakdownRow = z.infer<typeof TaxBreakdownRow>;
+
+export interface LineTax { bps: number; grossCents: Cents; taxCents: Cents; netCents: Cents }
 
 export interface Totals {
   totalCents: Cents;
   taxCents: Cents;
   netCents: Cents;
+  /** One row per category and rate, for the receipt's ABB block. */
   breakdown: TaxBreakdownRow[];
+  /** Same order as the input lines. */
+  lines: LineTax[];
 }
 
 /**
- * Tax is extracted per category group, not per line, so rounding error doesn't accumulate.
- * The total is exactly the sum of gross lines.
+ * How the ABB on a receipt is rounded.
+ *  - 'line'  (default): extract the tax from each line, then add the lines up. This is what
+ *    PyroBookKeeper's `calculateDocument` does, so receipts and the books agree to the cent.
+ *  - 'group': add the lines of a category up first, then extract once. Can differ from 'line'
+ *    by a cent on receipts with several small lines (two 9-cent lines at 6%: 2 cents vs 1 cent).
+ * Both keep the total equal to the sum of the prices charged. Which one the Belastingdienst
+ * expects is not something this code decides: 'line' is chosen for parity with the books.
  */
-export function computeTotals(lines: TaxableLine[], cats: TaxCategory[], isoDate: string): Totals {
+export type RoundingPolicy = 'line' | 'group';
+
+export function computeTotals(lines: readonly TaxableLine[], cats: readonly TaxCategory[], isoDate: string, policy: RoundingPolicy = 'line'): Totals {
   const byId = new Map(cats.map((c) => [c.id, c]));
   const groups = new Map<string, TaxBreakdownRow>();
+  const lineTax: LineTax[] = [];
   for (const l of lines) {
     const cat = byId.get(l.taxCategoryId);
-    if (!cat) throw new Error(`Unknown tax category ${l.taxCategoryId}`);
+    if (!cat) throw new TaxConfigError(`Unknown tax category ${l.taxCategoryId}`);
+    const gross = assertCents(l.grossCents, 'line total');
     const bps = rateAt(cat, isoDate);
+    const tax = taxInGross(gross, bps);
+    lineTax.push({ bps, grossCents: gross, taxCents: tax, netCents: gross - tax });
     const key = `${cat.id}@${bps}`;
     const row = groups.get(key) ?? { taxCategoryId: cat.id, name: cat.name, kind: cat.kind, bps, grossCents: 0, taxCents: 0, netCents: 0 };
-    row.grossCents += l.grossCents;
+    row.grossCents = assertCents(row.grossCents + gross, 'total');
+    row.taxCents += tax;
     groups.set(key, row);
   }
-  let total = 0;
-  let tax = 0;
   const breakdown = [...groups.values()].map((r) => {
-    r.taxCents = taxInGross(r.grossCents, r.bps);
+    if (policy === 'group') r.taxCents = taxInGross(r.grossCents, r.bps);
     r.netCents = r.grossCents - r.taxCents;
-    total += r.grossCents;
-    tax += r.taxCents;
     return r;
   });
-  return { totalCents: total, taxCents: tax, netCents: total - tax, breakdown };
+  const totalCents = sumCents(breakdown.map((r) => r.grossCents));
+  const taxCents = sumCents(breakdown.map((r) => r.taxCents));
+  return { totalCents, taxCents, netCents: totalCents - taxCents, breakdown, lines: lineTax };
 }
 
-/** Bonaire defaults. Rates per Handboek ABB 2026; classification of prepared food is UNVERIFIED. */
+/**
+ * Bonaire defaults (rates per Handboek ABB 2026). 2011-01-01 is when ABB replaced the old taxes;
+ * it is a starting row for the till, not evidence of historic rates. Which category prepared food
+ * and drinks fall under is UNVERIFIED until the accountant confirms it.
+ */
 export const BONAIRE_DEFAULT_TAX: TaxCategory[] = [
-  { id: 'service_6', name: 'ABB 6%', kind: 'taxed', rates: [{ validFrom: '2000-01-01', bps: 600 }], unverified: true },
-  { id: 'goods_8', name: 'ABB 8%', kind: 'taxed', rates: [{ validFrom: '2000-01-01', bps: 800 }], unverified: true },
+  { id: 'service_6', name: 'ABB 6%', kind: 'taxed', rates: [{ validFrom: '2011-01-01', bps: 600 }], unverified: true },
+  { id: 'goods_8', name: 'ABB 8%', kind: 'taxed', rates: [{ validFrom: '2011-01-01', bps: 800 }], unverified: true },
   { id: 'exempt', name: 'Exempt', kind: 'exempt', rates: [], reason: 'Specify legal ground', unverified: true },
   { id: 'outside_scope', name: 'Outside scope', kind: 'outside_scope', rates: [], reason: 'Resale of imported goods', unverified: true },
 ];

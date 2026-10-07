@@ -1,10 +1,6 @@
-import type { Order } from '@cactus/shared';
+import type { Order, Session } from '@cactus/shared';
 
-export interface Session {
-  token: string;
-  staff: { id: string; name: string; role: 'owner' | 'staff' };
-  business: { name: string; currency: string; brandColor?: string };
-}
+export type { Session };
 const KEY = 'cactus.session';
 
 export function getSession(): Session | null {

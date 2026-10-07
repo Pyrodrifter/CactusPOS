@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  computeTotals, formatMoney, parseMoney, type MenuCategory, type MenuItem, type ModifierGroup, type Order, type TaxCategory,
+  computeTotals, formatMoney, parseMoney, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
 import { api, ApiError, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
 
-interface Menu { categories: MenuCategory[]; items: MenuItem[]; taxCategories: TaxCategory[] }
+type Menu = MenuResponse;
 interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
 
 const money = (c: number) => formatMoney(c);

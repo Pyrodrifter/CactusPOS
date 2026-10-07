@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { formatMoney, parseMoney, type MenuCategory, type MenuItem, type ModifierGroup, type TaxCategory } from '@cactus/shared';
+import { formatMoney, parseMoney, type MenuItem, type MenuResponse, type ModifierGroup } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { useLang } from '../../i18n';
 import { errText, newId } from './Admin';
 
-interface Menu { categories: MenuCategory[]; items: MenuItem[]; taxCategories: TaxCategory[] }
+type Menu = MenuResponse;
 const dollars = (c: number) => (c / 100).toFixed(2);
 
 export function MenuAdmin() {

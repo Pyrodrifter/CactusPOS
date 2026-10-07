@@ -23,7 +23,7 @@ export function BusinessAdmin() {
     try {
       const saved = await api<Business>('/admin/business', { method: 'PUT', body: b });
       const s = getSession();
-      if (s) setSession({ ...s, business: { name: saved.name, currency: saved.currency, brandColor: saved.brandColor } });
+      if (s) setSession({ ...s, business: saved });
       setMsg(t('admin.saved'));
     } catch (e) { setErr(errText(e)); }
   };

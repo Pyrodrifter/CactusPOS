@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import type { Staff } from '@cactus/shared';
 import type { DB } from './db.js';
 
-export interface Staff { id: string; name: string; role: 'owner' | 'staff' }
+export type { Staff };
 
 const SESSION_DAYS = 30;
 

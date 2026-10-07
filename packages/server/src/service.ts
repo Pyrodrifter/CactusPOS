@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   computeTotals, type TaxCategory, type Order, type OrderLine, type MenuItem, type MenuCategory,
-  type CreateOrderBodyT, type PayBodyT, type Business,
+  type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
 import { getKv, nextCounter, tx, type DB } from './db.js';
@@ -30,7 +30,7 @@ export class PosService {
   taxCategories(): TaxCategory[] {
     return (this.db.prepare('SELECT data FROM tax_categories').all() as { data: string }[]).map((r) => JSON.parse(r.data));
   }
-  menu(): { categories: MenuCategory[]; items: MenuItem[]; taxCategories: TaxCategory[] } {
+  menu(): MenuResponse {
     const categories = this.db.prepare('SELECT id, name, sort FROM menu_categories ORDER BY sort, name').all() as unknown as MenuCategory[];
     const items = (this.db.prepare('SELECT data FROM menu_items').all() as { data: string }[]).map((r) => JSON.parse(r.data) as MenuItem);
     return { categories, items, taxCategories: this.taxCategories() };
@@ -95,6 +95,8 @@ export class PosService {
       };
     });
     const totals = computeTotals(lines.map((l) => ({ taxCategoryId: l.taxCategoryId, grossCents: l.lineTotalCents })), menu.taxCategories, date);
+    // Per-line ABB is stored with the order so receipts and the books never have to recompute it.
+    lines.forEach((l, i) => { l.taxCents = totals.lines[i]!.taxCents; });
     return tx(this.db, () => {
       const now = new Date().toISOString();
       const order: Order = {
@@ -159,7 +161,7 @@ export class PosService {
   }
 
   /** What the public pickup board may see: numbers and states only. */
-  pickupBoard() {
+  pickupBoard(): PickupBoard {
     const active = this.activeOrders().filter((o) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready');
     return {
       preparing: active.filter((o) => o.status !== 'ready').map((o) => o.ticketNumber),

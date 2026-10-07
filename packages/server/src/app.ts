@@ -5,8 +5,8 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
-  AvailabilityBody, BusinessSchema, CreateOrderBody, LoginBody, MenuCategory, MenuItem, PayBody, StaffInput, StatusBody,
-  TaxCategorySchema, VoidBody, type Order, type ServerEvent,
+  AvailabilityBody, BusinessSchema, CreateOrderBody, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
+  StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
@@ -29,13 +29,16 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
   };
   const broadcastOrder = (order: Order) => {
     broadcast({ type: 'order.changed', order });
-    const board = JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() });
+    const board = JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() } satisfies ServerEvent);
     for (const c of clients) if (c.kind === 'pickup') c.send(board);
   };
 
   app.setErrorHandler((err: unknown, _req, reply) => {
     if (err instanceof HttpError) return reply.code(err.status).send({ error: err.message });
     if (err instanceof ZodError) return reply.code(400).send({ error: 'Invalid request', issues: err.issues });
+    if (err instanceof MoneyError) return reply.code(400).send({ error: err.message });
+    // A sale the tax setup cannot price must stop loudly rather than go through untaxed.
+    if (err instanceof TaxConfigError) return reply.code(409).send({ error: `Tax setup problem: ${err.message}` });
     const e = err as { statusCode?: number; message?: string };
     return reply.code(e.statusCode ?? 500).send({ error: e.message ?? 'Server error' });
   });
@@ -52,7 +55,7 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
     if (s.role !== 'owner') throw new HttpError(403, 'Owner only');
     return s;
   };
-  const idOf = (req: FastifyRequest) => (req.params as { id: string }).id;
+  const idOf = (req: FastifyRequest) => IdParams.parse(req.params).id;
   const menuChanged = () => broadcast({ type: 'menu.changed' });
 
   app.register(websocket);
@@ -65,7 +68,7 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
       clients.add(client);
       socket.on('close', () => clients.delete(client));
       socket.send(JSON.stringify({ type: 'hello', serverTime: new Date().toISOString() } satisfies ServerEvent));
-      if (pickup) socket.send(JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() }));
+      if (pickup) socket.send(JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() } satisfies ServerEvent));
     });
   });
 
@@ -90,10 +93,9 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
   app.get('/api/menu', async (req) => { authOf(req); return svc.menu(); });
   app.get('/api/orders', async (req) => {
     authOf(req);
-    const q = req.query as { scope?: string };
-    return q.scope === 'today' ? svc.todaysOrders() : svc.activeOrders();
+    return OrdersQuery.parse(req.query).scope === 'today' ? svc.todaysOrders() : svc.activeOrders();
   });
-  app.get('/api/orders/:id', async (req) => { authOf(req); return svc.getOrder((req.params as { id: string }).id); });
+  app.get('/api/orders/:id', async (req) => { authOf(req); return svc.getOrder(idOf(req)); });
 
   app.post('/api/orders', async (req, reply) => {
     const staff = authOf(req);
@@ -103,26 +105,26 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
   });
   app.post('/api/orders/:id/pay', async (req) => {
     const staff = authOf(req);
-    const order = svc.pay((req.params as { id: string }).id, PayBody.parse(req.body), staff);
+    const order = svc.pay(idOf(req), PayBody.parse(req.body), staff);
     broadcastOrder(order);
     return order;
   });
   app.post('/api/orders/:id/status', async (req) => {
     const staff = authOf(req);
-    const order = svc.setStatus((req.params as { id: string }).id, StatusBody.parse(req.body).status, staff);
+    const order = svc.setStatus(idOf(req), StatusBody.parse(req.body).status, staff);
     broadcastOrder(order);
     return order;
   });
   app.post('/api/orders/:id/void', async (req) => {
     const staff = authOf(req);
     const b = VoidBody.parse(req.body);
-    const order = svc.voidOrder((req.params as { id: string }).id, b.reason, b.managerPin, staff);
+    const order = svc.voidOrder(idOf(req), b.reason, b.managerPin, staff);
     broadcastOrder(order);
     return order;
   });
   app.get('/api/orders/:id/receipt', async (req, reply) => {
     authOf(req);
-    const order = svc.getOrder((req.params as { id: string }).id);
+    const order = svc.getOrder(idOf(req));
     return reply.type('text/html').send(renderReceiptHtml(order, svc.business()));
   });
 

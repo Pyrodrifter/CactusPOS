@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Order } from '@cactus/shared';
+import { ServerEventSchema, type Order, type ServerEvent } from '@cactus/shared';
 import { api, getSession } from './api';
+
+/** Parses a socket message; anything that is not a known, well-formed event is ignored. */
+function readEvent(data: unknown): ServerEvent | null {
+  try {
+    const r = ServerEventSchema.safeParse(JSON.parse(String(data)));
+    if (!r.success) console.warn('Ignored malformed server event', r.error.issues[0]);
+    return r.success ? r.data : null;
+  } catch { return null; }
+}
 
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';
@@ -32,10 +41,11 @@ export function useOrders(scope: 'active' | 'today' = 'active') {
       ws = new WebSocket(`${proto}://${location.host}/ws?token=${token}`);
       ws.onopen = () => { attempt = 0; setOnline(true); void load(); };
       ws.onmessage = (m) => {
-        const ev = JSON.parse(m.data as string);
+        const ev = readEvent(m.data);
+        if (!ev) return;
         if (ev.type === 'menu.changed') window.dispatchEvent(new Event(MENU_CHANGED));
         if (ev.type === 'order.changed') {
-          const o = ev.order as Order;
+          const o = ev.order;
           setOrders((prev) => new Map(prev).set(o.id, o));
           if (!known.current.has(o.id)) { known.current.add(o.id); setNewIds((p) => [...p, o.id]); }
         }
@@ -67,8 +77,8 @@ export function usePickup() {
       ws = new WebSocket(`${proto}://${location.host}/ws?room=pickup`);
       ws.onopen = () => { attempt = 0; setOnline(true); };
       ws.onmessage = (m) => {
-        const ev = JSON.parse(m.data as string);
-        if (ev.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready });
+        const ev = readEvent(m.data);
+        if (ev?.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready });
       };
       ws.onclose = () => { setOnline(false); if (!closed) timer = window.setTimeout(connect, Math.min(1000 * 2 ** attempt++, 8000)); };
     };
