@@ -6,7 +6,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 ## M0 — Foundations
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
-| T00 | ops | Monorepo scaffold: npm workspaces (`shared, server, web, receipt, printer, books-bridge`), tsconfig base, eslint, vitest, `npm run dev/typecheck/test` | - | todo | | `npm run typecheck && npm test` pass on empty packages; `npm run dev` starts server + web |
+| T00 | ops | Monorepo scaffold: npm workspaces (`shared, server, web, receipt, printer, books-bridge`), tsconfig base, eslint, vitest, `npm run dev/typecheck/test` | - | doing | codex · 2026-10-07 | `npm run typecheck && npm test` pass on empty packages; `npm run dev` starts server + web |
 | T01 | shared | Money (integer cents) + ABB tax engine: categories, rates with `validFrom`, tax-inclusive extraction per line and per receipt, deterministic rounding. Reuse/mirror PBK `packages/core/src/tax` | T00 | todo | | Unit tests: 6%/8%/exempt/mixed carts, rounding, effective-date change, inclusive price round-trip |
 | T02 | shared | Domain contracts (zod): MenuItem, Modifier, TaxCategory, Order, OrderLine, Payment, Receipt, Device, Staff; HTTP route + WS event schemas; documented in `contracts/` | T00 | todo | | Schemas exported, contract docs written, server + web can import types |
 | T03 | server | SQLite schema + migrations, append-only `order_events`, projections, gapless receipt counter, seed command with Cactus Blue sample menu | T02 | todo | | `npm run seed` builds a DB; tests prove no order/payment row can be deleted and numbers are gapless under concurrency |
