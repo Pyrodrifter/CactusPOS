@@ -7,14 +7,14 @@ Needs: runs on a Windows/Linux laptop, any browser as a client, offline, simple 
 
 ## Decision
 - TypeScript (strict, ESM), npm workspaces.
-- Server: Node 20+, Fastify, `ws`, `better-sqlite3` (WAL).
+- Server: Node 20+, Fastify, `ws`, built-in `node:sqlite` (WAL; Node >= 22.5, no native module to compile).
 - Clients: React + Vite PWA, one app, role-based routes.
 - Contracts: zod schemas in `packages/shared`.
 
 ## Consequences
 + One language for tax, receipts, UI, bridge to PBK; easy for both Codex and Claude.
 + SQLite = no DB server to run in a truck.
-- Native module (`better-sqlite3`) needs prebuilt binaries per OS; ops lane documents it.
+- `node:sqlite` is still flagged experimental in some Node versions; pin Node in ops docs. Swap to better-sqlite3 behind `db.ts` if it ever bites.
 - Firmware is C++/Arduino (separate toolchain, PlatformIO).
 
 ## Alternatives considered
