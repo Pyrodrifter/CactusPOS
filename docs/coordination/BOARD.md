@@ -17,6 +17,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
  
 | T07 | shared | i18n framework: message catalogs EN + NL, locale per device and per receipt, number/currency/date formatting, lint rule against hardcoded UI strings (minimal EN/NL dictionary exists; framework + receipt locale TODO) | T00 | doing | claude · 2026-10-07 | Switching language flips all screens + receipt; missing keys fail tests |
 | T08 | web-admin | First-run setup wizard + business/brand/tax profile (Bonaire/Saba/Statia presets, template menus: food truck, restaurant, bar, shop) | T04,T05,T07 | todo | | Fresh install -> working POS for a made-up business without editing code |
+| T09 | server | Seed profiles (`seed/*.json`), real Cactus Blue menu from cactusblue.us menu board, market-price (open price) items, brand colour | T20 | doing | claude · 2026-10-07 | `npm run seed -- cactus-blue` loads her menu; Lion Fish Burger asks for a price at the counter |
 
 ## M1 — Walking skeleton (order -> kitchen -> pay -> print)
 | ID | Lane | Task | Deps | Status | Owner | Done when |
