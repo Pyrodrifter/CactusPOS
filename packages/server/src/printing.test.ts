@@ -25,6 +25,9 @@ describe('printing', () => {
     expect(sent).toEqual([]);
     expect((await app.inject({ method: 'GET', url: '/api/print/status', headers: h })).json().active).toBe(false);
     expect((await app.inject({ method: 'POST', url: `/api/orders/${o.id}/print`, headers: h, payload: {} })).statusCode).toBe(409);
+    // Browser fallback: the first print is the original, a reprint is marked.
+    expect((await app.inject({ method: 'GET', url: `/api/orders/${o.id}/receipt`, headers: h })).body).not.toContain('COPY');
+    expect((await app.inject({ method: 'GET', url: `/api/orders/${o.id}/receipt?copy=1`, headers: h })).body).toContain('COPY');
   });
 
   it('only the owner can change printer settings', async () => {

@@ -22,7 +22,7 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/orders/:id/pay` | `PayBody` | `Order` (receipt number assigned) |
 | `POST /api/orders/:id/status` | `StatusBody` | `Order` |
 | `POST /api/orders/:id/void` | `VoidBody` | `Order`. Paid or started orders need an owner session or `managerPin` |
-| `GET /api/orders/:id/receipt` | | HTML receipt (v0; replaced by the template engine, T13/T30) |
+| `GET /api/orders/:id/receipt[?copy=1]` | | Printable HTML receipt (browser fallback). `copy=1` marks a reprint. See `printer.md` |
 
 ## Owner only (`403` otherwise). Every change is written to the append-only `audit_log`.
 | Route | Body |

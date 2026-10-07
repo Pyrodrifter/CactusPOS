@@ -37,7 +37,7 @@ export async function printReceipt(order: Order): Promise<void> {
     const st = await api<{ active: boolean }>('/print/status');
     if (st.active) { await api(`/orders/${order.id}/print`, { body: { kind: 'receipt' } }); return; }
   } catch { /* fall through to the browser */ }
-  await browserPrintReceipt(order);
+  await browserPrintReceipt(order, true);
 }
 
 /** True when the server prints receipts itself, so the screen should not also open a print dialog. */
@@ -46,9 +46,9 @@ export async function serverPrints(): Promise<boolean> {
 }
 
 /** Open the server-rendered receipt in a window and trigger the browser's print dialog. */
-export async function browserPrintReceipt(order: Order): Promise<void> {
+export async function browserPrintReceipt(order: Order, copy = false): Promise<void> {
   const token = getSession()?.token ?? '';
-  const res = await fetch(`/api/orders/${order.id}/receipt`, { headers: { 'x-token': token } });
+  const res = await fetch(`/api/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`, { headers: { 'x-token': token } });
   const html = await res.text();
   const w = window.open('', '_blank', 'width=360,height=640');
   if (!w) return;

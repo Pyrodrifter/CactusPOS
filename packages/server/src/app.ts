@@ -131,7 +131,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.get('/api/orders/:id/receipt', async (req, reply) => {
     authOf(req);
     const order = svc.getOrder(idOf(req));
-    return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), true));
+    return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), (req.query as { copy?: string }).copy === '1'));
   });
 
   /* ----- printing ----- */
