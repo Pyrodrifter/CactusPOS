@@ -6,7 +6,7 @@ Format: `- [ ] Qn (lane, date) question — default if unanswered`
 - [ ] Q2 (print) Which receipt printer model (and connection: USB/Ethernet/Bluetooth) and cash drawer will be used? — Default: 80mm Epson-compatible ESC/POS over Ethernet.
 - [ ] Q3 (payments) Which card terminal/provider does she use today? Does it need integration, or is manual entry enough for v1? — Default: manual entry.
 - [x] Q4 (ops) ANSWERED 2026-10-07: router is available; laptop hotspot is acceptable as fallback. Plan: router-first, hotspot documented. (orig:) Truck network: own router with SIM/Starlink, phone hotspot, or fixed WiFi? Will the laptop have a fixed IP? — Default: dedicated travel router, laptop at a reserved IP.
-- [ ] Q5 (menu) Can we get her current menu (items, prices, modifiers, categories) and her current Mac POS name? — Default: sample menu.
+- [x] Q5 (menu) ANSWERED 2026-10-07: Allan sent https://www.cactusblue.us/ ; the 2025-2026 menu board is loaded as seed/cactus-blue.json. Current Mac POS name still unknown. (orig:) Can we get her current menu (items, prices, modifiers, categories) and her current Mac POS name? — Default: sample menu.
 - [x] Q6 (staff) ANSWERED: only Allan's mom and sister use it; simple login (PIN) is enough, no complex roles needed. (orig:) How many staff/devices at once, and do they need separate logins and tip tracking? — Default: PIN per staff, tips tracked per shift.
 - [x] Q7 (languages) ANSWERED: English + Dutch now; design i18n so Papiamento/Spanish can be added later. (orig:) Languages for UI/receipts: English, Dutch, Papiamento, Spanish? — Default: EN + NL.
 - [ ] Q8 (data) Import history from the current POS (sales, customers)? — Default: no.
@@ -15,3 +15,8 @@ Format: `- [ ] Qn (lane, date) question — default if unanswered`
 
 ## Ask the sister (Allan to collect)
 Q1 tax/CRIB number + how her accountant classifies food and drinks; Q2 printer + cash drawer; Q3 card terminal provider; Q5 current menu with prices and modifiers; Q8 whether to import old sales; Q9 logo/colors. Everything else has a default.
+
+## Added 2026-10-07 (from the menu board)
+- [ ] Q1b (shared) Chips (Lays/Doritos/Cheetos) and bottled drinks are resold as bought. Under ABB, reselling imported goods can be outside scope rather than taxed. How does her accountant treat them? — Default: same 6% category as food, flagged unverified.
+- [ ] Q5b (menu) The website mentions a Lion Fish wrap and the "Flamingo Droppings" dessert, but they are not on the menu board. Are they sold, and at what price? What is a typical Lion Fish Burger price? — Default: not on the POS; Lion Fish Burger asks for the price each time.
+- [ ] Q5c (menu) Please check the transcribed prices: Cactus Double $19.75, Kiteburger $16, Classic Cheese $14, Spicy $15, Dutchie $14, Chicken Sandwich $16, Beef Wrap $16, Chicken Wrap $17, Veg Wrap $15, Cheese Wrap $13, chips $2, soft drinks $2.75, water $4, juice $4, extras $1, salad +$3, beef patty +$5.

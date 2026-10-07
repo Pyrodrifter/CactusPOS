@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { openDb } from './db.js';
 import { buildApp } from './app.js';
 import { seedSample } from './seedData.js';
+import { applyProfile } from './seedProfile.js';
 
 const dbPath = process.env.CACTUS_DB ?? resolve(process.cwd(), 'data/cactus.sqlite');
 const wanted = Number(process.env.PORT ?? 3000);
@@ -26,7 +27,9 @@ if (port !== wanted) console.warn(`
 const db = openDb(dbPath);
 if (!db.prepare('SELECT 1 FROM tax_categories LIMIT 1').get()) {
   seedSample(db);
-  console.log('Empty database: loaded SAMPLE menu. Default PINs: owner 1234, staff 1111 — change them in Admin.');
+  const profile = process.env.CACTUS_SEED;
+  if (profile) applyProfile(db, profile);
+  console.log(`Empty database: loaded ${profile ? `seed/${profile}.json` : 'SAMPLE menu'}. Default PINs: owner 1234, staff 1111 — change them in Admin.`);
 }
 const { app } = buildApp(db);
 await app.listen({ port, host: '0.0.0.0' });

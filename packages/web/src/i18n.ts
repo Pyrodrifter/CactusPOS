@@ -73,6 +73,11 @@ const EN = {
   'admin.ratePct': 'Rate %',
   'admin.validFrom': 'Starts on',
   'admin.badRate': 'Enter a rate between 0 and 100 and a start date',
+  'pos.market': 'Market price',
+  'pos.enterPrice': 'Price today (incl. ABB)',
+  'admin.openPrice': 'Market price: ask at the counter',
+  'admin.description': 'Description (optional)',
+  'admin.brandColor': 'Brand colour',
   'p.preparing': 'Preparing', 'p.ready': 'Ready for pickup', 'offline': 'Offline — reconnecting…', 'ticket': 'Ticket', 'soldout': 'Sold out',
 } as const;
 type Key = keyof typeof EN;
@@ -148,6 +153,11 @@ const NL: Record<Key, string> = {
   'admin.ratePct': 'Tarief %',
   'admin.validFrom': 'Gaat in op',
   'admin.badRate': 'Vul een tarief tussen 0 en 100 en een startdatum in',
+  'pos.market': 'Dagprijs',
+  'pos.enterPrice': 'Prijs vandaag (incl. ABB)',
+  'admin.openPrice': 'Dagprijs: invullen bij de kassa',
+  'admin.description': 'Omschrijving (optioneel)',
+  'admin.brandColor': 'Huiskleur',
   'p.preparing': 'In bereiding', 'p.ready': 'Klaar om af te halen', 'offline': 'Offline — verbinding herstellen…', 'ticket': 'Bon', 'soldout': 'Uitverkocht',
 };
 const DICT: Record<Lang, Record<Key, string>> = { en: EN, nl: NL };

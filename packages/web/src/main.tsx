@@ -1,4 +1,4 @@
-import { StrictMode, useState } from 'react';
+import React, { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { api, getSession, setSession, type Session } from './lib/api';
@@ -13,7 +13,7 @@ import './ui/styles.css';
 function Shell({ session }: { session: Session }) {
   const { lang, t } = useLang();
   return (
-    <div className="shell">
+    <div className="shell" style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as React.CSSProperties) : undefined}>
       <header className="topbar">
         <strong className="brand">🌵 {session.business.name}</strong>
         <nav>

@@ -15,7 +15,7 @@ const extras = { id: 'extras', name: 'Extras', required: false, multi: true, opt
   { id: 'cheese', name: 'Extra cheese', priceDeltaCents: 100 }, { id: 'bacon', name: 'Bacon', priceDeltaCents: 200 }] };
 
 const mk = (id: string, categoryId: string, name: string, priceCents: number, extra: Partial<MenuItem> = {}): MenuItem => ({
-  id, categoryId, name, priceCents, taxCategoryId: 'service_6', station: 'kitchen', available: true, modifierGroups: [], ...extra,
+  id, categoryId, name, priceCents, taxCategoryId: 'service_6', station: 'kitchen', available: true, modifierGroups: [], openPrice: false, ...extra,
 });
 
 const ITEMS: MenuItem[] = [

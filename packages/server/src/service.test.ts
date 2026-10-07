@@ -3,6 +3,7 @@ import { openDb } from './db.js';
 import { PosService, type Staff } from './service.js';
 import { seedSample } from './seedData.js';
 import { buildApp } from './app.js';
+import { applyProfile } from './seedProfile.js';
 
 const staff: Staff = { id: 'staff1', name: 'Staff', role: 'staff' };
 let svc: PosService;
@@ -135,5 +136,32 @@ describe('admin', () => {
     const { app } = buildApp(db, { webDist: '/nonexistent' });
     for (let i = 0; i < 5; i++) await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '0000' } });
     expect((await app.inject({ method: 'POST', url: '/api/login', payload: { pin: '1111' } })).statusCode).toBe(429);
+  });
+});
+
+describe('seed profile + market price', () => {
+  it('loads the Cactus Blue menu board', () => {
+    expect(applyProfile(db, 'cactus-blue')).toBe(15);
+    const menu = svc.menu();
+    expect(menu.items.find((i) => i.id === 'cactus_double')!.priceCents).toBe(1975);
+    expect(menu.categories.map((c) => c.name)).toEqual(['Beefburgers', 'Lion Fish', 'Wraps', 'Chips', 'Drinks']);
+    expect(svc.business().address).toContain('Donkey Beach');
+    // Kiteburger + extra bacon + beef patty
+    const o = svc.createOrder({ lines: [{ itemId: 'kiteburger', qty: 1, modifierOptionIds: ['x_bacon', 'x_patty'] }], source: 'pos' }, staff);
+    expect(o.totalCents).toBe(1600 + 100 + 500);
+    // required choice
+    expect(() => svc.createOrder({ lines: [{ itemId: 'soda', qty: 1, modifierOptionIds: [] }], source: 'pos' }, staff)).toThrow(/required/);
+  });
+  it('market-price items need a price typed at the counter', () => {
+    applyProfile(db, 'cactus-blue');
+    expect(() => svc.createOrder({ lines: [{ itemId: 'lionfish_burger', qty: 1, modifierOptionIds: [] }], source: 'pos' }, staff)).toThrow(/Enter the price/);
+    const o = svc.createOrder({ lines: [{ itemId: 'lionfish_burger', qty: 2, modifierOptionIds: ['x_cheese'], priceCents: 2200 }], source: 'pos' }, staff);
+    expect(o.totalCents).toBe((2200 + 100) * 2);
+    // a typed price is ignored for normal items
+    const n = svc.createOrder({ lines: [{ itemId: 'chips', qty: 1, modifierOptionIds: ['c_lays'], priceCents: 1 }], source: 'pos' }, staff);
+    expect(n.totalCents).toBe(200);
+  });
+  it('rejects unknown profile names', () => {
+    expect(() => applyProfile(db, '../etc')).toThrow(/Bad profile name/);
   });
 });

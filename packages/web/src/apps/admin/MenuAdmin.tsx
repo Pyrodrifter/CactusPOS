@@ -54,7 +54,7 @@ export function MenuAdmin() {
   const blank = (): MenuItem => ({
     id: newId('item'), categoryId: cat, name: '', priceCents: 0,
     taxCategoryId: menu.taxCategories.find((x) => x.kind === 'taxed')?.id ?? menu.taxCategories[0]?.id ?? '',
-    station: 'kitchen', available: true, modifierGroups: [],
+    station: 'kitchen', available: true, modifierGroups: [], openPrice: false,
   });
 
   return (
@@ -84,7 +84,7 @@ export function MenuAdmin() {
                 {i.modifierGroups.length > 0 && ` · ${i.modifierGroups.map((g) => g.name).join(', ')}`}
               </small>
             </div>
-            <b>{formatMoney(i.priceCents)}</b>
+            <b>{i.openPrice ? t('pos.market') : formatMoney(i.priceCents)}</b>
             <div className="row-actions">
               <button className={i.available ? '' : 'on'} onClick={() => void run(() => api(`/menu/items/${i.id}/available`, { body: { available: !i.available } }))}>
                 {i.available ? t('admin.inStock') : t('soldout')}
@@ -125,7 +125,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
   const save = async () => {
     const cents = parseMoney(price);
     if (!d.name.trim()) return setErr(t('admin.needName'));
-    if (cents === null) return setErr(t('admin.badPrice'));
+    if (cents === null && !d.openPrice) return setErr(t('admin.badPrice'));
     const groups: ModifierGroup[] = [];
     for (const g of d.modifierGroups) {
       const options = [];
@@ -136,7 +136,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
       }
       groups.push({ ...g, name: g.name.trim() || t('admin.options'), options });
     }
-    try { await onSave({ ...d, name: d.name.trim(), priceCents: cents, modifierGroups: groups }); } catch (e) { setErr(errText(e)); }
+    try { await onSave({ ...d, name: d.name.trim(), description: d.description?.trim() || undefined, priceCents: d.openPrice ? 0 : cents!, modifierGroups: groups }); } catch (e) { setErr(errText(e)); }
   };
 
   return (
@@ -145,7 +145,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
         <h2>{isNew ? t('admin.addItem') : t('admin.edit')}</h2>
         <label>{t('admin.name')}<input value={d.name} autoFocus onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
         <div className="two">
-          <label>{t('admin.price')}<input inputMode="decimal" value={price} placeholder="0.00" onChange={(e) => setPrice(e.target.value)} /></label>
+          <label>{t('admin.price')}<input inputMode="decimal" value={d.openPrice ? '' : price} disabled={d.openPrice} placeholder={d.openPrice ? t('pos.market') : '0.00'} onChange={(e) => setPrice(e.target.value)} /></label>
           <label>{t('admin.category')}
             <select value={d.categoryId} onChange={(e) => setD({ ...d, categoryId: e.target.value })}>
               {menu.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -165,6 +165,8 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
             </select>
           </label>
         </div>
+        <div className="chips"><button className={d.openPrice ? 'on' : ''} onClick={() => setD({ ...d, openPrice: !d.openPrice })}>{t('admin.openPrice')}</button></div>
+        <label>{t('admin.description')}<input value={d.description ?? ''} onChange={(e) => setD({ ...d, description: e.target.value })} /></label>
         {tax?.unverified && <small className="warn-text">{t('admin.taxUnverified')}</small>}
 
         <h3>{t('admin.options')}</h3>

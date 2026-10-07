@@ -85,7 +85,9 @@ export class PosService {
         if (g.required && picked === 0) throw new HttpError(400, `${g.name} is required for ${item.name}`);
         if (!g.multi && picked > 1) throw new HttpError(400, `Only one ${g.name} allowed`);
       }
-      const unit = item.priceCents + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
+      if (item.openPrice && !l.priceCents) throw new HttpError(400, `Enter the price for ${item.name}`);
+      const base = item.openPrice ? l.priceCents! : item.priceCents;
+      const unit = base + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
       return {
         id: randomUUID(), itemId: item.id, name: item.name, qty: l.qty, unitPriceCents: unit,
         modifiers: mods, note: l.note, taxCategoryId: item.taxCategoryId, station: item.station,

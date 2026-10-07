@@ -1,0 +1,96 @@
+{
+  "_source": "Transcribed 2026-10-07 from the public 2025-2026 menu board at https://www.cactusblue.us/our-menu/ . Check prices with the owner before go-live.",
+  "business": {
+    "name": "Cactus Blue",
+    "crib": "",
+    "address": "Donkey Beach (dive site 37, Corporal Meiss), Bonaire",
+    "phone": "",
+    "timezone": "America/Kralendijk",
+    "currency": "USD",
+    "locale": "en",
+    "receiptFooter": "If you're happy, spread the word. If not, please tell us now!",
+    "brandColor": "#0f1d4a"
+  },
+  "categories": [
+    { "id": "burgers", "name": "Beefburgers", "sort": 1 },
+    { "id": "lionfish", "name": "Lion Fish", "sort": 2 },
+    { "id": "wraps", "name": "Wraps", "sort": 3 },
+    { "id": "chips", "name": "Chips", "sort": 4 },
+    { "id": "drinks", "name": "Drinks", "sort": 5 }
+  ],
+  "optionGroups": {
+    "extras": {
+      "id": "extras", "name": "Extras", "required": false, "multi": true,
+      "options": [
+        { "id": "x_bacon", "name": "Extra bacon", "priceDeltaCents": 100 },
+        { "id": "x_cheese", "name": "Extra cheese", "priceDeltaCents": 100 },
+        { "id": "x_jalapeno", "name": "Jalapeños", "priceDeltaCents": 100 },
+        { "id": "x_onions", "name": "Grilled onions", "priceDeltaCents": 100 },
+        { "id": "x_patty", "name": "Add beef patty", "priceDeltaCents": 500 },
+        { "id": "x_salad", "name": "Make it a salad", "priceDeltaCents": 300 }
+      ]
+    },
+    "without": {
+      "id": "without", "name": "Without", "required": false, "multi": true,
+      "options": [
+        { "id": "no_spinach", "name": "No spinach", "priceDeltaCents": 0 },
+        { "id": "no_tomato", "name": "No tomato", "priceDeltaCents": 0 }
+      ]
+    },
+    "dutchie_sauce": {
+      "id": "dutchie_sauce", "name": "Sauce", "required": true, "multi": false,
+      "options": [
+        { "id": "s_curry", "name": "Curry sauce", "priceDeltaCents": 0 },
+        { "id": "s_ketchup", "name": "Ketchup", "priceDeltaCents": 0 }
+      ]
+    },
+    "chips_kind": {
+      "id": "chips_kind", "name": "Which one", "required": true, "multi": false,
+      "options": [
+        { "id": "c_lays", "name": "Lays", "priceDeltaCents": 0 },
+        { "id": "c_doritos", "name": "Doritos", "priceDeltaCents": 0 },
+        { "id": "c_cheetos", "name": "Cheetos", "priceDeltaCents": 0 }
+      ]
+    },
+    "soda_kind": {
+      "id": "soda_kind", "name": "Which one", "required": true, "multi": false,
+      "options": [
+        { "id": "d_coke", "name": "Coke", "priceDeltaCents": 0 },
+        { "id": "d_zero", "name": "Coke Zero", "priceDeltaCents": 0 },
+        { "id": "d_sprite", "name": "Sprite", "priceDeltaCents": 0 },
+        { "id": "d_cassis", "name": "Cassis", "priceDeltaCents": 0 },
+        { "id": "d_icetea", "name": "Ice Tea", "priceDeltaCents": 0 },
+        { "id": "d_fanta", "name": "Fanta", "priceDeltaCents": 0 },
+        { "id": "d_energy", "name": "Energy Drink", "priceDeltaCents": 0 }
+      ]
+    },
+    "water_kind": {
+      "id": "water_kind", "name": "Which one", "required": true, "multi": false,
+      "options": [
+        { "id": "w_still", "name": "Still", "priceDeltaCents": 0 },
+        { "id": "w_sparkling", "name": "Sparkling", "priceDeltaCents": 0 }
+      ]
+    }
+  },
+  "items": [
+    { "id": "cactus_double", "categoryId": "burgers", "name": "Cactus Double", "priceCents": 1975, "description": "The Hungry Man's Burger: double layered, extra cheese, extra bacon, grilled onions, ketchup & BBQ sauce", "groups": ["extras", "without"] },
+    { "id": "kiteburger", "categoryId": "burgers", "name": "Famous Kiteburger", "priceCents": 1600, "description": "Cheese, crispy bacon, grilled onions, ketchup & BBQ sauce", "groups": ["extras", "without"] },
+    { "id": "classic_cheese", "categoryId": "burgers", "name": "Classic Cheese Burger", "priceCents": 1400, "description": "Old-school burger with cheese & ketchup", "groups": ["extras", "without"] },
+    { "id": "spicy_burger", "categoryId": "burgers", "name": "Spicy Burger", "priceCents": 1500, "description": "Fresh jalapeños, cheese & ketchup", "groups": ["extras", "without"] },
+    { "id": "dutchie", "categoryId": "burgers", "name": "The Dutchie Burger", "priceCents": 1400, "description": "Grilled onions, mayonaise, curry sauce or ketchup", "groups": ["dutchie_sauce", "extras", "without"] },
+    { "id": "chicken_sandwich", "categoryId": "burgers", "name": "Chicken Sandwich", "priceCents": 1600, "description": "Chicken strips with cheese, bacon, grilled onions & curry ketchup", "groups": ["extras", "without"] },
+
+    { "id": "lionfish_burger", "categoryId": "lionfish", "name": "Lion Fish Burger", "priceCents": 0, "openPrice": true, "description": "Market price. Grilled fillets, mild honey mustard dressing, cheese, crispy bacon, grilled onions & fresh jalapeños", "groups": ["extras", "without"] },
+
+    { "id": "beef_wrap", "categoryId": "wraps", "name": "Ground Beef Wrap", "priceCents": 1600, "description": "Seasoned ground beef, cheese, crispy bacon, grilled onions and curry ketchup", "groups": ["extras", "without"] },
+    { "id": "chicken_wrap", "categoryId": "wraps", "name": "Chicken Wrap", "priceCents": 1700, "description": "Seasoned chicken strips, veggies, cheese, crispy bacon & curry ketchup", "groups": ["extras", "without"] },
+    { "id": "veg_wrap", "categoryId": "wraps", "name": "Vegetarian Wrap", "priceCents": 1500, "description": "Loads of healthy veggies & soy sauce", "groups": ["extras", "without"] },
+    { "id": "cheese_wrap", "categoryId": "wraps", "name": "Cheese Wrap", "priceCents": 1300, "description": "Melted mixed cheeses with grilled onions & a mild honey mustard dressing", "groups": ["extras", "without"] },
+
+    { "id": "chips", "categoryId": "chips", "name": "Chips", "priceCents": 200, "station": "bar", "groups": ["chips_kind"] },
+
+    { "id": "soda", "categoryId": "drinks", "name": "Soft Drink", "priceCents": 275, "station": "bar", "groups": ["soda_kind"] },
+    { "id": "water", "categoryId": "drinks", "name": "Big Bottle of Water", "priceCents": 400, "station": "bar", "groups": ["water_kind"] },
+    { "id": "juice", "categoryId": "drinks", "name": "Daily Fresh Juice", "priceCents": 400, "station": "bar", "description": "Locally made", "groups": [] }
+  ]
+}
