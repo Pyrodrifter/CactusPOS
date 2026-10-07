@@ -63,10 +63,12 @@ These steps follow [mkcert's mobile guidance](https://github.com/FiloSottile/mkc
 
 - **iPhone/iPad:** open `rootCA.pem`, install the downloaded profile in Settings,
   then enable it under General → About → Certificate Trust Settings. Reopen Safari.
+  [Apple's current trust instructions](https://support.apple.com/en-us/102390).
 - **Android:** install `rootCA.pem` as a CA certificate under the device's security
   credentials settings, then reopen the browser. Menu names and browser support
   vary; verify the browser used by the till. This guide targets browser screens,
   not native Android apps, which have separate user-CA policies.
+  [Google's certificate installation guide](https://support.google.com/pixelphone/answer/2844832?hl=en).
 
 Replacing the local CA requires installing the new public root certificate on
 the devices again. Renewing a leaf with the same CA does not require a new root.
