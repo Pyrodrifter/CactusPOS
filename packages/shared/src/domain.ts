@@ -97,3 +97,27 @@ export type ServerEvent =
 
 export type CreateOrderBodyT = z.infer<typeof CreateOrderBody>;
 export type PayBodyT = z.infer<typeof PayBody>;
+
+/* ---------- Admin contracts (owner only) ---------- */
+export const TaxCategorySchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().min(1).max(60),
+  kind: z.enum(['taxed', 'exempt', 'outside_scope']),
+  rates: z.array(z.object({ validFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), bps: z.number().int().min(0).max(10000) })),
+  reason: z.string().max(200).optional(),
+  unverified: z.boolean().optional(),
+});
+export const BusinessSchema = z.object({
+  name: z.string().min(1).max(80), crib: z.string().max(30), address: z.string().max(200), phone: z.string().max(40),
+  timezone: z.string().min(1).max(60), currency: z.string().length(3), locale: z.enum(['en', 'nl']),
+  receiptFooter: z.string().max(300),
+});
+export type Business = z.infer<typeof BusinessSchema>;
+export const StaffInput = z.object({
+  name: z.string().min(1).max(40), role: Role, active: z.boolean().default(true),
+  /** 4-8 digits. Omit to keep the current PIN. */
+  pin: z.string().regex(/^\d{4,8}$/).optional(),
+});
+export type StaffInputT = z.infer<typeof StaffInput>;
+export interface StaffRow { id: string; name: string; role: Role; active: boolean }
+export const AvailabilityBody = z.object({ available: z.boolean() });

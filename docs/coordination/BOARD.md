@@ -31,8 +31,10 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 ## M2 — Truck-ready
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
-| T20 | web-admin | Menu admin: items, categories, modifiers, tax category per item, availability toggle ("86"), photos, ordering, import/export CSV | T04,T05 | doing | claude · 2026-10-07 | Owner edits menu on a phone; POS updates live |
-| T21 | web-admin | Settings: business details (name, CRIB, address), tax config view, currency, devices & roles, staff PINs, printer setup | T04,T05 | doing | claude · 2026-10-07 | Changing business details reflects on next receipt |
+| T20 | web-admin | Menu admin: items, categories, modifiers, tax category per item, availability toggle ("86"), photos, ordering, import/export CSV (photos + CSV split off as T20b) | T04,T05 | review | claude · 2026-10-07 | Owner edits menu on a phone; POS updates live |
+| T20b | web-admin | Item photos; menu CSV import/export | T20 | todo | | Round-trip export/import keeps prices and options |
+| T21 | web-admin | Settings: business details (name, CRIB, address), tax config view, currency, devices & roles, staff PINs, printer setup (devices/printer split off as T21b) | T04,T05 | review | claude · 2026-10-07 | Changing business details reflects on next receipt |
+| T21b | web-admin | Settings: devices and roles, printer setup | T21,T14 | todo | | Test page prints from the settings screen |
 | T22 | server | Payments v2: card (manual ref + tip), split tender, partial pay, void/refund with manager PIN + reason, comps/discounts with audit trail | T11 | todo | | All flows covered by tests; drawer reconciliation numbers add up |
 | T23 | web-pos | UI for payments v2, discounts, open tabs / hold orders, reprint receipt, order search | T22 | todo | | Cashier can do each flow without leaving the main screen |
 | T24 | web-screens | Pickup board (customer-facing): "Preparing / Ready" by order number, big type, auto-scroll, optional sound | T12 | todo | | Looks good from 3 m on a TV browser |

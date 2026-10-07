@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Order } from '@cactus/shared';
 import { api, getSession } from './api';
 
+/** Fired on window when the owner edits the menu or an item is marked sold out. */
+export const MENU_CHANGED = 'cactus:menu-changed';
+
 /** Live list of today's active orders: initial fetch + WebSocket updates + auto-reconnect. */
 export function useOrders(scope: 'active' | 'today' = 'active') {
   const [orders, setOrders] = useState<Map<string, Order>>(new Map());
@@ -30,6 +33,7 @@ export function useOrders(scope: 'active' | 'today' = 'active') {
       ws.onopen = () => { attempt = 0; setOnline(true); void load(); };
       ws.onmessage = (m) => {
         const ev = JSON.parse(m.data as string);
+        if (ev.type === 'menu.changed') window.dispatchEvent(new Event(MENU_CHANGED));
         if (ev.type === 'order.changed') {
           const o = ev.order as Order;
           setOrders((prev) => new Map(prev).set(o.id, o));
