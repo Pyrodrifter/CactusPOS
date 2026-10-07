@@ -4,3 +4,7 @@ dist/
 .env
 data/
 seed/private/
+coverage/
+*.tsbuildinfo
+.env.*
+!.env.example
