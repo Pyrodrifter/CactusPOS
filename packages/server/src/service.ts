@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import {
   computeTotals, type TaxCategory, type Order, type OrderLine, type MenuItem, type MenuCategory,
-  type CreateOrderBodyT, type PayBodyT,
+  type CreateOrderBodyT, type PayBodyT, type Business,
 } from '@cactus/shared';
+import { Auth, type Staff } from './auth.js';
 import { getKv, nextCounter, tx, type DB } from './db.js';
 
-export interface Business {
-  name: string; crib: string; address: string; phone: string;
-  timezone: string; currency: string; locale: string; receiptFooter: string;
-}
+export type { Business, Staff };
 export const DEFAULT_BUSINESS: Business = {
   name: 'Cactus Blue', crib: '', address: 'Bonaire', phone: '',
   timezone: 'America/Kralendijk', currency: 'USD', locale: 'en', receiptFooter: 'Thank you! / Dank u wel!',
@@ -18,10 +16,9 @@ export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export interface Staff { id: string; name: string; role: 'owner' | 'staff' }
-
 export class PosService {
-  constructor(private db: DB) {}
+  readonly auth: Auth;
+  constructor(private db: DB) { this.auth = new Auth(db); }
 
   business(): Business { return { ...DEFAULT_BUSINESS, ...getKv<Partial<Business>>(this.db, 'business', {}) }; }
 
@@ -39,12 +36,8 @@ export class PosService {
     return { categories, items, taxCategories: this.taxCategories() };
   }
 
-  login(pin: string): Staff | null {
-    const r = this.db.prepare('SELECT id, name, role FROM staff WHERE pin = ? AND active = 1').get(pin) as unknown as Staff | undefined;
-    return r ?? null;
-  }
   private isManagerPin(pin?: string): boolean {
-    return !!pin && this.login(pin)?.role === 'owner';
+    return !!pin && this.auth.findByPin(pin)?.role === 'owner';
   }
 
   getOrder(id: string): Order {
@@ -92,7 +85,9 @@ export class PosService {
         if (g.required && picked === 0) throw new HttpError(400, `${g.name} is required for ${item.name}`);
         if (!g.multi && picked > 1) throw new HttpError(400, `Only one ${g.name} allowed`);
       }
-      const unit = item.priceCents + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
+      if (item.openPrice && !l.priceCents) throw new HttpError(400, `Enter the price for ${item.name}`);
+      const base = item.openPrice ? l.priceCents! : item.priceCents;
+      const unit = base + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
       return {
         id: randomUUID(), itemId: item.id, name: item.name, qty: l.qty, unitPriceCents: unit,
         modifiers: mods, note: l.note, taxCategoryId: item.taxCategoryId, station: item.station,

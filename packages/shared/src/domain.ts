@@ -18,6 +18,9 @@ export const MenuItem = z.object({
   station: z.string().default('kitchen'),
   available: z.boolean().default(true),
   modifierGroups: z.array(ModifierGroup).default([]),
+  /** Market-price item: the cashier types the price for each sale (e.g. catch of the day). */
+  openPrice: z.boolean().default(false),
+  description: z.string().max(300).optional(),
 });
 export type MenuItem = z.infer<typeof MenuItem>;
 
@@ -29,6 +32,8 @@ export const OrderLineInput = z.object({
   qty: z.number().int().min(1).max(99),
   modifierOptionIds: z.array(z.string()).default([]),
   note: z.string().max(200).optional(),
+  /** Tax-inclusive price typed at the counter. Required for, and only used by, openPrice items. */
+  priceCents: z.number().int().positive().max(1_000_000).optional(),
 });
 export type OrderLineInput = z.infer<typeof OrderLineInput>;
 
@@ -97,3 +102,29 @@ export type ServerEvent =
 
 export type CreateOrderBodyT = z.infer<typeof CreateOrderBody>;
 export type PayBodyT = z.infer<typeof PayBody>;
+
+/* ---------- Admin contracts (owner only) ---------- */
+export const TaxCategorySchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().min(1).max(60),
+  kind: z.enum(['taxed', 'exempt', 'outside_scope']),
+  rates: z.array(z.object({ validFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), bps: z.number().int().min(0).max(10000) })),
+  reason: z.string().max(200).optional(),
+  unverified: z.boolean().optional(),
+});
+export const BusinessSchema = z.object({
+  name: z.string().min(1).max(80), crib: z.string().max(30), address: z.string().max(200), phone: z.string().max(40),
+  timezone: z.string().min(1).max(60), currency: z.string().length(3), locale: z.enum(['en', 'nl']),
+  receiptFooter: z.string().max(300),
+  /** Optional top-bar colour, e.g. #0f1d4a. */
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+});
+export type Business = z.infer<typeof BusinessSchema>;
+export const StaffInput = z.object({
+  name: z.string().min(1).max(40), role: Role, active: z.boolean().default(true),
+  /** 4-8 digits. Omit to keep the current PIN. */
+  pin: z.string().regex(/^\d{4,8}$/).optional(),
+});
+export type StaffInputT = z.infer<typeof StaffInput>;
+export interface StaffRow { id: string; name: string; role: Role; active: boolean }
+export const AvailabilityBody = z.object({ available: z.boolean() });

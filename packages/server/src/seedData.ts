@@ -1,5 +1,6 @@
 import { BONAIRE_DEFAULT_TAX, type MenuItem } from '@cactus/shared';
 import { setKv, tx, type DB } from './db.js';
+import { hashPin } from './auth.js';
 
 /** SAMPLE data only. Replace with Cactus Blue's real menu in /admin once available. */
 const CATEGORIES = [
@@ -14,7 +15,7 @@ const extras = { id: 'extras', name: 'Extras', required: false, multi: true, opt
   { id: 'cheese', name: 'Extra cheese', priceDeltaCents: 100 }, { id: 'bacon', name: 'Bacon', priceDeltaCents: 200 }] };
 
 const mk = (id: string, categoryId: string, name: string, priceCents: number, extra: Partial<MenuItem> = {}): MenuItem => ({
-  id, categoryId, name, priceCents, taxCategoryId: 'service_6', station: 'kitchen', available: true, modifierGroups: [], ...extra,
+  id, categoryId, name, priceCents, taxCategoryId: 'service_6', station: 'kitchen', available: true, modifierGroups: [], openPrice: false, ...extra,
 });
 
 const ITEMS: MenuItem[] = [
@@ -34,7 +35,7 @@ export function seedSample(db: DB, opts: { ownerPin?: string; staffPin?: string 
     for (const t of BONAIRE_DEFAULT_TAX) db.prepare('INSERT OR REPLACE INTO tax_categories(id, data) VALUES (?, ?)').run(t.id, JSON.stringify(t));
     for (const c of CATEGORIES) db.prepare('INSERT OR REPLACE INTO menu_categories(id, name, sort) VALUES (?,?,?)').run(c.id, c.name, c.sort);
     for (const i of ITEMS) db.prepare('INSERT OR REPLACE INTO menu_items(id, data) VALUES (?, ?)').run(i.id, JSON.stringify(i));
-    db.prepare('INSERT OR IGNORE INTO staff(id, name, pin, role) VALUES (?,?,?,?)').run('owner', 'Owner', opts.ownerPin ?? '1234', 'owner');
-    db.prepare('INSERT OR IGNORE INTO staff(id, name, pin, role) VALUES (?,?,?,?)').run('staff1', 'Staff', opts.staffPin ?? '1111', 'staff');
+    db.prepare('INSERT OR IGNORE INTO staff(id, name, pin, role) VALUES (?,?,?,?)').run('owner', 'Owner', hashPin(opts.ownerPin ?? '1234'), 'owner');
+    db.prepare('INSERT OR IGNORE INTO staff(id, name, pin, role) VALUES (?,?,?,?)').run('staff1', 'Staff', hashPin(opts.staffPin ?? '1111'), 'staff');
   });
 }
