@@ -10,17 +10,21 @@ import {
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
+import { PrinterSettings, Printing } from './printing.js';
+import type { Transport } from '@cactus/printer';
 import { HttpError, PosService, type Staff } from './service.js';
 import { renderReceiptHtml } from './receipt.js';
 import type { DB } from './db.js';
 
 interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
 
-export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService } {
+export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing } {
   const svc = new PosService(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
   const throttle = new LoginThrottle();
+  const printing = new Printing(db, () => svc.business(), opts.printerTransport);
+  app.addHook('onClose', async () => printing.queue.stop());
   const clients = new Set<Client>();
 
   const broadcast = (ev: ServerEvent) => {
@@ -101,12 +105,14 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
     const staff = authOf(req);
     const order = svc.createOrder(CreateOrderBody.parse(req.body), staff);
     broadcastOrder(order);
+    printing.onSent(order);
     return reply.code(201).send(order);
   });
   app.post('/api/orders/:id/pay', async (req) => {
     const staff = authOf(req);
     const order = svc.pay(idOf(req), PayBody.parse(req.body), staff);
     broadcastOrder(order);
+    printing.onPaid(order);
     return order;
   });
   app.post('/api/orders/:id/status', async (req) => {
@@ -125,7 +131,31 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
   app.get('/api/orders/:id/receipt', async (req, reply) => {
     authOf(req);
     const order = svc.getOrder(idOf(req));
-    return reply.type('text/html').send(renderReceiptHtml(order, svc.business()));
+    return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), true));
+  });
+
+  /* ----- printing ----- */
+  // Tells a screen whether to send receipts to the printer or fall back to the browser's print dialog.
+  app.get('/api/print/status', async (req) => { authOf(req); return { active: printing.active, pending: printing.queue.pending(), jobs: printing.queue.list().slice(0, 20) }; });
+  app.post('/api/orders/:id/print', async (req) => {
+    authOf(req);
+    if (!printing.active) throw new HttpError(409, 'No receipt printer is set up');
+    const kind = (req.body as { kind?: string } | null)?.kind === 'kitchen' ? 'kitchen' : 'receipt';
+    const order = svc.getOrder(idOf(req));
+    return kind === 'kitchen' ? printing.kitchen(order) : printing.receipt(order, { copy: true });
+  });
+  app.post('/api/print/drawer', async (req) => {
+    authOf(req);
+    if (!printing.active || !printing.settings().drawer) throw new HttpError(409, 'No cash drawer is set up');
+    return printing.openDrawer();
+  });
+  app.post('/api/print/retry', async (req) => { authOf(req); printing.queue.retryFailed(); return { ok: true }; });
+  app.get('/api/admin/printer', async (req) => { ownerOf(req); return printing.settings(); });
+  app.put('/api/admin/printer', async (req) => { ownerOf(req); return printing.save(PrinterSettings.parse(req.body)); });
+  app.post('/api/admin/printer/test', async (req) => {
+    ownerOf(req);
+    if (!printing.active) throw new HttpError(409, 'Turn the printer on and enter its address first');
+    return printing.test();
   });
 
   /* ----- menu availability: any signed-in staff ----- */
@@ -175,5 +205,5 @@ export function buildApp(db: DB, opts: { webDist?: string } = {}): { app: Fastif
       return reply.sendFile('index.html');
     });
   }
-  return { app, svc, admin };
+  return { app, svc, admin, printing };
 }

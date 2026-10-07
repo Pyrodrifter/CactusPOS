@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   computeTotals, formatMoney, parseMoney, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
-import { api, ApiError, printReceipt } from '../../lib/api';
+import { api, ApiError, browserPrintReceipt, printReceipt, serverPrints } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
 
@@ -146,7 +146,8 @@ export function Pos() {
             if (!order) { setPaying(null); return; }
             const paid = await api<Order>(`/orders/${order.id}/pay`, { body });
             setPaying(null);
-            void printReceipt(paid);
+            // With a receipt printer the server already printed it on payment.
+            if (!(await serverPrints())) void browserPrintReceipt(paid);
           }}
         />
       )}

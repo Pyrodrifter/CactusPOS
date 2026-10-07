@@ -25,8 +25,9 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T10 | web-pos | Counter UI: category grid, cart, modifiers/notes, quantity, tax-inclusive totals, send to kitchen | T04,T05 | review | claude · 2026-10-07 | Order placed in <10 taps for a typical meal; totals match shared engine |
 | T11 | web-pos | Payment flow: cash (tendered/change), mark paid, receipt number assigned | T10 | review | claude · 2026-10-07 | Cash payment closes the order, change correct, event log complete |
 | T12 | web-screens | Kitchen display: live tickets, elapsed timers, bump to ready/recall, station filter, sound alert on new ticket | T04,T05 | review | claude · 2026-10-07 | New order shows within 1s on a second device; bump updates pickup state |
-| T13 | receipt | Receipt model v1 + HTML renderer + ESC/POS renderer for fixed default template (58/80mm, logo, lines, ABB table, CRIB number) | T01,T02 | doing | claude · 2026-10-07 | Golden-file tests for HTML and ESC/POS bytes; visually verified in browser |
-| T14 | print | Print agent: network ESC/POS (TCP 9100), print queue with retry, cash-drawer kick, printer profiles, "print test page", on-screen fallback if printer offline | T13 | doing | claude · 2026-10-07 | Prints real receipt on target printer; offline printer queues and reprints |
+| T13 | receipt | Receipt model v1 + HTML renderer + ESC/POS renderer for fixed default template (58/80mm, logo, lines, ABB table, CRIB number) | T01,T02 | review | claude · 2026-10-07 | Golden-file tests for HTML and ESC/POS bytes; visually verified in browser |
+| T14 | print | Print agent: network ESC/POS (TCP 9100), print queue with retry, cash-drawer kick, printer profiles, "print test page", on-screen fallback if printer offline | T13 | review | claude · 2026-10-07 | Prints real receipt on target printer; offline printer queues and reprints |
+| T14b | print | USB and Bluetooth printer transports; one printer per station; verify on the real printer once chosen (Q2) | T14 | todo | | Real receipt printed on her printer |
 | T15 | qa | Playwright e2e of M1 flow across 3 browser contexts (pos, kitchen, pickup mock) + seed fixtures | T11,T12 | todo | | CI-style `npm run e2e` green |
 
 ## M2 — Truck-ready

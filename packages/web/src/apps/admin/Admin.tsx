@@ -4,8 +4,9 @@ import { MenuAdmin } from './MenuAdmin';
 import { BusinessAdmin } from './BusinessAdmin';
 import { StaffAdmin } from './StaffAdmin';
 import { TaxAdmin } from './TaxAdmin';
+import { PrinterAdmin } from './PrinterAdmin';
 
-const TABS = ['menu', 'business', 'staff', 'tax'] as const;
+const TABS = ['menu', 'business', 'staff', 'tax', 'printer'] as const;
 type Tab = (typeof TABS)[number];
 
 export function Admin() {
@@ -21,6 +22,7 @@ export function Admin() {
         {tab === 'business' && <BusinessAdmin />}
         {tab === 'staff' && <StaffAdmin />}
         {tab === 'tax' && <TaxAdmin />}
+        {tab === 'printer' && <PrinterAdmin />}
       </div>
     </div>
   );
