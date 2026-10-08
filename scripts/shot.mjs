@@ -29,7 +29,7 @@ const scenario = opt('scenario');
 const pin = opt('pin');
 const [w0, h0] = opt('size', '1180x820').split('x').map(Number);
 // Git Bash on Windows rewrites an argument like /pos into C:/Program Files/Git/pos; undo that, and accept "pos" too.
-const paths = args.map((p) => `/${p.replace(/^[A-Za-z]:[\/].*?[\/]Git[\/]/, '').replace(/^\/+/, '')}`);
+const paths = args.map((p) => `/${p.replace(/^[A-Za-z]:[\\/].*?[\\/]Git[\\/]/, '').replace(/^\/+/, '')}`);
 
 const browser = [
   process.env.SHOT_BROWSER,
