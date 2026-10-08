@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { beep, useNow, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
 import { Icon, type IconName } from '../../ui/Icon';
+import { haptic } from '../../ui/touch';
 import './kitchen.css';
 
 const copy = {
@@ -35,10 +36,13 @@ function Ticket({ o, now, online }: { o: Order; now: number; online: boolean }) 
   const inFlight = useRef(false);
   const mins = Math.max(0, Math.floor((now - Date.parse(o.createdAt)) / 60000));
   const late = mins >= 10 && o.status !== 'ready';
+  const warm = mins >= 5 && !late && o.status !== 'ready';
+  const fresh = o.status === 'sent' && now - Date.parse(o.createdAt) < 20_000;
   // Keep actions locked until the live projection confirms a successful update.
   useEffect(() => { if (pending === o.status) setPending(null); }, [o.status, pending]);
   async function setStatus(status: 'preparing' | 'ready' | 'collected') {
     if (inFlight.current || pending || !online) return;
+    haptic(15);
     inFlight.current = true;
     setPending(status);
     setFailed(false);
@@ -48,10 +52,10 @@ function Ticket({ o, now, online }: { o: Order; now: number; online: boolean }) 
   }
   const disabled = pending !== null || !online;
   return (
-    <article className={`ticket${late ? ' late' : ''}${o.status === 'ready' ? ' ticket-ready' : ''}`} aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-busy={pending !== null}>
+    <article className={`ticket${late ? ' late' : warm ? ' warm' : ''}${fresh ? ' ticket-fresh' : ''}${o.status === 'ready' ? ' ticket-ready' : ''}`} aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-busy={pending !== null}>
       <header className="ticket-heading">
         <div className="ticket-number"><span>{t('ticket')}</span><b>#{o.ticketNumber}</b></div>
-        <span className={`ticket-age${late ? ' ticket-age-late' : ''}`} aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={18} />{mins} min</span>
+        <span className={`ticket-age${late ? ' ticket-age-late' : warm ? ' ticket-age-warm' : ''}`} aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={18} />{mins} min</span>
       </header>
       <div className={`ticket-payment ${o.paid ? 'ticket-paid' : 'ticket-unpaid'}`}>
         <Icon name={o.paid ? 'check' : 'cash'} size={16} />{o.paid ? t('orders.paid') : t('orders.unpaid')}
@@ -60,7 +64,7 @@ function Ticket({ o, now, online }: { o: Order; now: number; online: boolean }) 
         {o.lines.map((l) => (
           <li key={l.id}>
             <div className="ticket-line"><b className="ticket-quantity">{l.qty}×</b><strong>{l.name}</strong></div>
-            {l.modifiers.length > 0 && <div className="ticket-modifiers">{l.modifiers.map((m) => m.name).join(', ')}</div>}
+            {l.modifiers.length > 0 && <div className="ticket-modifiers">{l.modifiers.map((m) => <div key={m.id} className={/^(no|geen)\s/i.test(m.name) ? 'ticket-exclusion' : undefined}>{m.name}</div>)}</div>}
             {l.note && <div className="ticket-line-note">{l.note}</div>}
           </li>
         ))}
@@ -83,7 +87,7 @@ export function Kitchen() {
   const { t, lang } = useLang();
   const c = copy[lang];
   const { orders, online, newIds, clearNew } = useOrders('active');
-  const now = useNow();
+  const now = useNow(5000);
   useEffect(() => { if (newIds.length) { beep(); clearNew(); } }, [newIds, clearNew]);
   const live = orders.filter((o) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready');
   const cols: { status: Order['status']; title: string; icon: IconName; empty: string }[] = [

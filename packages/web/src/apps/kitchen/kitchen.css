@@ -23,13 +23,17 @@
 .kitchen .kitchen-count { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px; background: #2a3e4b; font-size: 14px; font-weight: 750; }
 .kitchen .kitchen-column-empty { border: 1px dashed #3d5260; border-radius: 18px; padding: 30px 16px; text-align: center; font-size: 14px; color: var(--muted); margin: 0; }
 .kitchen .ticket { border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 16px; box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
-.kitchen .ticket.late { border-color: #e2ad6d; box-shadow: inset 4px 0 #e2ad6d, 0 5px 18px #070f1426; }
+.kitchen .ticket.warm { border-color: #e2ad6d; box-shadow: inset 4px 0 #e2ad6d, 0 5px 18px #070f1426; }
+.kitchen .ticket.late { border-color: #ef9898; box-shadow: inset 4px 0 #ef9898, 0 5px 18px #070f1426; }
+.kitchen .ticket-fresh { animation: kitchen-arrival 1.2s ease-out 2; }
+@keyframes kitchen-arrival { 0%, 100% { background-color: var(--card); } 40% { background-color: #35534c; } }
 .kitchen .ticket-ready { background: #203b38; border-color: #486859; }
 .kitchen .ticket .ticket-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .kitchen .ticket-number span { display: block; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
 .kitchen .ticket-number b { display: block; font-size: 36px; line-height: 1.2; letter-spacing: -.8px; }
 .kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; font-size: 14px; font-weight: 600; white-space: nowrap; background: #293e4b; color: #c9d9df; border-radius: 10px; }
-.kitchen .ticket-age-late { color: #ffce96; background: #513f2c; }
+.kitchen .ticket-age-warm { color: #ffce96; background: #513f2c; }
+.kitchen .ticket-age-late { color: #ffd0d0; background: #502e31; }
 .kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 650; border-radius: 999px; margin-top: 9px; padding: 4px 9px; }
 .kitchen .ticket-paid { background: #2b4a3e; color: #c8eeaf; }
 .kitchen .ticket-unpaid { background: #4a3b2d; color: #ffd09b; }
@@ -39,6 +43,7 @@
 .kitchen .ticket-line strong { font-weight: 650; }
 .kitchen .ticket-quantity { color: #c9ee96; min-width: 28px; }
 .kitchen .ticket-modifiers { color: #b8cbd2; margin: 5px 0 0 38px; font-size: 14px; }
+.kitchen .ticket-exclusion { color: #ffb5b5; font-weight: 650; }
 .kitchen .ticket-line-note { color: #ffce96; margin: 5px 0 0 38px; font-size: 15px; }
 .kitchen .ticket-note, .kitchen .ticket-error { display: flex; gap: 9px; padding: 12px; border-radius: 12px; margin: 0 0 14px; background: #483a29; color: #ffdda8; font-size: 14px; }
 .kitchen .ticket-error { background: #502e31; color: #ffd0d0; }

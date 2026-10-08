@@ -97,6 +97,16 @@ const EN = {
   'printer.st.printing': 'Printing',
   'printer.st.done': 'Printed',
   'printer.st.failed': 'Failed',
+  'cart.title': 'Current order',
+  'cart.view': 'View order',
+  'cart.payNow': 'Pay',
+  'cart.sendOnly': 'Send, pay later',
+  'toast.sent': 'Sent to kitchen: order',
+  'pay.paid': 'Paid',
+  'pay.next': 'Next order',
+  'pay.failed': 'The order could not be sent',
+  'pay.noTip': 'No tip',
+  'pay.cardHint': 'Take the payment on the card terminal first, then confirm here.',
   'p.preparing': 'Preparing', 'p.ready': 'Ready for pickup', 'offline': 'Offline — reconnecting…', 'ticket': 'Ticket', 'soldout': 'Sold out',
 } as const;
 type Key = keyof typeof EN;
@@ -196,6 +206,16 @@ const NL: Record<Key, string> = {
   'printer.st.printing': 'Bezig',
   'printer.st.done': 'Afgedrukt',
   'printer.st.failed': 'Mislukt',
+  'cart.title': 'Huidige bestelling',
+  'cart.view': 'Bekijk bestelling',
+  'cart.payNow': 'Betalen',
+  'cart.sendOnly': 'Versturen, later betalen',
+  'toast.sent': 'Naar de keuken: bestelling',
+  'pay.paid': 'Betaald',
+  'pay.next': 'Volgende bestelling',
+  'pay.failed': 'De bestelling kon niet worden verstuurd',
+  'pay.noTip': 'Geen fooi',
+  'pay.cardHint': 'Reken eerst af op de pinautomaat en bevestig daarna hier.',
   'p.preparing': 'In bereiding', 'p.ready': 'Klaar om af te halen', 'offline': 'Offline — verbinding herstellen…', 'ticket': 'Bon', 'soldout': 'Uitverkocht',
 };
 const DICT: Record<Lang, Record<Key, string>> = { en: EN, nl: NL };

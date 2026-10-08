@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
-import { usePickup } from '../../lib/live';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { useNow, usePickup } from '../../lib/live';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
 import './pickup.css';
@@ -26,11 +26,22 @@ export function Pickup() {
   const { t, lang } = useLang();
   const c = copy[lang];
   const { board, online } = usePickup();
+  const now = useNow(10_000);
+  const [businessName, setBusinessName] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch('/api/health', { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((health: { business?: unknown } | null) => {
+        if (typeof health?.business === 'string') setBusinessName(health.business);
+      }).catch(() => { /* Keep the local board usable while the server reconnects. */ });
+    return () => controller.abort();
+  }, [online]);
   return (
     <div className="pickup pickup-board">
       <header className="pickup-heading">
-        <div className="pickup-brand"><span className="pickup-mark"><Icon name="leaf" size={32} /></span><div><p>{t('nav.pickup')}</p><h1>{c.title}</h1><span>{c.subtitle}</span></div></div>
-        <div className={`pickup-connection${online ? '' : ' pickup-reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} />{online ? c.live : c.reconnect}</div>
+        <div className="pickup-brand"><span className="pickup-mark"><Icon name="leaf" size={32} /></span><div><p>{businessName || t('nav.pickup')}</p><h1>{c.title}</h1><span>{c.subtitle}</span></div></div>
+        <div className="pickup-overview"><time dateTime={new Date(now).toISOString()} className="pickup-clock">{new Date(now).toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</time><div className={`pickup-connection${online ? '' : ' pickup-reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} />{online ? c.live : c.reconnect}</div></div>
       </header>
       {!online && <p className="pickup-offline" role="status"><Icon name="wifi-off" /><span>{c.offline}</span></p>}
       <div className="pickup-columns">
