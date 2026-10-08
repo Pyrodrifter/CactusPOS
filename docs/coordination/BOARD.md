@@ -65,9 +65,10 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T43 | firmware | Hardware notes: BOM, enclosure, charging, range test | T41 | todo | | |
 
 ## M5 — Polish
-| UX01 | web-core | Shared visual refresh: local SVG icon system, app navigation, PIN login, design tokens, accessible touch/focus styles and responsive shell | T00 | doing | codex · 2026-10-07 | Consistent polished shell at phone/tablet widths; controls at least 48px; icons have accessible labels; existing flows preserved |
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
+| UX01 | web-core | Shared visual refresh: local SVG icon system, app navigation, PIN login, design tokens, accessible touch/focus styles and responsive shell | T00 | doing | codex · 2026-10-07 | Consistent polished shell at phone/tablet widths; controls at least 48px; icons have accessible labels; existing flows preserved |
+| UX02 | web-pos | Polish POS menu/cart/modifier/payment/order views with icons, clear hierarchy and phone/tablet touch layouts | T00 | doing | codex-pos · 2026-10-07 | Existing order/payment flows work; quantity/actions at least 48px; no horizontal overflow at 390px; visual browser verification |
 | T50 | web-pos | Training mode (separate DB), quick-keys, dark/light themes, language NL/EN/PAP/ES | T23 | todo | | |
 | T51 | server | Inventory-lite: stock counts per item, low alerts, auto-86 | T20 | todo | | |
 | T52 | web-screens | Customer-facing order status page via QR on receipt | T24 | todo | | |
