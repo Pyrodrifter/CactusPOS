@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { MAX_CENTS } from './money.js';
 import { TaxBreakdownRow, TaxCategorySchema } from './tax.js';
+import { ServiceMode } from './receiptDesign.js';
 
 /**
  * Wire and storage contracts. Everything that crosses a package boundary is a zod schema here;
@@ -87,6 +88,10 @@ export const OrderSource = z.enum(['pos', 'mobile', 'guest']);
 
 export const Order = z.object({
   id: z.string(),
+  /** Absent on old orders means board. Counter orders are never queued on either board. */
+  serviceMode: ServiceMode.optional(),
+  /** Immutable design version selected when the order was created. Zero is the built-in design. */
+  templateVersion: z.number().int().nonnegative().optional(),
   /** Short number shown on tickets / pickup board; restarts daily. */
   ticketNumber: z.number().int().positive(),
   /** Gapless legal receipt number, assigned on payment. */
@@ -231,6 +236,7 @@ export const ServerEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('hello'), serverTime: IsoDateTime }),
   z.object({ type: z.literal('order.changed'), order: Order }),
   z.object({ type: z.literal('menu.changed') }),
+  z.object({ type: z.literal('service-mode.changed'), mode: ServiceMode }),
   z.object({ type: z.literal('pickup.changed'), preparing: z.array(z.number().int()), ready: z.array(z.number().int()) }),
 ]);
 export type ServerEvent = z.infer<typeof ServerEventSchema>;
