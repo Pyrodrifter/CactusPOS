@@ -52,7 +52,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T30 | receipt | Template model v2: blocks, variables, conditionals, versioning, WiFi-QR and generic QR/barcode blocks, image dithering for thermal | T13 | todo | | Schema documented; renderers handle all blocks |
 | T31 | receipt | **Receipt editor** UI (drag blocks, edit text/variables, upload logo, WiFi QR wizard, giveaway/promo block with date range, live 58/80mm preview, test print, publish/rollback versions) | T30,T21 | todo | | Non-technical user changes the footer + adds WiFi QR and prints it |
 | T32 | books | Spike: read PBK journal schema and `docs/bonaire-tax.md`; write ADR on direct-append vs import-file; prototype one day's entry | T01 | todo | | ADR merged; prototype entry accepted by PBK `npm run doctor` |
-| T33 | books | Z-report (end of day): sales by tax category, tender totals, tips, voids, drawer variance; printable and stored | T22 | todo | | Numbers reconcile with order events in tests |
+| T33 | books | Z-report (end of day): sales by tax category, tender totals, tips, voids, drawer variance; printable and stored | T22 | doing | claude · 2026-10-08 | Numbers reconcile with order events in tests |
 | T34 | books | PBK bridge: post daily summarized entry, backfill, idempotent re-run, mapping of tax categories -> PBK accounts | T32,T33 | todo | | Re-running a day never duplicates; PBK ABB report matches POS Z-reports |
 | T35 | web-admin | Reports: daily/weekly sales, top items, hourly heatmap, ABB summary per quarter (15th-of-month deadline reminder) | T33 | todo | | Matches Z-reports |
 
