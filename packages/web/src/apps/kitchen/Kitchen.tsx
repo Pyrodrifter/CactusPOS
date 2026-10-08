@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
-import type { Order } from '@cactus/shared';
+import { kitchenLines, type Order } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { beep, useNow, useOrders } from '../../lib/live';
 import { useLang } from '../../i18n';
@@ -17,6 +17,7 @@ const copy = {
     offline: 'Showing the last received tickets. Actions resume when the connection returns.',
     elapsed: 'minutes since ordered',
     undo: 'Undo', undoFailed: 'Not undone, try again', show: 'Show tickets',
+    added: 'Added', round: 'Round',
   },
   nl: {
     subtitle: 'Elke bon in één oogopslag', live: 'Live updates', reconnect: 'Verbinding herstellen',
@@ -27,6 +28,7 @@ const copy = {
     offline: 'De laatst ontvangen bonnen blijven zichtbaar. Acties hervatten zodra de verbinding terug is.',
     elapsed: 'minuten sinds besteld',
     undo: 'Ongedaan maken', undoFailed: 'Niet gelukt, probeer opnieuw', show: 'Bonnen tonen',
+    added: 'Toegevoegd', round: 'Ronde',
   },
 };
 
@@ -59,10 +61,15 @@ function Ticket({ o, now, online, settled, onMoved }: {
   const [pending, setPending] = useState<Order['status'] | null>(null);
   const [failed, setFailed] = useState(false);
   const inFlight = useRef(false);
-  const mins = Math.max(0, Math.floor((now - Date.parse(o.createdAt)) / 60000));
+  // A tab that orders again is a new ticket for the kitchen: its clock starts when that round arrived.
+  const since = Date.parse(o.kitchenSince ?? o.createdAt);
+  const mins = Math.max(0, Math.floor((now - since) / 60000));
   const late = mins >= 10 && o.status !== 'ready';
   const warm = mins >= 5 && !late && o.status !== 'ready';
-  const fresh = o.status === 'sent' && now - Date.parse(o.createdAt) < 20_000;
+  const fresh = o.status === 'sent' && now - since < 20_000;
+  // Only what still has to be made. Earlier rounds of a tab were already handed over.
+  const firstRound = o.kitchenRound ?? 1;
+  const lines = kitchenLines(o);
   // Keep actions locked until the live projection confirms a successful update.
   useEffect(() => { if (pending === o.status) setPending(null); }, [o.status, pending]);
   async function setStatus(status: Step) {
@@ -89,19 +96,22 @@ function Ticket({ o, now, online, settled, onMoved }: {
         {/* Number and payment state wrap as a pair, so the age always keeps the top right corner. */}
         <div className="ticket-id">
           <div className="ticket-number"><b>#{o.ticketNumber}</b></div>
+          {firstRound > 1 && <div className="ticket-round">{c.round} {firstRound}</div>}
           <div className={`ticket-payment ${o.paid ? 'ticket-paid' : 'ticket-unpaid'}`}>
             <Icon name={o.paid ? 'check' : 'cash'} size={18} />{o.paid ? t('orders.paid') : t('orders.unpaid')}
           </div>
         </div>
         <span className={`ticket-age${late ? ' ticket-age-late' : warm ? ' ticket-age-warm' : ''}`} aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={20} />{mins} min</span>
       </header>
+      {o.tabName && <p className="ticket-tab"><Icon name="staff" size={22} /><span>{o.tabName}</span></p>}
       {o.note && <p className="ticket-note"><Icon name="edit" size={22} /><span>{o.note}</span></p>}
       <ul className="ticket-lines">
-        {o.lines.map((l) => (
-          <li key={l.id}>
+        {lines.map((l) => (
+          <li key={l.id} className={(l.round ?? 1) > firstRound ? 'ticket-line-added' : undefined}>
             <b className={`ticket-quantity${l.qty > 1 ? ' ticket-quantity-many' : ''}`}>{l.qty}×</b>
             <div className="ticket-item">
               <strong>{l.name}</strong>
+              {(l.round ?? 1) > firstRound && <span className="ticket-added"><Icon name="plus" size={16} />{c.added}</span>}
               {l.modifiers.length > 0 && (
                 <div className="ticket-modifiers">
                   {l.modifiers.map((m) => /^(no|geen)\s/i.test(m.name)
@@ -133,6 +143,17 @@ export function Kitchen() {
   const { orders, online, newIds, clearNew } = useOrders('active');
   const now = useNow(5000);
   useEffect(() => { if (newIds.length) { beep(); clearNew(); } }, [newIds, clearNew]);
+  // A tab that adds a round is new work too, even though its ticket already exists.
+  const rounds = useRef(new Map<string, number>());
+  useEffect(() => {
+    let added = false;
+    for (const o of orders) {
+      const seen = rounds.current.get(o.id);
+      if (seen !== undefined && (o.round ?? 1) > seen && (o.status === 'sent' || o.status === 'preparing')) added = true;
+      rounds.current.set(o.id, o.round ?? 1);
+    }
+    if (added) beep();
+  }, [orders]);
   const live = orders.filter((o) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready');
   const cols: { status: Column; title: string; icon: IconName; empty: string }[] = [
     { status: 'sent', title: t('st.sent'), icon: 'receipt', empty: c.sentEmpty },

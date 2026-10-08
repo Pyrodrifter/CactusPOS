@@ -143,3 +143,10 @@
   .kitchen .kitchen-switch .kitchen-count { min-width: 0; height: auto; padding: 0 8px; border-radius: 9px; background: none; font-size: 22px; line-height: 1.15; }
   .kitchen .kitchen-switch button[aria-pressed='true'] .kitchen-count { background: none; color: #10222b; }
 }
+
+/* ---- tabs: who it is for, which round, what was added ---- */
+.kitchen .ticket-tab { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 22px; font-weight: 750; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.kitchen .ticket-round { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 99px; background: #3a5a78; color: #dcecff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.kitchen .ticket-added { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0; padding: 3px 9px; border-radius: 99px; background: #c9ee96; color: #1f3a12; font-size: 14px; font-weight: 750; vertical-align: middle; white-space: nowrap; }
+.kitchen .ticket-line-added { background: rgba(201, 238, 150, .09); border-radius: 12px; }
+.kitchen .ticket-lines li.ticket-line-added { padding-left: 10px; padding-right: 10px; margin: 0 -10px; }

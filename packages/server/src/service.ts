@@ -195,7 +195,7 @@ export class PosService {
         id: randomUUID(), ticketNumber: nextCounter(this.db, `ticket:${date}`), receiptNumber: null,
         status: 'sent', paid: false, lines, payments: [], note: body.note, source: body.source,
         totalCents: figures.totalCents, taxCents: figures.taxCents, breakdown: figures.breakdown,
-        tabName: body.tabName, round: 1, kitchenRound: 1,
+        tabName: body.tabName, round: 1, kitchenRound: 1, kitchenSince: now,
         createdAt: now, updatedAt: now, createdBy: staff.id,
       };
       this.save(order, 'order.created', { request: body.lines }, staff, date, true);
@@ -228,6 +228,7 @@ export class PosService {
       // If they are still on an earlier round, the new lines simply join the ticket they have.
       if (order.status === 'ready' || order.status === 'collected') {
         order.kitchenRound = round;
+        order.kitchenSince = new Date().toISOString();
         order.status = 'sent';
       } else {
         order.kitchenRound = order.kitchenRound ?? 1;

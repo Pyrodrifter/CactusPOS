@@ -110,6 +110,8 @@ export const Order = z.object({
   round: z.number().int().positive().optional(),
   /** First round the kitchen still has to make; earlier rounds were already handed over. Absent means 1. */
   kitchenRound: z.number().int().positive().optional(),
+  /** When the kitchen's current ticket started: the order time, or when a later round became a fresh ticket. */
+  kitchenSince: IsoDateTime.optional(),
   createdAt: IsoDateTime, updatedAt: IsoDateTime, createdBy: z.string(),
 });
 export type Order = z.infer<typeof Order>;

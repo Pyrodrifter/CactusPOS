@@ -45,6 +45,8 @@ describe('tabs', () => {
     await status(tab.id, 'collected');
     const r3 = Order.parse((await add(tab.id, [{ itemId: 'fries', qty: 1 }])).json());           // +500
     expect(r3).toMatchObject({ round: 3, kitchenRound: 3, status: 'sent', totalCents: 2600 });
+    expect(r3.kitchenSince! >= r2.kitchenSince!).toBe(true);
+    expect(r2.kitchenSince).toBe(tab.kitchenSince); // joining a ticket in progress does not restart its clock
     expect(kitchenLines(r3).map((l) => l.name)).toEqual(['Fries']);
     expect(r3.lines.map((l) => [l.name, l.round])).toEqual([['Burger', 1], ['Cola', 2], ['Fries', 3]]);
     // per-line ABB adds up to the receipt ABB: 1500 -> 85, 600 -> 34, 500 -> 28
