@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
-  AvailabilityBody, BusinessSchema, CreateOrderBody, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
+  type Ack, AvailabilityBody, BusinessSchema, CreateOrderBody, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
   StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
@@ -41,6 +41,10 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     if (err instanceof HttpError) return reply.code(err.status).send({ error: err.message });
     if (err instanceof ZodError) return reply.code(400).send({ error: 'Invalid request', issues: err.issues });
     if (err instanceof MoneyError) return reply.code(400).send({ error: err.message });
+    // Another program holds the database (a backup, a second copy). Nothing was written; the screen can retry.
+    if ((err as { code?: string; errstr?: string })?.errstr === 'database is locked' || /database is locked/.test(String((err as Error)?.message))) {
+      return reply.code(503).send({ error: 'The till is busy for a moment. Please try again.' });
+    }
     // A sale the tax setup cannot price must stop loudly rather than go through untaxed.
     if (err instanceof TaxConfigError) return reply.code(409).send({ error: `Tax setup problem: ${err.message}` });
     const e = err as { statusCode?: number; message?: string };
@@ -61,6 +65,13 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   };
   const idOf = (req: FastifyRequest) => IdParams.parse(req.params).id;
   const menuChanged = () => broadcast({ type: 'menu.changed' });
+  const ok: Ack = { ok: true };
+  /** Optional `Idempotency-Key` header; a malformed one is a client bug, so it is rejected rather than ignored. */
+  const requestIdOf = (req: FastifyRequest): string | undefined => {
+    const h = req.headers['idempotency-key'];
+    const value = Array.isArray(h) ? h[0] : h;
+    return value === undefined ? undefined : RequestId.parse(value);
+  };
 
   app.register(websocket);
   app.register(async (f) => {
@@ -91,7 +102,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     const h = req.headers['x-token'];
     const token = Array.isArray(h) ? h[0] : h;
     if (token) svc.auth.logout(token);
-    return { ok: true };
+    return ok;
   });
 
   app.get('/api/menu', async (req) => { authOf(req); return svc.menu(); });
@@ -103,16 +114,19 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
 
   app.post('/api/orders', async (req, reply) => {
     const staff = authOf(req);
-    const order = svc.createOrder(CreateOrderBody.parse(req.body), staff);
-    broadcastOrder(order);
-    printing.onSent(order);
+    const requestId = requestIdOf(req);
+    const known = requestId ? db.prepare('SELECT 1 FROM requests WHERE key = ?').get(`create:${requestId}`) : undefined;
+    const order = svc.createOrder(CreateOrderBody.parse(req.body), staff, requestId);
+    // A repeat returns the first result without announcing or printing it a second time.
+    if (!known) { broadcastOrder(order); printing.onSent(order); }
     return reply.code(201).send(order);
   });
   app.post('/api/orders/:id/pay', async (req) => {
     const staff = authOf(req);
-    const order = svc.pay(idOf(req), PayBody.parse(req.body), staff);
-    broadcastOrder(order);
-    printing.onPaid(order);
+    const requestId = requestIdOf(req);
+    const known = requestId ? db.prepare('SELECT 1 FROM requests WHERE key = ?').get(`pay:${requestId}`) : undefined;
+    const order = svc.pay(idOf(req), PayBody.parse(req.body), staff, requestId);
+    if (!known) { broadcastOrder(order); printing.onPaid(order); }
     return order;
   });
   app.post('/api/orders/:id/status', async (req) => {
@@ -149,7 +163,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     if (!printing.active || !printing.settings().drawer) throw new HttpError(409, 'No cash drawer is set up');
     return printing.openDrawer();
   });
-  app.post('/api/print/retry', async (req) => { authOf(req); printing.queue.retryFailed(); return { ok: true }; });
+  app.post('/api/print/retry', async (req) => { authOf(req); printing.queue.retryFailed(); return ok; });
   app.get('/api/admin/printer', async (req) => { ownerOf(req); return printing.settings(); });
   app.put('/api/admin/printer', async (req) => { ownerOf(req); return printing.save(PrinterSettings.parse(req.body)); });
   app.post('/api/admin/printer/test', async (req) => {
@@ -173,14 +187,14 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     menuChanged();
     return c;
   });
-  app.delete('/api/admin/menu/categories/:id', async (req) => { admin.deleteCategory(idOf(req), ownerOf(req)); menuChanged(); return { ok: true }; });
+  app.delete('/api/admin/menu/categories/:id', async (req) => { admin.deleteCategory(idOf(req), ownerOf(req)); menuChanged(); return ok; });
   app.put('/api/admin/menu/items/:id', async (req) => {
     const by = ownerOf(req);
     const item = admin.upsertItem(MenuItem.parse({ ...(req.body as object), id: idOf(req) }), by);
     menuChanged();
     return item;
   });
-  app.delete('/api/admin/menu/items/:id', async (req) => { admin.deleteItem(idOf(req), ownerOf(req)); menuChanged(); return { ok: true }; });
+  app.delete('/api/admin/menu/items/:id', async (req) => { admin.deleteItem(idOf(req), ownerOf(req)); menuChanged(); return ok; });
 
   app.get('/api/admin/business', async (req) => { ownerOf(req); return svc.business(); });
   app.put('/api/admin/business', async (req) => admin.setBusiness(BusinessSchema.parse(req.body), ownerOf(req)));

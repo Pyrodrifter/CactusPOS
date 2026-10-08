@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   computeTotals, formatMoney, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
-import { api, ApiError, browserPrintReceipt, printReceipt, serverPrints } from '../../lib/api';
+import { api, ApiError, browserPrintReceipt, newRequestId, printReceipt, serverPrints } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import type { CSSProperties } from 'react';
 import { useLang } from '../../i18n';
@@ -107,6 +107,10 @@ export function Pos() {
   };
   const bump = (key: string, d: number) => { haptic(6); setCart((c) => c.map((l) => (l.key === key ? { ...l, qty: Math.min(99, l.qty + d) } : l)).filter((l) => l.qty > 0)); };
 
+  // One key per cart: tapping Send again after a lost reply returns the same order instead of making a second one.
+  const sendKey = useRef(newRequestId());
+  useEffect(() => { sendKey.current = newRequestId(); }, [cart, note]);
+
   const place = async (reportSuccess = false): Promise<Order | null> => {
     if (placing.current || !cart.length) return null;
     placing.current = true; setSending(true); setSuccess('');
@@ -114,6 +118,7 @@ export function Pos() {
     try {
       const order = await api<Order>('/orders', {
         body: { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents })), note: note || undefined },
+        requestId: sendKey.current,
       });
       setCart([]); setNote('');
       if (reportSuccess) {
@@ -208,7 +213,7 @@ export function Pos() {
             if (!order) throw new Error(t('pay.failed'));
             // Keep the created order for a payment retry; never create the cart twice.
             setPaying({ order });
-            const paid = await api<Order>(`/orders/${order.id}/pay`, { body });
+            const paid = await api<Order>(`/orders/${order.id}/pay`, { body, requestId: `pay-${order.id}` });
             // With a receipt printer the server already printed it on payment.
             if (!(await serverPrints())) void browserPrintReceipt(paid);
             return paid;

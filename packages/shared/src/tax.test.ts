@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BONAIRE_DEFAULT_TAX, computeTotals, rateAt, taxInGross, TaxCategorySchema, type TaxCategory } from './tax.js';
-import { assertCents, MAX_CENTS, parseMoney, roundDiv, sumCents } from './money.js';
+import { assertCents, formatMoney, MAX_CENTS, parseMoney, roundDiv, sumCents } from './money.js';
 
 const D = '2026-10-07';
 
@@ -132,6 +132,30 @@ describe('receipt totals', () => {
     expect(() => computeTotals([{ taxCategoryId: 'exempt', grossCents: 0.5 }], BONAIRE_DEFAULT_TAX, D)).toThrow();
     expect(() => computeTotals([{ taxCategoryId: 'nope', grossCents: 1 }], BONAIRE_DEFAULT_TAX, D)).toThrow(/Unknown tax category/);
     expect(() => computeTotals([{ taxCategoryId: 'exempt', grossCents: MAX_CENTS }, { taxCategoryId: 'exempt', grossCents: 1 }], BONAIRE_DEFAULT_TAX, D)).toThrow();
+  });
+});
+
+describe('review R7: formatting and signed totals stay inside the supported range', () => {
+  it('formatMoney rejects what is not integer cents in range', () => {
+    for (const bad of [0.5, NaN, Infinity, MAX_CENTS + 1, -MAX_CENTS - 1]) expect(() => formatMoney(bad)).toThrow();
+    expect(formatMoney(1975)).toBe('$19.75');
+    expect(formatMoney(-500)).toBe('-$5.00');
+    expect(formatMoney(MAX_CENTS)).toBe('$100,000,000.00');
+  });
+  it('a net total outside the range is an error, not a returned value', () => {
+    expect(() => computeTotals([
+      { taxCategoryId: 'service_6', grossCents: MAX_CENTS },
+      { taxCategoryId: 'exempt', grossCents: -MAX_CENTS },
+      { taxCategoryId: 'outside_scope', grossCents: -MAX_CENTS },
+    ], BONAIRE_DEFAULT_TAX, D)).toThrow(/out of range/);
+    // the same shape inside the range is fine and every returned amount passes assertCents
+    const t = computeTotals([
+      { taxCategoryId: 'service_6', grossCents: 1060 },
+      { taxCategoryId: 'exempt', grossCents: -300 },
+      { taxCategoryId: 'outside_scope', grossCents: -200 },
+    ], BONAIRE_DEFAULT_TAX, D);
+    expect(t).toMatchObject({ totalCents: 560, taxCents: 60, netCents: 500 });
+    for (const v of [t.totalCents, t.taxCents, t.netCents, ...t.breakdown.flatMap((b) => [b.grossCents, b.taxCents, b.netCents])]) expect(assertCents(v)).toBe(v);
   });
 });
 

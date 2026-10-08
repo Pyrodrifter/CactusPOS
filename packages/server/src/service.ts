@@ -55,24 +55,86 @@ export class PosService {
     return rows.map((r) => JSON.parse(r.data));
   }
 
-  private save(order: Order, type: string, payload: unknown, staff: Staff, date: string) {
+  /**
+   * Writes the current order and appends an event. Every event carries the complete order as it
+   * stood, with its own copy of names, prices, tax and payments, so the sale can be rebuilt from
+   * the event log alone, whatever later happens to the menu, the rates or the `orders` row.
+   */
+  private save(order: Order, type: string, payload: Record<string, unknown>, staff: Staff, date: string, isNew = false) {
     const now = new Date().toISOString();
     order.updatedAt = now;
-    this.db.prepare(
-      `INSERT INTO orders(id, ticket_number, receipt_number, business_date, data, created_at) VALUES (?,?,?,?,?,?)
-       ON CONFLICT(id) DO UPDATE SET receipt_number = excluded.receipt_number, data = excluded.data`,
-    ).run(order.id, order.ticketNumber, order.receiptNumber, date, JSON.stringify(order), order.createdAt);
+    const data = JSON.stringify(order);
+    if (isNew) {
+      this.db.prepare('INSERT INTO orders(id, ticket_number, receipt_number, business_date, data, created_at) VALUES (?,?,?,?,?,?)')
+        .run(order.id, order.ticketNumber, order.receiptNumber, date, data, order.createdAt);
+    } else {
+      this.db.prepare('UPDATE orders SET receipt_number = ?, data = ? WHERE id = ?').run(order.receiptNumber, data, order.id);
+    }
     this.db.prepare('INSERT INTO order_events(order_id, type, payload, staff_id, at) VALUES (?,?,?,?,?)')
-      .run(order.id, type, JSON.stringify(payload), staff.id, now);
+      .run(order.id, type, JSON.stringify({ ...payload, order }), staff.id, now);
   }
 
-  createOrder(body: CreateOrderBodyT, staff: Staff): Order {
+  /** The order a repeated request already produced, if any. */
+  private replayed(kind: 'create' | 'pay', requestId: string | undefined): Order | null {
+    if (!requestId) return null;
+    const row = this.db.prepare('SELECT order_id FROM requests WHERE key = ?').get(`${kind}:${requestId}`) as { order_id: string } | undefined;
+    return row ? this.getOrder(row.order_id) : null;
+  }
+  private remember(kind: 'create' | 'pay', requestId: string | undefined, orderId: string): void {
+    if (requestId) this.db.prepare('INSERT INTO requests(key, kind, order_id, at) VALUES (?,?,?,?)').run(`${kind}:${requestId}`, kind, orderId, new Date().toISOString());
+  }
+
+  /** The order as recorded by its latest event: the authoritative copy if the `orders` row is ever in doubt. */
+  orderFromEvents(id: string): Order | null {
+    const rows = this.db.prepare('SELECT payload FROM order_events WHERE order_id = ? ORDER BY seq DESC').all(id) as { payload: string }[];
+    for (const r of rows) {
+      const snapshot = (JSON.parse(r.payload) as { order?: Order }).order;
+      if (snapshot) return snapshot;
+    }
+    return null; // only events written before snapshots were recorded
+  }
+
+  /**
+   * Cross-checks the three records of every sale: the current order row, the event log and the
+   * payments table. Returns one line per disagreement; an empty list means the ledger is consistent.
+   */
+  verifyLedger(): string[] {
+    const problems: string[] = [];
+    const orders = this.db.prepare('SELECT id, receipt_number, data FROM orders').all() as { id: string; receipt_number: number | null; data: string }[];
+    for (const row of orders) {
+      const order = JSON.parse(row.data) as Order;
+      const snapshot = this.orderFromEvents(row.id);
+      if (snapshot && JSON.stringify(snapshot) !== row.data) problems.push(`order ${row.id}: current record differs from its last event`);
+      const paid = this.db.prepare('SELECT id, amount_cents FROM payments WHERE order_id = ? ORDER BY at').all(row.id) as { id: string; amount_cents: number }[];
+      if (paid.length !== order.payments.length || paid.some((p) => !order.payments.some((x) => x.id === p.id && x.amountCents === p.amount_cents))) {
+        problems.push(`order ${row.id}: payments on the order do not match the payments table`);
+      }
+      if ((row.receipt_number ?? null) !== order.receiptNumber) problems.push(`order ${row.id}: receipt number mismatch`);
+    }
+    const max = (this.db.prepare('SELECT MAX(receipt_number) AS m, COUNT(receipt_number) AS n FROM orders').get() as { m: number | null; n: number });
+    if ((max.m ?? 0) !== max.n) problems.push(`receipt numbers have a gap: highest is ${max.m ?? 0} but ${max.n} were issued`);
+    return problems;
+  }
+
+  /** Restores an order row from its last event. Returns false when no snapshot exists. */
+  repairOrder(id: string): boolean {
+    const snapshot = this.orderFromEvents(id);
+    if (!snapshot) return false;
+    tx(this.db, () => { this.db.prepare('UPDATE orders SET receipt_number = ?, data = ? WHERE id = ?').run(snapshot.receiptNumber, JSON.stringify(snapshot), id); });
+    return true;
+  }
+
+  createOrder(body: CreateOrderBodyT, staff: Staff, requestId?: string): Order {
+    const before = this.replayed('create', requestId);
+    if (before) return before;
     const menu = this.menu();
     const date = this.businessDate();
     const lines: OrderLine[] = body.lines.map((l) => {
       const item = menu.items.find((i) => i.id === l.itemId);
       if (!item) throw new HttpError(400, `Unknown item ${l.itemId}`);
       if (!item.available) throw new HttpError(409, `${item.name} is sold out`);
+      // The same option twice would add its price twice while still passing the "only one" check.
+      if (new Set(l.modifierOptionIds).size !== l.modifierOptionIds.length) throw new HttpError(400, `An option was chosen twice for ${item.name}`);
       const mods = l.modifierOptionIds.map((oid) => {
         for (const g of item.modifierGroups) {
           const o = g.options.find((x) => x.id === oid);
@@ -88,6 +150,8 @@ export class PosService {
       if (item.openPrice && !l.priceCents) throw new HttpError(400, `Enter the price for ${item.name}`);
       const base = item.openPrice ? l.priceCents! : item.priceCents;
       const unit = base + mods.reduce((s, m) => s + m.priceDeltaCents, 0);
+      // Discounting options can add up to more than the item costs; a sale is never negative.
+      if (unit < 0) throw new HttpError(400, `The options chosen make ${item.name} cost less than nothing`);
       return {
         id: randomUUID(), itemId: item.id, name: item.name, qty: l.qty, unitPriceCents: unit,
         modifiers: mods, note: l.note, taxCategoryId: item.taxCategoryId, station: item.station,
@@ -98,6 +162,8 @@ export class PosService {
     // Per-line ABB is stored with the order so receipts and the books never have to recompute it.
     lines.forEach((l, i) => { l.taxCents = totals.lines[i]!.taxCents; });
     return tx(this.db, () => {
+      const again = this.replayed('create', requestId); // another writer may have finished the same request meanwhile
+      if (again) return again;
       const now = new Date().toISOString();
       const order: Order = {
         id: randomUUID(), ticketNumber: nextCounter(this.db, `ticket:${date}`), receiptNumber: null,
@@ -105,13 +171,19 @@ export class PosService {
         totalCents: totals.totalCents, taxCents: totals.taxCents, breakdown: totals.breakdown,
         createdAt: now, updatedAt: now, createdBy: staff.id,
       };
-      this.save(order, 'order.created', { lines: body.lines }, staff, date);
+      this.save(order, 'order.created', { request: body.lines }, staff, date, true);
+      this.remember('create', requestId, order.id);
       return order;
     });
   }
 
-  pay(id: string, body: PayBodyT, staff: Staff): Order {
+  pay(id: string, body: PayBodyT, staff: Staff, requestId?: string): Order {
     return tx(this.db, () => {
+      const before = this.replayed('pay', requestId);
+      if (before) {
+        if (before.id !== id) throw new HttpError(409, 'This request was already used for another order');
+        return before;
+      }
       const order = this.getOrder(id);
       if (order.status === 'void') throw new HttpError(409, 'Order is void');
       if (order.paid) throw new HttpError(409, 'Order already paid');
@@ -121,13 +193,18 @@ export class PosService {
         if (tendered < order.totalCents) throw new HttpError(400, 'Cash tendered is less than the total');
         change = tendered - order.totalCents;
       }
-      order.payments.push({
+      const payment = {
         id: randomUUID(), method: body.method, amountCents: order.totalCents, tenderedCents: tendered,
         changeCents: change, reference: body.reference, tipCents: body.tipCents, at: new Date().toISOString(),
-      });
+      };
+      order.payments.push(payment);
       order.paid = true;
       order.receiptNumber = nextCounter(this.db, 'receipt');
-      this.save(order, 'order.paid', { method: body.method, tendered, change, tip: body.tipCents }, staff, this.rowDate(id));
+      // The payments table is the protected record of money taken; the order keeps a copy for display.
+      this.db.prepare('INSERT INTO payments(id, order_id, receipt_number, method, amount_cents, tendered_cents, change_cents, tip_cents, reference, staff_id, at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+        .run(payment.id, order.id, order.receiptNumber, payment.method, payment.amountCents, tendered ?? null, change ?? null, payment.tipCents, payment.reference ?? null, staff.id, payment.at);
+      this.save(order, 'order.paid', { payment, receiptNumber: order.receiptNumber }, staff, this.rowDate(id));
+      this.remember('pay', requestId, order.id);
       return order;
     });
   }

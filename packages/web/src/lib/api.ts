@@ -14,11 +14,11 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; requestId?: string } = {}): Promise<T> {
   const token = getSession()?.token;
   const res = await fetch(`/api${path}`, {
     method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
-    headers: { 'content-type': 'application/json', ...(token ? { 'x-token': token } : {}) },
+    headers: { 'content-type': 'application/json', ...(token ? { 'x-token': token } : {}), ...(init.requestId ? { 'idempotency-key': init.requestId } : {}) },
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
   });
   const text = await res.text();
@@ -56,4 +56,9 @@ export async function browserPrintReceipt(order: Order, copy = false): Promise<v
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 250);
+}
+
+/** A key for one intended action; reuse it when retrying that same action (see `RequestId` in shared). */
+export function newRequestId(): string {
+  return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}${Math.random().toString(36).slice(2, 8)}`;
 }

@@ -39,6 +39,7 @@ export function sumCents(values: readonly number[]): Cents {
 }
 
 export function formatMoney(cents: Cents, locale = 'en-US', currency = 'USD'): string {
+  assertCents(cents);
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100);
 }
 

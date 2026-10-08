@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Business, MenuCategory, MenuItem, StaffInputT, StaffRow, TaxCategory } from '@cactus/shared';
+import type { AuditRow, Business, MenuCategory, MenuItem, StaffInputT, StaffRow, TaxCategory } from '@cactus/shared';
 import { setKv, tx, type DB } from './db.js';
 import { hashPin, type Auth, type Staff } from './auth.js';
 import { HttpError, type PosService } from './service.js';
@@ -41,7 +41,15 @@ export class AdminService {
       if (new Set(optionIds).size !== optionIds.length) throw new HttpError(400, 'Option ids must be unique within an item');
       for (const g of item.modifierGroups) {
         if (g.options.length === 0) throw new HttpError(400, `Option group "${g.name}" has no options`);
-        if (g.options.some((o) => item.priceCents + o.priceDeltaCents < 0)) throw new HttpError(400, 'An option would make the price negative');
+      }
+      // Cheapest possible sale: every discount that can be picked together. Checking options one by one
+      // misses two groups that each take off more than half the price.
+      if (!item.openPrice) {
+        const lowest = item.modifierGroups.reduce((sum, g) => {
+          const cuts = g.options.map((o) => o.priceDeltaCents).filter((d) => d < 0);
+          return sum + (g.multi ? cuts.reduce((a, b) => a + b, 0) : Math.min(0, ...cuts));
+        }, item.priceCents);
+        if (lowest < 0) throw new HttpError(400, 'Discount options could take this item below a price of zero');
       }
       this.db.prepare('INSERT INTO menu_items(id, data) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data = excluded.data').run(item.id, JSON.stringify(item));
       this.log('menu.item.saved', item, by);
@@ -115,7 +123,7 @@ export class AdminService {
     });
   }
 
-  auditLog(limit = 200): { seq: number; type: string; payload: unknown; staffId: string; at: string }[] {
+  auditLog(limit = 200): AuditRow[] {
     return (this.db.prepare('SELECT seq, type, payload, staff_id, at FROM audit_log ORDER BY seq DESC LIMIT ?').all(limit) as { seq: number; type: string; payload: string; staff_id: string; at: string }[])
       .map((r) => ({ seq: r.seq, type: r.type, payload: JSON.parse(r.payload), staffId: r.staff_id, at: r.at }));
   }

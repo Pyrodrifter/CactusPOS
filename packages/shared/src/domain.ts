@@ -166,7 +166,21 @@ export const StaffInput = z.object({
 export type StaffInputT = z.infer<typeof StaffInput>;
 export const AvailabilityBody = z.object({ available: z.boolean() });
 
+/**
+ * Sent as the `Idempotency-Key` header on POST /api/orders and POST /api/orders/:id/pay.
+ * Repeating a request with the same key returns the first result instead of acting twice,
+ * so a double tap or a retry after a lost reply cannot create a second order or payment.
+ */
+export const RequestId = z.string().regex(/^[A-Za-z0-9_-]{8,80}$/);
+
 /* ---------- HTTP responses ---------- */
+/** Reply of routes that only confirm: logout, deletes, print retry. */
+export const Ack = z.object({ ok: z.literal(true) });
+export type Ack = z.infer<typeof Ack>;
+/** One owner-side change. `payload` depends on `type` and is intentionally left open. */
+export const AuditRow = z.object({ seq: z.number().int().positive(), type: z.string(), payload: z.unknown(), staffId: z.string(), at: IsoDateTime });
+export type AuditRow = z.infer<typeof AuditRow>;
+export const AuditList = z.array(AuditRow);
 export const ErrorResponse = z.object({ error: z.string(), issues: z.array(z.unknown()).optional() });
 export const HealthResponse = z.object({ ok: z.literal(true), business: z.string(), time: IsoDateTime });
 export const LoginResponse = z.object({ token: z.string().min(16), staff: StaffSchema, business: BusinessSchema });

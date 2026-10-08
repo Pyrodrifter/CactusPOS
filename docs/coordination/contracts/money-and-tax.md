@@ -5,6 +5,8 @@ Code: `packages/shared/src/money.ts`, `tax.ts`. Rules downstream consumers (rece
 ## Money
 - Integer cents, USD. Supported range +/- `MAX_CENTS` = $100,000,000.00. Every public entry point rejects fractions, NaN, infinity and out-of-range values with `MoneyError` (HTTP 400). Inside that range all arithmetic is exact.
 - Rounding: halves away from zero (`roundDiv`), the same algorithm as PyroBookKeeper `divRoundHalfUp`. Never returns -0.
+- `formatMoney` rejects anything that is not integer cents in range, like every other entry point.
+- Sums of signed lines are checked too: if credits and sales combine into a net outside the range, `computeTotals` throws rather than return it.
 - `parseMoney` returns `null` for anything that is not a plain non-negative amount with at most 2 decimals.
 
 ## ABB on a receipt

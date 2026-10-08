@@ -124,12 +124,13 @@ export function computeTotals(lines: readonly TaxableLine[], cats: readonly TaxC
   }
   const breakdown = [...groups.values()].map((r) => {
     if (policy === 'group') r.taxCents = taxInGross(r.grossCents, r.bps);
-    r.netCents = r.grossCents - r.taxCents;
+    r.netCents = assertCents(r.grossCents - r.taxCents, 'net');
     return r;
   });
   const totalCents = sumCents(breakdown.map((r) => r.grossCents));
   const taxCents = sumCents(breakdown.map((r) => r.taxCents));
-  return { totalCents, taxCents, netCents: totalCents - taxCents, breakdown, lines: lineTax };
+  // Credits and sales can combine so that the net leaves the supported range even though every input was in it.
+  return { totalCents, taxCents, netCents: assertCents(totalCents - taxCents, 'net total'), breakdown, lines: lineTax };
 }
 
 /**
