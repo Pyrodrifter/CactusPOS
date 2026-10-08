@@ -1,7 +1,9 @@
 :root {
   --bg: #f5f6f1; --card: #fff; --ink: #182e36; --muted: #63757a; --line: #e0e7e3;
   --brand: #14566a; --brand-ink: #fff; --accent: #258356; --lime: #d5eb9a; --warn: #b86516; --danger: #b43c35;
-  --radius: 18px; --tap: 52px; --shadow: 0 8px 28px rgba(24, 46, 54, .055);
+  --radius: 18px; --r: 18px; --r-sm: 12px; --tap: 52px; --navh: 0px; --soft: #f5f8f3;
+  --accent-soft: #e6f3e9; --warn-soft: #fff0db; --danger-soft: #fcecea; --info: #2876a0; --info-soft: #e8f3f8;
+  --shadow: 0 8px 28px rgba(24, 46, 54, .055); --shadow-lg: 0 24px 80px rgba(24,46,54,.18); --ease: cubic-bezier(.2,.8,.2,1);
 }
 .dark { --bg: #10232b; --card: #1a3039; --ink: #f1f7f4; --muted: #a3b7bd; --line: #304751; --accent: #a8dfb6; --warn: #f5b46e; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -156,6 +158,7 @@ input[type=color] { padding: 4px; max-width: 120px; }
 
 @media (max-width: 1200px) { .who { display: none; } .logout-button span { display: none; } .topbar { gap: 12px; padding: 12px 18px; } }
 @media (max-width: 900px) {
+  :root { --navh: 76px; }
   .topbar { min-height: 80px; padding: 12px 16px; }
   .brand-copy strong { max-width: 190px; font-size: 17px; }
   .topbar nav { position: fixed; z-index: 10; bottom: 0; left: 0; right: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(24,46,54,.035); gap: 4px; }
@@ -166,3 +169,26 @@ input[type=color] { padding: 4px; max-width: 120px; }
 }
 @media (max-width: 440px) { .brand-copy strong { max-width: 154px; } .brand-mark { width: 42px; height: 42px; border-radius: 14px; } .brand { gap: 9px; } .topbar-tools { gap: 6px; } .topbar .ghost { padding: 0 10px; } .language-button svg { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Shared touch helpers retained from T54. App lanes supply their scoped layouts. */
+.money { font-variant-numeric: tabular-nums; }
+.icon-btn { min-width: 52px; min-height: 52px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.money-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.money-pad button { min-height: 60px; font-size: 24px; border-radius: 14px; }
+.stepper { display: inline-flex; align-items: center; gap: 3px; background: var(--soft); padding: 3px; border-radius: 16px; }
+.stepper button { min-width: 48px; min-height: 48px; width: 48px; padding: 0; font-size: 24px; }
+.stepper span { min-width: 32px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheet-head h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sheet-grip { display: none; }
+.sheet-body { display: flex; flex-direction: column; gap: 16px; }
+.sheet-foot { display: flex; align-items: center; gap: 10px; padding-top: 12px; }
+.amount { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.amount.empty { color: var(--muted); } .amount.good, .amount.big { color: var(--accent); } .amount.bad { color: var(--danger); }
+.amount.big { font-size: 56px; } .pay-row { display: flex; justify-content: space-between; gap: 12px; }
+.paid { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0; text-align: center; }
+.paid-mark { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.paid-mark svg { width: 38px; height: 38px; }
+.toasts { position: fixed; bottom: calc(var(--navh) + 20px + env(safe-area-inset-bottom)); left: 0; right: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 12px; pointer-events: none; }
+.toast { display: flex; align-items: center; gap: 10px; background: #18323c; color: white; padding: 14px 20px; border-radius: 16px; box-shadow: var(--shadow-lg); font-weight: 600; }
+.toast.ok svg { color: #bce9c4; } .toast.error { background: var(--danger); }

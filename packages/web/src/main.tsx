@@ -6,6 +6,7 @@ import { api, getSession, setSession, type Session } from './lib/api';
 import { setLang, useLang } from './i18n';
 import { Login } from './ui/Login';
 import { Icon } from './ui/Icon';
+import { Toasts } from './ui/touch';
 import { PwaStatus } from './ui/PwaStatus';
 import { initializePwa } from './lib/pwa';
 import { Pos } from './apps/pos/Pos';
@@ -54,6 +55,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="app-frame">
+        <Toasts />
         <PwaStatus />
         <Routes>
           <Route path="/pickup" element={<Pickup />} />
