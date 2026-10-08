@@ -14,8 +14,12 @@ function readEvent(data: unknown): ServerEvent | null {
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';
 
-/** Live list of today's active orders: initial fetch + WebSocket updates + auto-reconnect. */
-export function useOrders(scope: 'active' | 'today' = 'active') {
+/**
+ * Live list of orders: initial fetch + WebSocket updates + auto-reconnect.
+ * `active` and `today` cover the current business day; `open` is every unpaid order from any day (tabs).
+ * Updates for orders outside the scope still arrive, so callers filter what they show.
+ */
+export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
   const [orders, setOrders] = useState<Map<string, Order>>(new Map());
   const [online, setOnline] = useState(false);
   const [newIds, setNewIds] = useState<string[]>([]);
