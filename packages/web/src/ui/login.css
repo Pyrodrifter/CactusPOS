@@ -1,0 +1,40 @@
+.login { max-width: none; padding: 0; gap: 0; grid-template-columns: minmax(0, 1fr) minmax(450px, .85fr); min-height: 0; align-items: stretch; background: #f5f6ef; }
+.login-story { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: clamp(36px, 6vw, 100px); background: #12244c; color: #fff; }
+.login-story::after { content: ''; width: 420px; height: 420px; position: absolute; right: -230px; bottom: -140px; border: 70px solid #d5eb9a0c; border-radius: 50%; pointer-events: none; }
+.login-brand { margin-bottom: clamp(50px, 10vh, 100px); font-size: 24px; }
+.login-language { background: #ffffff0c !important; color: #fff; border-color: #ffffff33; }
+.login-eyebrow { color: #d5eb9a; font-size: 12px; letter-spacing: 2px; }
+.login-story h1 { font-size: clamp(44px, 5vw, 72px); font-weight: 650; letter-spacing: -3px; margin-top: 16px; }
+.login-intro { color: #c1cee2; font-size: 18px; line-height: 1.7; max-width: 390px; }
+.login-features { gap: 20px; margin-top: 26px; }
+.login-features span { color: #eef2f8; font-size: 14px; }
+.login-service { display: flex; align-items: center; margin-top: auto; padding-top: 70px; gap: 5px; }
+.login-service > span { width: 9px; height: 9px; border-radius: 50%; background: #58c9c5; }
+.login-service > span:nth-child(2) { background: #eeb646; }
+.login-service > span:nth-child(3) { background: #d5eb9a; }
+.login-service p { margin: 0 0 0 10px; font-size: 13px; color: #c1cee2; }
+.login-card { align-self: center; justify-self: center; width: min(410px, calc(100% - 64px)); padding: 32px; margin: 32px 0; background: transparent; border: 0; box-shadow: none; }
+.login-lock { background: #e6ebdc; width: 60px; height: 60px; border-radius: 20px; margin-bottom: 22px; }
+.login-card h2 { font-size: 29px; letter-spacing: -.9px; color: #142747; }
+.login-card > p { font-size: 15px; }
+.pin-entry { display: flex; align-items: center; gap: 8px; margin: 14px 0; }
+.pin-entry .pin-dots { flex: 1; min-width: 0; gap: 12px; height: 64px; padding-left: 48px; }
+.pin-dots span { height: 15px; width: 15px; flex-shrink: 0; border-color: #a7b6ab; transition: background 100ms, transform 100ms; }
+.pin-dots span.filled { background: #142747; border-color: #142747; transform: scale(1.06); }
+.pin-clear { min-width: 48px; min-height: 48px; padding: 0; border: 0; background: transparent; color: #62716b; }
+.login .keypad { gap: 12px; }
+.login .keypad button { min-height: 80px; border-radius: 21px; background: #fff; border: 1px solid #dce2d6; box-shadow: 0 3px 0 #e3e7dd; font-size: 30px; color: #142747; }
+.login .keypad button:active { box-shadow: none; transform: translateY(2px); }
+.login .keypad .primary { background: #142747; border-color: #142747; color: #fff; box-shadow: 0 3px 0 #071631; }
+.login .keypad .login-submit { font-size: 14px; }
+@media (max-width: 800px) {
+  .login { display: flex; gap: 0; justify-content: flex-start; }
+  .login-story { width: 100%; padding: 18px 24px; display: block; overflow: visible; }
+  .login-story::after, .login-service { display: none; }
+  .login-brand { font-size: 21px; margin: 0; justify-content: flex-start; }
+  .login-brand .logo { width: 44px; height: 44px; }
+  .login-card { width: min(410px, 100%); padding: 28px; margin: auto; }
+  .login .keypad button { min-height: 74px; }
+}
+@media (max-height: 740px) { .login-card { padding-top: 20px; padding-bottom: 20px; } .login-lock { display: none; } .login .keypad button { min-height: 64px; } .pin-entry { margin: 4px 0; } }
+@media (max-width: 360px) { .pin-entry .pin-dots { padding-left: 0; gap: 10px; } }

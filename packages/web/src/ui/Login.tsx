@@ -3,6 +3,7 @@ import { api, ApiError, type Session } from '../lib/api';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
+import './login.css';
 
 export function Login({ onDone }: { onDone: (s: Session) => void }) {
   const { lang, t } = useLang();
@@ -12,12 +13,14 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
     pin: 'Uw persoonlijke pincode', hint: 'Log in om aan de slag te gaan.', erase: 'Laatste cijfer wissen',
     waiting: 'Even geduld', connection: 'De server is niet bereikbaar. Controleer de verbinding en probeer opnieuw.',
     blocked: 'Te veel pogingen. Wacht 30 seconden en probeer opnieuw.', digits: 'cijfers ingevoerd',
+    clear: 'Pincode wissen', service: 'Een fijne dienst begint hier.',
   } : {
     eyebrow: 'Made for great service', title: 'Ready for a\ngood day.',
     intro: 'Take orders, keep the kitchen moving, and make checkout simple.',
     pin: 'Your staff PIN', hint: 'Sign in to get things moving.', erase: 'Delete last digit',
     waiting: 'One moment', connection: 'Cannot reach the server. Check the connection and try again.',
     blocked: 'Too many attempts. Wait 30 seconds and try again.', digits: 'digits entered',
+    clear: 'Clear PIN', service: 'A good shift starts here.',
   };
   const [pin, setPin] = useState('');
   const [err, setErr] = useState('');
@@ -60,13 +63,14 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
         <div className="login-features">
           <span><Icon name="cart" />{t('nav.orders')}</span><span><Icon name="kitchen" />{t('nav.kitchen')}</span><span><Icon name="card" />{t('pay.title')}</span>
         </div>
+        <div className="login-service"><span /><span /><span /><p>{copy.service}</p></div>
       </section>
       <section className="login-card" aria-busy={busy}>
         <div className="login-lock"><Icon name="lock" size={24} /></div>
         <h2>{copy.pin}</h2><p className="muted">{copy.hint}</p>
-        <div className="pin-dots" role="status" aria-label={`${pin.length} ${copy.digits}`}>
+        <div className="pin-entry"><div className="pin-dots" role="status" aria-label={`${pin.length} ${copy.digits}`}>
           {Array.from({ length: Math.max(4, pin.length) }, (_, index) => <span key={index} className={index < pin.length ? 'filled' : ''} aria-hidden="true" />)}
-        </div>
+        </div><button className="pin-clear" disabled={busy || !pin.length} aria-label={copy.clear} onClick={() => setPin('')}><Icon name="close" size={20} /></button></div>
         {err && <div className="error" role="alert">{err}</div>}
         <div className="keypad">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => <button key={d} disabled={busy} onClick={() => press(d)}>{d}</button>)}

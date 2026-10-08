@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   computeTotals, formatMoney, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
@@ -40,6 +40,22 @@ function Sheet({ children, onCancel, busy = false, dismissable = true, titleId, 
 type Menu = MenuResponse;
 interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
 
+// Lives above the routes, so both the draft and an in-flight send survive screen changes.
+// Reload/sign-out clears it. The request identity survives a lost reply and a return to the till.
+function useDraftState() {
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [note, setNote] = useState('');
+  const [sending, setSending] = useState(false);
+  const placing = useRef(false);
+  const request = useRef({ signature: '', id: newRequestId() });
+  return { cart, setCart, note, setNote, sending, setSending, placing, request };
+}
+const DraftContext = createContext<ReturnType<typeof useDraftState> | null>(null);
+export function PosDraftProvider({ children }: { children: ReactNode }) {
+  const draft = useDraftState();
+  return <DraftContext.Provider value={draft}>{children}</DraftContext.Provider>;
+}
+
 /** One colour per category (the palette of a hand-painted menu board), so the grid reads at a glance. */
 const CAT_COLORS = ['#0e93ab', '#e2741a', '#d63384', '#3f9a3a', '#3567e0', '#8a56d8'];
 const catStyle = (index: number) => ({ '--c': CAT_COLORS[Math.max(0, index) % CAT_COLORS.length] }) as CSSProperties;
@@ -55,24 +71,35 @@ function lineUnit(l: CartLine): number {
 export function Pos() {
   const { t, lang } = useLang();
   const c = copy[lang];
+  const { cart, setCart, note, setNote, sending, setSending, placing, request } = useContext(DraftContext)!;
   const [menu, setMenu] = useState<Menu | null>(null);
   const [cat, setCat] = useState('');
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [note, setNote] = useState('');
+  const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const [undo, setUndo] = useState<{ cart: CartLine[]; note: string } | null>(null);
   const [picking, setPicking] = useState<MenuItem | null>(null);
   const [paying, setPaying] = useState<{ order: Order } | { cartTotal: number } | null>(null);
   const [view, setView] = useState<'order' | 'orders'>('order');
   const [error, setError] = useState('');
-  const [sending, setSending] = useState(false);
-  const placing = useRef(false);
   const [success, setSuccess] = useState('');
   const cartPanel = useRef<HTMLElement>(null);
   const { orders, online } = useOrders('today');
+  const ui = lang === 'nl'
+    ? { all: 'Alles', search: 'Zoek in het hele menu', clearSearch: 'Zoekopdracht wissen', found: 'gevonden', noResults: 'Niets gevonden', trySearch: 'Probeer een andere naam of kies een categorie.', undo: 'Herstellen', removed: 'Bestelling aangepast', clear: 'Bestelling wissen', menuHint: 'Tik op een gerecht om toe te voegen' }
+    : { all: 'All items', search: 'Find anything on the menu', clearSearch: 'Clear search', found: 'found', noResults: 'Nothing on the menu matches', trySearch: 'Try another name or choose a category.', undo: 'Undo', removed: 'Order updated', clear: 'Clear order', menuHint: 'Tap something good to add it' };
+
+  useEffect(() => {
+    if (!undo) return;
+    const timeout = setTimeout(() => setUndo(null), 8000);
+    return () => clearTimeout(timeout);
+  }, [undo]);
 
   useEffect(() => {
     const load = () => void api<Menu>('/menu').then((m) => {
       setMenu(m);
-      setCat((c) => (m.categories.some((x) => x.id === c) ? c : m.categories[0]?.id ?? ''));
+      setCat((c) => (m.categories.some((x) => x.id === c) ? c : ''));
+      setUndo(null);
       // Drop cart lines whose item was removed or sold out while the order was being built.
       setCart((lines) => lines.flatMap((l) => {
         const item = m.items.find((i) => i.id === l.item.id);
@@ -95,6 +122,7 @@ export function Pos() {
 
   const add = (item: MenuItem, optionIds: string[] = [], priceCents?: number, qty = 1) => {
     haptic();
+    setUndo(null);
     setCart((c) => {
       const key = `${item.id}|${[...optionIds].sort().join(',')}|${priceCents ?? ''}`;
       const hit = c.find((l) => l.key === key);
@@ -105,21 +133,26 @@ export function Pos() {
     if (!item.available) return;
     if (item.modifierGroups.length || item.openPrice) setPicking(item); else add(item);
   };
-  const bump = (key: string, d: number) => { haptic(6); setCart((c) => c.map((l) => (l.key === key ? { ...l, qty: Math.min(99, l.qty + d) } : l)).filter((l) => l.qty > 0)); };
+  const bump = (key: string, d: number) => {
+    haptic(6);
+    setUndo(d < 0 && cart.find((line) => line.key === key)?.qty === 1 ? { cart, note } : null);
+    setCart((c) => c.map((l) => (l.key === key ? { ...l, qty: Math.min(99, l.qty + d) } : l)).filter((l) => l.qty > 0));
+  };
 
   // One key per cart: tapping Send again after a lost reply returns the same order instead of making a second one.
-  const sendKey = useRef(newRequestId());
-  useEffect(() => { sendKey.current = newRequestId(); }, [cart, note]);
-
   const place = async (reportSuccess = false): Promise<Order | null> => {
     if (placing.current || !cart.length) return null;
+    setUndo(null);
     placing.current = true; setSending(true); setSuccess('');
     setError('');
     try {
+      const body = { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents })), note: note || undefined };
+      const signature = JSON.stringify(body);
+      if (request.current.signature !== signature) request.current = { signature, id: newRequestId() };
       const order = await api<Order>('/orders', {
-        body: { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents })), note: note || undefined },
-        requestId: sendKey.current,
+        body, requestId: request.current.id,
       });
+      request.current = { signature: '', id: newRequestId() };
       setCart([]); setNote('');
       if (reportSuccess) {
         setSuccess(`${c.sent} · #${order.ticketNumber}`);
@@ -131,14 +164,19 @@ export function Pos() {
   };
 
   if (!menu) return <div className="pos pos-loading" role="status"><Icon name="menu" size={36} /><p>{error || c.loading}</p></div>;
-  const items = menu.items.filter((i) => i.categoryId === cat);
+  const search = query.trim().toLocaleLowerCase();
+  const items = menu.items.filter((i) => search
+    ? `${i.name} ${i.description ?? ''} ${menu.categories.find((category) => category.id === i.categoryId)?.name ?? ''}`.toLocaleLowerCase().includes(search)
+    : !cat || i.categoryId === cat);
 
   return (
     <div className="pos">
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
-      <div className="tabs">
+      <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || o.status !== 'collected')).length}</span></button>
+      </div>
+      {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
       </div>
       {success && <div className="pos-success" role="status"><Icon name="check" />{success}<button aria-label={c.close} onClick={() => setSuccess('')}><Icon name="close" /></button></div>}
 
@@ -146,8 +184,10 @@ export function Pos() {
         <div className="pos-grid">
           <section className="menu">
             <div className="cats">
-              {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => setCat(c.id)}><i className="pos-cat-dot" />{c.name}</button>)}
+              <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="menu" />{ui.all}</button>
+              {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
+            <div className="pos-menu-caption"><span>{search ? `“${query.trim()}”` : ui.menuHint}</span><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
             <div className="items">
               {items.map((i) => (
                 <button key={i.id} className="item" style={catStyle(menu.categories.findIndex((x) => x.id === i.categoryId))} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
@@ -157,12 +197,13 @@ export function Pos() {
                   <span className="pos-item-footer"><b>{!i.available ? t('soldout') : i.openPrice ? t('pos.market') : money(i.priceCents)}</b><span className="pos-item-add"><Icon name={i.modifierGroups.length || i.openPrice ? 'more' : 'plus'} /></span></span>
                 </button>
               ))}
-              {!items.length && <p className="muted">{c.noItems}</p>}
+              {!items.length && <div className="pos-no-results"><Icon name="search" size={32} /><h3>{search ? ui.noResults : c.noItems}</h3><p>{ui.trySearch}</p><button onClick={() => { setQuery(''); setCat(''); }}>{ui.all}<Icon name="arrow-right" /></button></div>}
             </div>
           </section>
 
           <aside ref={cartPanel} className="cart">
-            <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2></span><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></header>
+            <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></span><button className="pos-clear-order" aria-label={ui.clear} disabled={!cart.length || sending || !!paying} onClick={() => { setUndo({ cart, note }); setCart([]); setNote(''); }}><Icon name="trash" /></button></header>
+            {undo && <div className="pos-undo" role="status"><span>{ui.removed}</span><button disabled={sending || !!paying} onClick={() => { setCart(undo.cart); setNote(undo.note); setUndo(null); }}><Icon name="undo" />{ui.undo}</button></div>}
             {cart.length === 0 && <div className="pos-cart-empty"><span><Icon name="cart" size={38} /></span><h3>{c.emptyTitle}</h3><p>{t('cart.empty')}</p></div>}
             <ul>
               {cart.map((l) => {
@@ -181,14 +222,13 @@ export function Pos() {
                 );
               })}
             </ul>
-            {cart.length > 0 && <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => setNote(e.target.value)} /></label>}
+            {cart.length > 0 && <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => { setNote(e.target.value); setUndo(null); }} /></label>}
             {error && <div className="error" role="alert">{error}</div>}
             <div className="total">
               <span>{t('cart.total')} <small className="muted">{t('cart.abb')}{totals ? ` ${money(totals.taxCents)}` : ''}</small></span>
               <b>{money(total)}</b>
             </div>
             <div className="actions">
-              <button className="ghost pos-clear" disabled={!cart.length || sending || !!paying} onClick={() => { setCart([]); setNote(''); }}><Icon name="trash" />{t('cart.clear')}</button>
               <button disabled={!cart.length || sending || !!paying} onClick={() => void place(true)}><Icon name="send" />{sending ? c.sending : t('cart.send')}</button>
               <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.payNow')}<span className="pos-pay-amount">{money(total)}</span></button>
             </div>
