@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { useLang } from '../i18n';
 import { applyUpdate, checkServer, installApp, usePwa } from '../lib/pwa';
 import { Icon } from './Icon';
@@ -22,14 +23,17 @@ export function PwaStatus() {
   const { lang } = useLang();
   const pwa = usePwa();
   const text = messages[lang];
-  if (pwa.connection !== 'offline' && !pwa.installAvailable && !pwa.updateAvailable) return null;
+  // Offer installing only where nobody is mid-sale: on the sign-in screen and in Admin.
+  const { pathname } = useLocation();
+  const offerInstall = pwa.installAvailable && (pathname === '/login' || pathname.startsWith('/admin'));
+  if (pwa.connection !== 'offline' && !offerInstall && !pwa.updateAvailable) return null;
   return (
     <aside className={`pwa-status ${pwa.connection === 'offline' ? 'is-offline' : ''}`} aria-label="CactusPOS" aria-live="polite">
       {pwa.connection === 'offline' && <div className="pwa-message">
         <Icon name="wifi-off" size={20} /><span>{text.offline} {pwa.offlineReady && text.ready}</span>
         <button onClick={() => { void checkServer(); }}><Icon name="refresh" size={18} />{text.retry}</button>
       </div>}
-      {pwa.installAvailable && <button onClick={() => { void installApp(); }}><Icon name="download" size={18} />{text.install}</button>}
+      {offerInstall && <button onClick={() => { void installApp(); }}><Icon name="download" size={18} />{text.install}</button>}
       {pwa.updateAvailable && <div className="pwa-message">
         <span>{text.update}</span>
         <button disabled={pwa.updating} onClick={() => { if (confirm(text.confirm)) applyUpdate(); }}>

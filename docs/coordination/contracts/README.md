@@ -5,6 +5,7 @@ One markdown file per boundary; the zod schemas in `packages/shared/src/domain.t
 Planned files (created by the owning task):
 - [`http.md`](http.md) — REST routes (written)
 - [`events.md`](events.md) — WebSocket events and rooms (written)
+- [`touch-ui.md`](touch-ui.md) — touch sizes, navigation and how to screenshot your work (written)
 - [`database.md`](database.md) — tables, migrations, what the database itself refuses (written)
 - [`money-and-tax.md`](money-and-tax.md) — cents, rounding policy, rate dates (written)
 - `receipt-template.md` — block schema & variables (T13/T30)
