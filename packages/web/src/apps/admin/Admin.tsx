@@ -6,13 +6,14 @@ import { StaffAdmin } from './StaffAdmin';
 import { TaxAdmin } from './TaxAdmin';
 import { PrinterAdmin } from './PrinterAdmin';
 import { ReportsAdmin } from './ReportsAdmin';
+import { BooksAdmin } from './BooksAdmin';
 import { Icon, type IconName } from '../../ui/Icon';
 import { useAdminCopy } from './copy';
 import './admin.css';
 
-const TABS = ['reports', 'menu', 'business', 'staff', 'tax', 'printer'] as const;
+const TABS = ['reports', 'menu', 'business', 'staff', 'tax', 'printer', 'books'] as const;
 type Tab = (typeof TABS)[number];
-const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer' };
+const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download' };
 
 export function Admin() {
   const { t } = useLang();
@@ -31,6 +32,7 @@ export function Admin() {
         {tab === 'staff' && <StaffAdmin />}
         {tab === 'tax' && <TaxAdmin />}
         {tab === 'printer' && <PrinterAdmin />}
+        {tab === 'books' && <BooksAdmin />}
       </div>
     </div>
   );

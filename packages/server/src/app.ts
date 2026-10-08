@@ -12,6 +12,7 @@ import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
 import { PrinterSettings, Printing } from './printing.js';
 import { Reports } from './reports.js';
+import { Books, BooksSettings, ExportQuery } from './books.js';
 import { buildDayReport, renderHtml } from '@cactus/receipt';
 import type { Transport } from '@cactus/printer';
 import { HttpError, PosService, type Staff } from './service.js';
@@ -20,7 +21,7 @@ import type { DB } from './db.js';
 
 interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
 
-export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports } {
+export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books } {
   const svc = new PosService(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
@@ -28,6 +29,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   const printing = new Printing(db, () => svc.business(), opts.printerTransport);
   app.addHook('onClose', async () => printing.queue.stop());
   const reports = new Reports(db, svc);
+  const books = new Books(db, svc);
   const clients = new Set<Client>();
 
   const broadcast = (ev: ServerEvent) => {
@@ -172,6 +174,23 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     return reply.type('text/html').send(renderHtml(buildDayReport(reports.latestFor(date) ?? reports.day(date), svc.business()), { title: `Report ${date}` }));
   });
 
+  /* ----- bookkeeping exports: owner only ----- */
+  app.get('/api/books', async (req) => { ownerOf(req); return { settings: books.settings(), pbk: books.status(), today: svc.businessDate() }; });
+  app.put('/api/books/settings', async (req) => { ownerOf(req); return books.save(BooksSettings.parse(req.body)); });
+  app.post('/api/books/pbk/post', async (req) => { ownerOf(req); return books.postToPbk(); });
+  const csv = (reply: import('fastify').FastifyReply, name: string, body: string) =>
+    reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${name}"`).send(body);
+  app.get('/api/books/days.csv', async (req, reply) => {
+    ownerOf(req);
+    const q = ExportQuery.parse(req.query);
+    return csv(reply, `daily-sales_${q.from ?? 'start'}_${q.to ?? 'today'}.csv`, books.daysCsv(q.from, q.to));
+  });
+  app.get('/api/books/journal.csv', async (req, reply) => {
+    ownerOf(req);
+    const q = ExportQuery.parse(req.query);
+    return csv(reply, `journal_${q.from ?? 'start'}_${q.to ?? 'today'}.csv`, books.journalCsv(q.from, q.to));
+  });
+
   /* ----- printing ----- */
   // Tells a screen whether to send receipts to the printer or fall back to the browser's print dialog.
   app.get('/api/print/status', async (req) => { authOf(req); return { active: printing.active, pending: printing.queue.pending(), jobs: printing.queue.list().slice(0, 20) }; });
@@ -243,5 +262,5 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
       return reply.sendFile('index.html');
     });
   }
-  return { app, svc, admin, printing, reports };
+  return { app, svc, admin, printing, reports, books };
 }
