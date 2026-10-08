@@ -3,6 +3,9 @@ import { rateAt, type TaxCategory } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { useLang } from '../../i18n';
 import { errText } from './Admin';
+import { Icon } from '../../ui/Icon';
+import { AdminDialog } from './AdminDialog';
+import { useAdminCopy } from './copy';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const pct = (bps: number) => `${(bps / 100).toFixed(bps % 100 ? 2 : 0)}%`;
@@ -13,15 +16,19 @@ const pct = (bps: number) => `${(bps / 100).toFixed(bps % 100 ? 2 : 0)}%`;
  */
 export function TaxAdmin() {
   const { t } = useLang();
+  const copy = useAdminCopy();
   const [cats, setCats] = useState<TaxCategory[]>([]);
   const [adding, setAdding] = useState<{ cat: TaxCategory; pct: string; from: string } | null>(null);
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const load = useCallback(() => api<{ taxCategories: TaxCategory[] }>('/menu').then((m) => setCats(m.taxCategories)), []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load().catch((e) => setErr(errText(e))); }, [load]);
 
   const save = async (cat: TaxCategory) => {
+    if (busy) return false;
+    setBusy(true);
     setErr('');
-    try { await api(`/admin/tax/${cat.id}`, { method: 'PUT', body: cat }); await load(); return true; } catch (e) { setErr(errText(e)); return false; }
+    try { await api(`/admin/tax/${cat.id}`, { method: 'PUT', body: cat }); await load(); return true; } catch (e) { setErr(errText(e)); return false; } finally { setBusy(false); }
   };
   const addRate = async () => {
     if (!adding) return;
@@ -34,7 +41,7 @@ export function TaxAdmin() {
   return (
     <div>
       <p className="notice">{t('admin.taxIntro')}</p>
-      {err && !adding && <div className="error">{err}</div>}
+      {err && !adding && <div className="error" role="alert">{err}</div>}
       <ul className="orders">
         {cats.map((c) => (
           <li key={c.id}>
@@ -47,8 +54,9 @@ export function TaxAdmin() {
               </small>
             </div>
             <div className="row-actions">
-              {c.kind === 'taxed' && <button onClick={() => { setErr(''); setAdding({ cat: c, pct: '', from: today() }); }}>{t('admin.newRate')}</button>}
-              <button className={c.unverified ? 'primary' : 'ghost'} onClick={() => void save({ ...c, unverified: !c.unverified })}>
+              {c.kind === 'taxed' && <button disabled={busy} onClick={() => { setErr(''); setAdding({ cat: c, pct: '', from: today() }); }}><Icon name="plus" />{t('admin.newRate')}</button>}
+              <button className={c.unverified ? 'primary' : 'ghost'} disabled={busy} onClick={() => void save({ ...c, unverified: !c.unverified })}>
+                <Icon name={c.unverified ? 'check' : 'warning'} />
                 {c.unverified ? t('admin.markVerified') : t('admin.markUnverified')}
               </button>
             </div>
@@ -56,20 +64,17 @@ export function TaxAdmin() {
         ))}
       </ul>
       {adding && (
-        <div className="sheet-bg" onClick={() => setAdding(null)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <h2>{t('admin.newRate')} · {adding.cat.name}</h2>
+        <AdminDialog title={`${t('admin.newRate')} · ${adding.cat.name}`} onClose={() => setAdding(null)} busy={busy}>
             <div className="two">
               <label>{t('admin.ratePct')}<input inputMode="decimal" autoFocus value={adding.pct} placeholder="6" onChange={(e) => setAdding({ ...adding, pct: e.target.value })} /></label>
               <label>{t('admin.validFrom')}<input type="date" value={adding.from} onChange={(e) => setAdding({ ...adding, from: e.target.value })} /></label>
             </div>
-            {err && <div className="error">{err}</div>}
+            {err && <div className="error" role="alert">{err}</div>}
             <div className="actions">
-              <button className="ghost" onClick={() => setAdding(null)}>{t('pay.cancel')}</button>
-              <button className="primary" onClick={() => void addRate()}>{t('admin.save')}</button>
+              <button className="ghost" disabled={busy} onClick={() => setAdding(null)}>{t('pay.cancel')}</button>
+              <button className="primary" disabled={busy} onClick={() => void addRate()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
             </div>
-          </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );
