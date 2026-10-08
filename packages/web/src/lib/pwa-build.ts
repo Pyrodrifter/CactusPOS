@@ -8,7 +8,7 @@ export function pwaBuild(): Plugin {
   let root = '';
   const publicAssets = [
     'manifest.webmanifest',
-    'icons/icon-192.png', 'icons/icon-512.png',
+    'icons/logo.svg', 'icons/icon-192.png', 'icons/icon-512.png',
     'icons/maskable-192.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
   ];
   return {

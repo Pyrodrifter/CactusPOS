@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { useNow, usePickup } from '../../lib/live';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
+import { Logo } from '../../ui/Logo';
 import './pickup.css';
 
 const copy = {
@@ -40,7 +41,7 @@ export function Pickup() {
   return (
     <div className="pickup pickup-board">
       <header className="pickup-heading">
-        <div className="pickup-brand"><span className="pickup-mark"><Icon name="leaf" size={32} /></span><div><p>{businessName || t('nav.pickup')}</p><h1>{c.title}</h1><span>{c.subtitle}</span></div></div>
+        <div className="pickup-brand"><Logo size={72} /><div><p>{businessName || t('nav.pickup')}</p><h1>{c.title}</h1><span>{c.subtitle}</span></div></div>
         <div className="pickup-overview"><time dateTime={new Date(now).toISOString()} className="pickup-clock">{new Date(now).toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</time><div className={`pickup-connection${online ? '' : ' pickup-reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} />{online ? c.live : c.reconnect}</div></div>
       </header>
       {!online && <p className="pickup-offline" role="status"><Icon name="wifi-off" /><span>{c.offline}</span></p>}

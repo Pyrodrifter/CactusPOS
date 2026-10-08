@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Session } from '../lib/api';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
+import { Logo } from './Logo';
 
 export function Login({ onDone }: { onDone: (s: Session) => void }) {
   const { lang, t } = useLang();
@@ -53,7 +54,7 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
   return (
     <div className="login">
       <section className="login-story">
-        <div className="login-brand"><span className="brand-mark"><Icon name="leaf" size={28} /></span><strong>{t('app.name')}</strong><button className="ghost login-language" aria-label={lang === 'nl' ? 'Taal wijzigen' : 'Change language'} onClick={() => setLang(lang === 'en' ? 'nl' : 'en')}><Icon name="language" size={20} /><span>{lang === 'en' ? 'NL' : 'EN'}</span></button></div>
+        <div className="login-brand"><Logo size={56} /><strong>{t('app.name')}</strong><button className="ghost login-language" aria-label={lang === 'nl' ? 'Taal wijzigen' : 'Change language'} onClick={() => setLang(lang === 'en' ? 'nl' : 'en')}><Icon name="language" size={20} /><span>{lang === 'en' ? 'NL' : 'EN'}</span></button></div>
         <p className="login-eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1><p className="login-intro">{copy.intro}</p>
         <div className="login-features">

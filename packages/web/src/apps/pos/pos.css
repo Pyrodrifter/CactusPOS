@@ -159,3 +159,52 @@
   .pos-payment .sheet { gap: 12px; }
   .pos-payment .change { padding: 14px; }
 }
+
+/* ---- UI pass 2: category colours, compact menu, payment layout ---- */
+.logo { flex-shrink: 0; display: block; filter: drop-shadow(0 4px 10px #0b164026); }
+.pos .cats { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-bottom: 10px; }
+.pos .cats button { gap: 9px; font-size: 16px; }
+.pos-cat-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--c, var(--brand)); flex-shrink: 0; }
+.pos .cats button.on { background: var(--c, var(--brand)); border-color: var(--c, var(--brand)); color: #fff; box-shadow: 0 6px 16px color-mix(in srgb, var(--c, var(--brand)) 32%, transparent); }
+.pos .cats button.on .pos-cat-dot { background: #fff; }
+.pos .item { overflow: hidden; padding-left: 22px; transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease; }
+.pos .item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: var(--c, var(--brand)); }
+.pos .item:active:not(:disabled) { transform: scale(.97); background: color-mix(in srgb, var(--c, var(--brand)) 9%, var(--card)); }
+.pos .item:disabled::before { background: var(--line); }
+.pos-item-add { background: color-mix(in srgb, var(--c, var(--brand)) 13%, var(--card)); color: var(--c, var(--brand)); min-width: 34px; min-height: 34px; }
+.pos .item:has(.pos-item-count) { border-color: var(--c, #93bda1); background: color-mix(in srgb, var(--c, #93bda1) 7%, var(--card)); box-shadow: 0 0 0 1.5px var(--c, #93bda1), 0 6px 18px #16313d12; }
+.pos-item-count { background: var(--c, var(--brand)); animation: pos-pop .25s cubic-bezier(.2, .8, .2, 1); }
+.pos .cart .pos-pay { font-size: 19px; min-height: 64px; justify-content: space-between; padding: 0 22px; }
+.pos .cart .pos-pay svg { margin-right: 2px; }
+.pos-pay-amount { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 21px; letter-spacing: -.02em; }
+.pos .cart li { animation: pos-slide .2s cubic-bezier(.2, .8, .2, 1); }
+.pos .total > b, .pos .amt, .pos .item b, .pos-payment-total, .pos-sheet .amount { font-variant-numeric: tabular-nums; }
+@keyframes pos-pop { 0% { transform: scale(.4); } 70% { transform: scale(1.15); } }
+@keyframes pos-slide { from { opacity: 0; transform: translateX(10px); } }
+
+.pos-pay-cols { display: flex; flex-direction: column; gap: 14px; }
+.pos-pay-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pos-pay-amounts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pos-pay-amounts > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; background: var(--bg); min-width: 0; }
+.pos-pay-amounts span { font-size: 13px; font-weight: 650; color: var(--muted); }
+.pos-pay-amounts .amount { font-size: 28px; line-height: 1.15; letter-spacing: -.03em; }
+.pos-pay-change { background: #e9f5e6 !important; } .pos-pay-change .amount, .pos-pay-change span { color: #1f6b3a; }
+.pos-pay-change.pos-short { background: var(--danger-soft, #fae9e5) !important; } .pos-pay-change.pos-short .amount, .pos-pay-change.pos-short span { color: var(--danger, #b3402f); }
+.pos-quick { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
+.pos-quick button { padding: 0 8px; }
+/* Tablets: amounts on the left, keypad on the right, so nothing needs scrolling during a sale. */
+@media (min-width: 861px) {
+  .pos-payment:not(.pos-paid) .sheet { width: min(760px, 100%); }
+  .pos-pay-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .pos-quick { grid-template-columns: 1fr 1fr; }
+  .pos-quick button { min-height: 58px; font-size: 18px; }
+}
+@media (max-height: 760px) {
+  .pos-sheet .sheet { gap: 12px; padding-top: 20px; }
+  .pos-sheet .money-pad button { min-height: 52px; }
+  .pos-payment-method button { min-height: 56px; }
+}
+@media (max-width: 860px) {
+  .pos .cats { top: 0; margin: -3px -16px 0; padding: 3px 16px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .pos .cart li, .pos-item-count { animation: none; } }

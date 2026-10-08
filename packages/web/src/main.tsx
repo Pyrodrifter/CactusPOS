@@ -6,6 +6,7 @@ import { api, getSession, setSession, type Session } from './lib/api';
 import { setLang, useLang } from './i18n';
 import { Login } from './ui/Login';
 import { Icon } from './ui/Icon';
+import { Logo } from './ui/Logo';
 import { Toasts } from './ui/touch';
 import { PwaStatus } from './ui/PwaStatus';
 import { initializePwa } from './lib/pwa';
@@ -23,7 +24,7 @@ function Shell({ session }: { session: Session }) {
     <div className="shell" style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as React.CSSProperties) : undefined}>
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark"><Icon name="leaf" size={26} /></span>
+          <Logo size={48} />
           <span className="brand-copy"><strong>{session.business.name}</strong><small>{copy.subtitle}</small></span>
         </div>
         <nav aria-label={copy.navigation}>

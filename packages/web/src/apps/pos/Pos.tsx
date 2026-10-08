@@ -4,6 +4,7 @@ import {
 } from '@cactus/shared';
 import { api, ApiError, browserPrintReceipt, printReceipt, serverPrints } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
+import type { CSSProperties } from 'react';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
 import { haptic, MoneyPad, Stepper, toast } from '../../ui/touch';
@@ -38,6 +39,10 @@ function Sheet({ children, onCancel, busy = false, dismissable = true, titleId, 
 
 type Menu = MenuResponse;
 interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
+
+/** One colour per category (the palette of a hand-painted menu board), so the grid reads at a glance. */
+const CAT_COLORS = ['#0e93ab', '#e2741a', '#d63384', '#3f9a3a', '#3567e0', '#8a56d8'];
+const catStyle = (index: number) => ({ '--c': CAT_COLORS[Math.max(0, index) % CAT_COLORS.length] }) as CSSProperties;
 
 const money = (c: number) => formatMoney(c);
 const today = () => new Date().toISOString().slice(0, 10);
@@ -135,13 +140,12 @@ export function Pos() {
       {view === 'order' ? (
         <div className="pos-grid">
           <section className="menu">
-            <div className="pos-section-heading"><div><p className="pos-eyebrow">{c.menu}</p><h1>{c.choose}</h1></div><span className="pos-menu-icon"><Icon name="leaf" size={28} /></span></div>
             <div className="cats">
-              {menu.categories.map((c) => <button key={c.id} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => setCat(c.id)}>{c.name}</button>)}
+              {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => setCat(c.id)}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
             <div className="items">
               {items.map((i) => (
-                <button key={i.id} className="item" disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
+                <button key={i.id} className="item" style={catStyle(menu.categories.findIndex((x) => x.id === i.categoryId))} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
                   <span className="pos-item-name">{i.name}</span>
                   {cart.some((l) => l.item.id === i.id) && <span className="pos-item-count pos-count">{cart.filter((l) => l.item.id === i.id).reduce((sum, l) => sum + l.qty, 0)}</span>}
                   {i.description && <small className="pos-item-description">{i.description}</small>}
@@ -181,7 +185,7 @@ export function Pos() {
             <div className="actions">
               <button className="ghost pos-clear" disabled={!cart.length || sending || !!paying} onClick={() => { setCart([]); setNote(''); }}><Icon name="trash" />{t('cart.clear')}</button>
               <button disabled={!cart.length || sending || !!paying} onClick={() => void place(true)}><Icon name="send" />{sending ? c.sending : t('cart.send')}</button>
-              <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.pay')}</button>
+              <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.payNow')}<span className="pos-pay-amount">{money(total)}</span></button>
             </div>
           </aside>
         </div>
@@ -294,19 +298,24 @@ function PaySheet({ total, onPay, onCancel }: {
   return (
     <Sheet onCancel={onCancel} busy={busy} titleId="pos-pay-title" kind="pos-payment">
         <header className="pos-sheet-heading"><div><p className="pos-eyebrow">{c.amountDue}</p><h2 id="pos-pay-title">{t('pay.title')}</h2></div><strong className="pos-payment-total">{money(total)}</strong></header>
-        <p className="pos-sheet-hint">{c.paymentHint}</p>
         <div className="chips pos-payment-method">
           <button disabled={busy} aria-pressed={method === 'cash'} className={method === 'cash' ? 'on' : ''} onClick={() => setMethod('cash')}><Icon name="cash" />{t('pay.cash')}</button>
           <button disabled={busy} aria-pressed={method === 'card'} className={method === 'card' ? 'on' : ''} onClick={() => setMethod('card')}><Icon name="card" />{t('pay.card')}</button>
         </div>
         {method === 'cash' ? (
           <>
-            <div className="pos-tendered"><span>{t('pay.tendered')}</span><strong className="amount" aria-live="polite">{money(given)}</strong></div>
-            <div className="chips">
-              {quick.map((q) => <button disabled={busy} key={q} aria-pressed={(q === total ? tendered === 0 : tendered === q)} className={(q === total ? tendered === 0 : tendered === q) ? 'on' : ''} onClick={() => { haptic(6); setTendered(q === total ? 0 : q); }}>{q === total ? t('pay.exact') : money(q)}</button>)}
+            <div className="pos-pay-cols">
+            <div className="pos-pay-side">
+            <div className="pos-pay-amounts">
+              <div><span>{t('pay.tendered')}</span><strong className="amount" aria-live="polite">{money(given)}</strong></div>
+              <div className={`pos-pay-change${given < total ? ' pos-short' : ''}`} aria-live="polite"><span>{given < total ? (lang === 'nl' ? 'Nog te betalen' : 'Still due') : t('pay.change')}</span><strong className="amount">{money(Math.abs(given - total))}</strong></div>
+            </div>
+            <div className="chips pos-quick">
+              {quick.map((q) => <button disabled={busy} key={q} aria-pressed={(q === total ? tendered === 0 : tendered === q)} className={(q === total ? tendered === 0 : tendered === q) ? 'on' : ''} onClick={() => { haptic(6); setTendered(q === total ? 0 : q); }}>{q === total ? t('pay.exact') : money(q).replace('.00', '')}</button>)}
+            </div>
             </div>
             {!busy && <MoneyPad cents={tendered} onChange={setTendered} />}
-            <div className={`change${given < total ? ' pos-short' : ''}`} aria-live="polite"><span>{given < total ? (lang === 'nl' ? 'Nog te betalen' : 'Still due') : t('pay.change')}</span><b>{money(Math.abs(given - total))}</b></div>
+            </div>
           </>
         ) : (
           <>
