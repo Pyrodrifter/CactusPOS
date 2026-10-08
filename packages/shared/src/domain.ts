@@ -92,6 +92,7 @@ export const Order = z.object({
   serviceMode: ServiceMode.optional(),
   /** Immutable design version selected when the order was created. Zero is the built-in design. */
   templateVersion: z.number().int().nonnegative().optional(),
+  printBusiness: z.lazy(() => BusinessSchema).optional(),
   /** Short number shown on tickets / pickup board; restarts daily. */
   ticketNumber: z.number().int().positive(),
   /** Gapless legal receipt number, assigned on payment. */
