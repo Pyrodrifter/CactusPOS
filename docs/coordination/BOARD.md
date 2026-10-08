@@ -44,6 +44,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T25 | web-screens | Phone ordering `/order`: staff mode (roaming order taker) and guest mode (QR, order -> pending until staff confirms/pays) | T10 | todo | | Guest order shows on POS "pending" tray; staff accepts in one tap |
 | T26 | ops | Installers: Windows service (NSSM) and Linux systemd unit, auto-start, health page, update script, kiosk browser launcher | T06 | todo | | Reboot laptop -> system is up with no login |
 | T27 | ops | Backups: nightly SQLite snapshot + journal copy to USB/cloud folder, one-click restore, restore drill documented | T03 | todo | | Restore on a clean machine reproduces all orders |
+| T29 | server | Tabs: name an unpaid order, add rounds of items to it later, pay at the end; kitchen sees each round; tab list on the counter (owner request) | T22 | doing | claude · 2026-10-08 | Guest opens a tab, orders twice more, pays once; kitchen got three rounds; one receipt |
 | T28 | qa | Load/chaos tests: 8 devices, 100 orders/hour, WiFi drop, server restart mid-order | T25 | todo | | No lost or duplicated orders; recovery documented |
 
 ## M3 — Receipt editor + books
