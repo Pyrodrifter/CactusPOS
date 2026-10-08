@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
-  type Ack, AvailabilityBody, BusinessSchema, CloseDayBody, CreateOrderBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
+  type Ack, AddLinesBody, AvailabilityBody, BusinessSchema, CloseDayBody, CreateOrderBody, TabNameBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
   StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
@@ -113,7 +113,8 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.get('/api/menu', async (req) => { authOf(req); return svc.menu(); });
   app.get('/api/orders', async (req) => {
     authOf(req);
-    return OrdersQuery.parse(req.query).scope === 'today' ? svc.todaysOrders() : svc.activeOrders();
+    const scope = OrdersQuery.parse(req.query).scope;
+    return scope === 'today' ? svc.todaysOrders() : scope === 'open' ? svc.openTabs() : svc.activeOrders();
   });
   app.get('/api/orders/:id', async (req) => { authOf(req); return svc.getOrder(idOf(req)); });
 
@@ -125,6 +126,20 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     // A repeat returns the first result without announcing or printing it a second time.
     if (!known) { broadcastOrder(order); printing.onSent(order); }
     return reply.code(201).send(order);
+  });
+  app.post('/api/orders/:id/lines', async (req) => {
+    const staff = authOf(req);
+    const requestId = requestIdOf(req);
+    const known = requestId ? db.prepare('SELECT 1 FROM requests WHERE key = ?').get(`add:${requestId}`) : undefined;
+    const order = svc.addLines(idOf(req), AddLinesBody.parse(req.body), staff, requestId);
+    if (!known) { broadcastOrder(order); printing.onAdded(order); }
+    return order;
+  });
+  app.post('/api/orders/:id/tab', async (req) => {
+    const staff = authOf(req);
+    const order = svc.setTabName(idOf(req), TabNameBody.parse(req.body).tabName, staff);
+    broadcastOrder(order);
+    return order;
   });
   app.post('/api/orders/:id/pay', async (req) => {
     const staff = authOf(req);

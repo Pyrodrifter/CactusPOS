@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
-  computeTotals, type TaxCategory, type Order, type OrderLine, type MenuItem, type MenuCategory,
-  type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard,
+  computeTotals, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
+  type AddLinesBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
 import { getKv, nextCounter, tx, type DB } from './db.js';
@@ -50,6 +50,11 @@ export class PosService {
     const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? ORDER BY ticket_number').all(this.businessDate()) as { data: string }[];
     return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => o.status !== 'void' && (o.status !== 'collected' || !o.paid));
   }
+  /** Every unpaid, non-void order, whatever day it was started: the tab list. Oldest first. */
+  openTabs(): Order[] {
+    const rows = this.db.prepare('SELECT data FROM orders WHERE receipt_number IS NULL ORDER BY created_at').all() as { data: string }[];
+    return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => !o.paid && o.status !== 'void');
+  }
   todaysOrders(): Order[] {
     const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? ORDER BY ticket_number DESC').all(this.businessDate()) as { data: string }[];
     return rows.map((r) => JSON.parse(r.data));
@@ -75,12 +80,12 @@ export class PosService {
   }
 
   /** The order a repeated request already produced, if any. */
-  private replayed(kind: 'create' | 'pay', requestId: string | undefined): Order | null {
+  private replayed(kind: 'create' | 'pay' | 'add', requestId: string | undefined): Order | null {
     if (!requestId) return null;
     const row = this.db.prepare('SELECT order_id FROM requests WHERE key = ?').get(`${kind}:${requestId}`) as { order_id: string } | undefined;
     return row ? this.getOrder(row.order_id) : null;
   }
-  private remember(kind: 'create' | 'pay', requestId: string | undefined, orderId: string): void {
+  private remember(kind: 'create' | 'pay' | 'add', requestId: string | undefined, orderId: string): void {
     if (requestId) this.db.prepare('INSERT INTO requests(key, kind, order_id, at) VALUES (?,?,?,?)').run(`${kind}:${requestId}`, kind, orderId, new Date().toISOString());
   }
 
@@ -124,12 +129,9 @@ export class PosService {
     return true;
   }
 
-  createOrder(body: CreateOrderBodyT, staff: Staff, requestId?: string): Order {
-    const before = this.replayed('create', requestId);
-    if (before) return before;
-    const menu = this.menu();
-    const date = this.businessDate();
-    const lines: OrderLine[] = body.lines.map((l) => {
+  /** Prices a set of requested lines against the menu as it is now. Throws HttpError for anything not sellable. */
+  private buildLines(inputs: OrderLineInput[], menu: MenuResponse, round: number): OrderLine[] {
+    return inputs.map((l) => {
       const item = menu.items.find((i) => i.id === l.itemId);
       if (!item) throw new HttpError(400, `Unknown item ${l.itemId}`);
       if (!item.available) throw new HttpError(409, `${item.name} is sold out`);
@@ -155,12 +157,36 @@ export class PosService {
       return {
         id: randomUUID(), itemId: item.id, name: item.name, qty: l.qty, unitPriceCents: unit,
         modifiers: mods, note: l.note, taxCategoryId: item.taxCategoryId, station: item.station,
-        lineTotalCents: unit * l.qty,
+        lineTotalCents: unit * l.qty, round,
       };
     });
+  }
+
+  /**
+   * Adds the totals of new lines to an order. Lines already on the order are never re-priced or
+   * re-taxed: only the new ones are computed, then the receipt figures are summed.
+   */
+  private addTotals(order: Pick<Order, 'totalCents' | 'taxCents' | 'breakdown'>, lines: OrderLine[], menu: MenuResponse, date: string): void {
     const totals = computeTotals(lines.map((l) => ({ taxCategoryId: l.taxCategoryId, grossCents: l.lineTotalCents })), menu.taxCategories, date);
     // Per-line ABB is stored with the order so receipts and the books never have to recompute it.
     lines.forEach((l, i) => { l.taxCents = totals.lines[i]!.taxCents; });
+    for (const row of totals.breakdown) {
+      const same = order.breakdown.find((x) => x.taxCategoryId === row.taxCategoryId && x.bps === row.bps);
+      if (same) { same.grossCents += row.grossCents; same.taxCents += row.taxCents; same.netCents += row.netCents; }
+      else order.breakdown.push(row);
+    }
+    order.totalCents = sumCents([order.totalCents, totals.totalCents]);
+    order.taxCents = sumCents([order.taxCents, totals.taxCents]);
+  }
+
+  createOrder(body: CreateOrderBodyT, staff: Staff, requestId?: string): Order {
+    const before = this.replayed('create', requestId);
+    if (before) return before;
+    const menu = this.menu();
+    const date = this.businessDate();
+    const lines = this.buildLines(body.lines, menu, 1);
+    const figures = { totalCents: 0, taxCents: 0, breakdown: [] as Order['breakdown'] };
+    this.addTotals(figures, lines, menu, date);
     return tx(this.db, () => {
       const again = this.replayed('create', requestId); // another writer may have finished the same request meanwhile
       if (again) return again;
@@ -168,11 +194,56 @@ export class PosService {
       const order: Order = {
         id: randomUUID(), ticketNumber: nextCounter(this.db, `ticket:${date}`), receiptNumber: null,
         status: 'sent', paid: false, lines, payments: [], note: body.note, source: body.source,
-        totalCents: totals.totalCents, taxCents: totals.taxCents, breakdown: totals.breakdown,
+        totalCents: figures.totalCents, taxCents: figures.taxCents, breakdown: figures.breakdown,
+        tabName: body.tabName, round: 1, kitchenRound: 1,
         createdAt: now, updatedAt: now, createdBy: staff.id,
       };
       this.save(order, 'order.created', { request: body.lines }, staff, date, true);
       this.remember('create', requestId, order.id);
+      return order;
+    });
+  }
+
+  /**
+   * Adds a round of items to an open tab. The kitchen gets the new round; what was already made
+   * is not sent again. Earlier lines keep the price and tax they were sold at.
+   */
+  addLines(id: string, body: AddLinesBodyT, staff: Staff, requestId?: string): Order {
+    return tx(this.db, () => {
+      const before = this.replayed('add', requestId);
+      if (before) {
+        if (before.id !== id) throw new HttpError(409, 'This request was already used for another order');
+        return before;
+      }
+      const order = this.getOrder(id);
+      if (order.status === 'void') throw new HttpError(409, 'Order is void');
+      if (order.paid) throw new HttpError(409, 'This order is already paid. Start a new order instead.');
+      const round = (order.round ?? 1) + 1;
+      const menu = this.menu();
+      const lines = this.buildLines(body.lines, menu, round);
+      this.addTotals(order, lines, menu, this.rowDate(id));
+      order.lines.push(...lines);
+      order.round = round;
+      // If the kitchen had finished everything so far, this round is a fresh ticket for them.
+      // If they are still on an earlier round, the new lines simply join the ticket they have.
+      if (order.status === 'ready' || order.status === 'collected') {
+        order.kitchenRound = round;
+        order.status = 'sent';
+      } else {
+        order.kitchenRound = order.kitchenRound ?? 1;
+      }
+      this.save(order, 'order.lines_added', { request: body.lines, round }, staff, this.rowDate(id));
+      this.remember('add', requestId, order.id);
+      return order;
+    });
+  }
+
+  setTabName(id: string, tabName: string, staff: Staff): Order {
+    return tx(this.db, () => {
+      const order = this.getOrder(id);
+      if (order.status === 'void') throw new HttpError(409, 'Order is void');
+      order.tabName = tabName || undefined;
+      this.save(order, 'order.tab_named', { tabName }, staff, this.rowDate(id));
       return order;
     });
   }

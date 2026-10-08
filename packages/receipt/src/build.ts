@@ -7,12 +7,12 @@ const T = {
   en: {
     receipt: 'Receipt', ticket: 'Ticket', total: 'TOTAL', inclAbb: 'Prices include ABB', abbOver: 'over', cash: 'Cash', card: 'Card',
     change: 'Change', tip: 'Tip', void: '*** VOID ***', unpaid: '*** NOT PAID ***', copy: 'COPY', exempt: 'Exempt', outside: 'Outside scope of ABB',
-    note: 'Note', order: 'ORDER', test: 'Printer test', testBody: 'If you can read this, the printer works.',
+    note: 'Note', order: 'ORDER', tab: 'Tab', added: '+++ ADDED TO THIS ORDER +++', test: 'Printer test', testBody: 'If you can read this, the printer works.',
   },
   nl: {
     receipt: 'Bon', ticket: 'Volgnr', total: 'TOTAAL', inclAbb: 'Prijzen zijn inclusief ABB', abbOver: 'over', cash: 'Contant', card: 'Pin',
     change: 'Wisselgeld', tip: 'Fooi', void: '*** GEANNULEERD ***', unpaid: '*** NIET BETAALD ***', copy: 'KOPIE', exempt: 'Vrijgesteld', outside: 'Buiten toepassing ABB',
-    note: 'Opmerking', order: 'BESTELLING', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
+    note: 'Opmerking', order: 'BESTELLING', tab: 'Rekening', added: '+++ TOEGEVOEGD AAN DEZE BESTELLING +++', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
   },
 } as const;
 
@@ -46,6 +46,7 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   out.push({ t: 'rule' });
   out.push({ t: 'row', left: `${t.receipt} #${o.receiptNumber ?? '-'}`, right: `${t.ticket} ${o.ticketNumber}` });
   out.push({ t: 'text', text: when });
+  if (o.tabName) out.push({ t: 'text', text: `${t.tab}: ${o.tabName}` });
   if (opts.copy) out.push({ t: 'text', text: t.copy, align: 'center', bold: true });
   if (o.status === 'void') out.push({ t: 'text', text: t.void, align: 'center', bold: true });
   else if (!o.paid) out.push({ t: 'text', text: t.unpaid, align: 'center', bold: true });
@@ -80,14 +81,17 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
 }
 
 /** Kitchen ticket: big, no prices. Optionally only the lines for one station. */
-export function buildKitchenTicket(o: Order, b: Business, opts: { lang?: ReceiptLang; station?: string } = {}): Block[] {
+export function buildKitchenTicket(o: Order, b: Business, opts: { lang?: ReceiptLang; station?: string; fromRound?: number } = {}): Block[] {
   const t = T[opts.lang ?? b.locale ?? 'en'];
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: b.timezone, hour: '2-digit', minute: '2-digit' }).format(new Date(o.createdAt));
-  const lines = opts.station ? o.lines.filter((l) => l.station === opts.station) : o.lines;
+  const from = opts.fromRound ?? 1;
+  const lines = o.lines.filter((l) => (l.round ?? 1) >= from && (!opts.station || l.station === opts.station));
   const out: Block[] = [
     { t: 'row', left: `${t.order} #${o.ticketNumber}`, right: time, bold: true, size: 'large' },
-    { t: 'rule' },
   ];
+  if (o.tabName) out.push({ t: 'text', text: o.tabName, bold: true, size: 'large' });
+  if (from > 1) out.push({ t: 'text', text: t.added, bold: true });
+  out.push({ t: 'rule' });
   for (const l of lines) {
     out.push({ t: 'text', text: `${l.qty} x ${l.name}`, bold: true, size: 'large' });
     for (const x of l.modifiers) out.push({ t: 'sub', text: `+ ${x.name}` });

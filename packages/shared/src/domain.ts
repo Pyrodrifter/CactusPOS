@@ -67,6 +67,8 @@ export const OrderLine = z.object({
   lineTotalCents: PriceZ,
   /** ABB contained in lineTotalCents. Absent on orders stored before per-line tax was recorded. */
   taxCents: CentsZ.optional(),
+  /** Which round of the order this line was added in. Absent means the first. */
+  round: z.number().int().positive().optional(),
 });
 export type OrderLine = z.infer<typeof OrderLine>;
 
@@ -99,9 +101,28 @@ export const Order = z.object({
   taxCents: PriceZ,
   breakdown: z.array(TaxBreakdownRow),
   voidReason: z.string().optional(),
+  /**
+   * Tabs. An unpaid order is an open tab: it can be given a name, more rounds of items can be added
+   * to it, and it is paid once at the end, on one receipt.
+   */
+  tabName: z.string().max(40).optional(),
+  /** Number of the latest round added. Absent means 1. */
+  round: z.number().int().positive().optional(),
+  /** First round the kitchen still has to make; earlier rounds were already handed over. Absent means 1. */
+  kitchenRound: z.number().int().positive().optional(),
   createdAt: IsoDateTime, updatedAt: IsoDateTime, createdBy: z.string(),
 });
 export type Order = z.infer<typeof Order>;
+
+/** The lines the kitchen still has to make: everything from `kitchenRound` on. */
+export function kitchenLines(order: Order): OrderLine[] {
+  const from = order.kitchenRound ?? 1;
+  return order.lines.filter((l) => (l.round ?? 1) >= from);
+}
+/** An open tab is any order that is neither paid nor void. */
+export function isOpenTab(order: Order): boolean {
+  return !order.paid && order.status !== 'void';
+}
 
 /**
  * The legal record of a sale: what the printed receipt must be reproducible from.
@@ -146,6 +167,8 @@ export const CreateOrderBody = z.object({
   lines: z.array(OrderLineInput).min(1).max(100),
   note: z.string().max(300).optional(),
   source: OrderSource.default('pos'),
+  /** Name for a tab that will be paid later, e.g. the guest's first name. */
+  tabName: z.string().trim().min(1).max(40).optional(),
 });
 export type CreateOrderBodyT = z.infer<typeof CreateOrderBody>;
 export const PayBody = z.object({
@@ -156,7 +179,13 @@ export type PayBodyT = z.infer<typeof PayBody>;
 export const StatusBody = z.object({ status: z.enum(['preparing', 'ready', 'collected']) });
 export const VoidBody = z.object({ reason: z.string().min(2).max(200), managerPin: z.string().optional() });
 export const LoginBody = z.object({ pin: z.string().min(3).max(12) });
-export const OrdersQuery = z.object({ scope: z.enum(['active', 'today']).default('active') });
+/** `open` = every unpaid, non-void order whatever day it was started (yesterday's forgotten tab stays payable). */
+export const OrdersQuery = z.object({ scope: z.enum(['active', 'today', 'open']).default('active') });
+/** Adds a round of items to an open tab. */
+export const AddLinesBody = z.object({ lines: z.array(OrderLineInput).min(1).max(100) });
+export type AddLinesBodyT = z.infer<typeof AddLinesBody>;
+/** Names or renames a tab; an empty name removes it. */
+export const TabNameBody = z.object({ tabName: z.string().trim().max(40) });
 export const IdParams = z.object({ id: z.string().min(1).max(80) });
 export const StaffInput = z.object({
   name: z.string().min(1).max(40), role: Role, active: z.boolean().default(true),
