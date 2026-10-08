@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { formatMoney } from '@cactus/shared';
 import { Icon as UiIcon } from './Icon';
 import { useLang } from '../i18n';
@@ -29,14 +29,32 @@ export function Sheet({ title, onClose, children, wide, dismissable = true }: {
   title?: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean; dismissable?: boolean;
 }) {
   const { lang } = useLang();
+  const panel = useRef<HTMLDivElement>(null);
+  const closing = useRef({ onClose, dismissable });
+  closing.current = { onClose, dismissable };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && dismissable) onClose(); };
+    const previous = document.activeElement;
+    const dialog = panel.current;
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && closing.current.dismissable) { e.preventDefault(); closing.current.onClose(); }
+      if (e.key !== 'Tab' || !dialog) return;
+      const controls = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')]
+        .filter((element) => element.getClientRects().length > 0);
+      const first = controls[0], last = controls.at(-1);
+      if (!first) { e.preventDefault(); dialog.focus(); }
+      else if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { e.preventDefault(); first.focus(); }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, dismissable]);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, []);
   return (
     <div className="sheet-bg" onClick={dismissable ? onClose : undefined}>
-      <div className={`sheet${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div ref={panel} tabIndex={-1} className={`sheet${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-grip" />
         {title !== undefined && (
           <div className="sheet-head">
