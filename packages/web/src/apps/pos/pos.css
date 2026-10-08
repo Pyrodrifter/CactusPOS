@@ -123,7 +123,11 @@
   .pos-payment-total { font-size: 27px; }
 }
 @media (max-width: 860px) {
-  .pos-mobile-bar { position: sticky; bottom: 0; z-index: 3; display: flex; justify-content: space-between; gap: 10px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px #123a4510; }
+  /* The shell main already reserves the navigation and safe area with bottom
+     padding. Sticky bottom is relative to that content box: another nav offset
+     would lift this bar over the cart actions at the end of the scroll. Keep
+     its full height in normal flow so the last cart button can clear it. */
+  .pos-mobile-bar { position: sticky; bottom: 0; z-index: 3; flex-shrink: 0; display: flex; justify-content: space-between; gap: 10px; padding: 10px 16px; background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px #123a4510; }
   .pos-mobile-bar > .ghost { justify-content: flex-start; flex: 1; padding: 0 6px; border: 0; gap: 10px; }
   .pos-mobile-bar > .ghost > span:not(.pos-count) { display: flex; flex-direction: column; text-align: left; font-size: 12px; color: var(--muted); }
   .pos-mobile-bar b { font-size: 19px; color: var(--ink); }
@@ -146,7 +150,6 @@
 .pos-paid-confirmation p { margin: 0; }
 .pos-paid-confirmation .amount { line-height: 1.15; }
 .pos-paid .actions { grid-template-columns: 1fr 1fr; }
-@media (max-width: 860px) { .pos-mobile-bar { bottom: calc(76px + env(safe-area-inset-bottom)); } }
 @media (max-width: 420px) { .pos-paid .actions { grid-template-columns: 1fr; } .pos-paid .actions .primary { grid-row: 1; } }
 
 @media (max-width: 420px) {
