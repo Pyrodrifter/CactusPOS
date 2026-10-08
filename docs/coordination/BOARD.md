@@ -71,6 +71,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T51 | server | Inventory-lite: stock counts per item, low alerts, auto-86 | T20 | todo | | |
 | T52 | web-screens | Customer-facing order status page via QR on receipt | T24 | todo | | |
 | T53 | books | Card-terminal reconciliation import; tip payout tracking | T34 | todo | | |
+| T54 | web-core | UI polish + touch optimisation across login, POS, payment, kitchen, pickup (owner request) | T10,T12 | review | claude · 2026-10-07 | Looks and feels right on her tablet and a phone |
 
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06

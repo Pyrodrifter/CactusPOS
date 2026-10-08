@@ -8,6 +8,7 @@ import { Pos } from './apps/pos/Pos';
 import { Kitchen } from './apps/kitchen/Kitchen';
 import { Pickup } from './apps/pickup/Pickup';
 import { Admin } from './apps/admin/Admin';
+import { Icon, Toasts } from './ui/touch';
 import './ui/styles.css';
 
 function Shell({ session }: { session: Session }) {
@@ -15,17 +16,18 @@ function Shell({ session }: { session: Session }) {
   return (
     <div className="shell" style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as React.CSSProperties) : undefined}>
       <header className="topbar">
-        <strong className="brand">🌵 {session.business.name}</strong>
+        <strong className="brand">🌵 <span>{session.business.name}</span></strong>
+        {/* On phones this nav becomes a bottom tab bar, within thumb reach. */}
         <nav>
-          <NavLink to="/pos">{t('nav.order')}</NavLink>
-          <NavLink to="/kitchen">{t('nav.kitchen')}</NavLink>
-          {session.staff.role === 'owner' && <NavLink to="/admin">{t('nav.admin')}</NavLink>}
-          <a href="/pickup" target="_blank" rel="noreferrer">{t('nav.pickup')}</a>
+          <NavLink to="/pos"><Icon.order /><span>{t('nav.order')}</span></NavLink>
+          <NavLink to="/kitchen"><Icon.kitchen /><span>{t('nav.kitchen')}</span></NavLink>
+          {session.staff.role === 'owner' && <NavLink to="/admin"><Icon.admin /><span>{t('nav.admin')}</span></NavLink>}
+          <a href="/pickup" target="_blank" rel="noreferrer"><Icon.board /><span>{t('nav.pickup')}</span></a>
         </nav>
         <span className="spacer" />
         <button className="ghost" onClick={() => setLang(lang === 'en' ? 'nl' : 'en')}>{lang === 'en' ? 'NL' : 'EN'}</button>
         <span className="who">{session.staff.name}</span>
-        <button className="ghost" onClick={() => { void api('/logout', { body: {} }).catch(() => {}).finally(() => { setSession(null); location.assign('/login'); }); }}>{t('nav.logout')}</button>
+        <button className="ghost icon-btn" aria-label={t('nav.logout')} title={t('nav.logout')} onClick={() => { void api('/logout', { body: {} }).catch(() => {}).finally(() => { setSession(null); location.assign('/login'); }); }}><Icon.logout /></button>
       </header>
       <main>
         <Routes>
@@ -43,6 +45,7 @@ function App() {
   const [session, setS] = useState<Session | null>(getSession());
   return (
     <BrowserRouter>
+      <Toasts />
       <Routes>
         <Route path="/pickup" element={<Pickup />} />
         <Route path="/login" element={session ? <Navigate to="/pos" replace /> : <Login onDone={(s) => { setSession(s); setS(s); }} />} />
