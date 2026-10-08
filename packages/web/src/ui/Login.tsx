@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Session } from '../lib/api';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
@@ -37,17 +37,21 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
   const press = (d: string) => {
     if (submitting.current) return;
     setErr('');
-    const next = (pin + d).slice(0, 8);
-    setPin(next);
+    setPin((value) => (value + d).slice(0, 8));
   };
-
-  return (
-    <div className="login" onKeyDown={(event) => {
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
       if (busy || event.altKey || event.ctrlKey || event.metaKey) return;
       if (/^\d$/.test(event.key)) { event.preventDefault(); press(event.key); }
-      if (event.key === 'Backspace') { event.preventDefault(); setPin(pin.slice(0, -1)); }
+      if (event.key === 'Backspace') { event.preventDefault(); setPin((value) => value.slice(0, -1)); }
       if (event.key === 'Enter') { event.preventDefault(); void submit(pin); }
-    }}>
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [busy, pin, lang]);
+
+  return (
+    <div className="login">
       <section className="login-story">
         <div className="login-brand"><span className="brand-mark"><Icon name="leaf" size={28} /></span><strong>{t('app.name')}</strong><button className="ghost login-language" aria-label={lang === 'nl' ? 'Taal wijzigen' : 'Change language'} onClick={() => setLang(lang === 'en' ? 'nl' : 'en')}><Icon name="language" size={20} /><span>{lang === 'en' ? 'NL' : 'EN'}</span></button></div>
         <p className="login-eyebrow">{copy.eyebrow}</p>

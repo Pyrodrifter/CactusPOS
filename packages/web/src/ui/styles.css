@@ -8,7 +8,7 @@
 .dark { --bg: #10232b; --card: #1a3039; --ink: #f1f7f4; --muted: #a3b7bd; --line: #304751; --accent: #a8dfb6; --warn: #f5b46e; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; margin: 0; }
-body { font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+body { font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; }
 button { font: inherit; font-weight: 600; min-height: var(--tap); min-width: 48px; padding: 0 18px; border-radius: 13px; border: 1px solid var(--line);
   background: var(--card); color: var(--ink); cursor: pointer; touch-action: manipulation; }
 button:active { transform: scale(.98); }
@@ -148,7 +148,7 @@ button.danger { color: var(--danger); border-color: var(--danger); }
 @media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
 input[type=color] { padding: 4px; max-width: 120px; }
 
-.app-frame { height: 100%; display: flex; flex-direction: column; }
+.app-frame { height: 100dvh; display: flex; flex-direction: column; }
 .app-frame > .shell { flex: 1; min-height: 0; height: auto; }
 .app-frame > .pickup { flex: 1; min-height: 0; }
 .pwa-status { position: relative; z-index: 5; flex-shrink: 0; padding: 6px 16px; background: #edf3ee; border-bottom: 1px solid var(--line); color: var(--brand); font-size: 14px; }
