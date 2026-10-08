@@ -65,6 +65,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T43 | firmware | Hardware notes: BOM, enclosure, charging, range test | T41 | todo | | |
 
 ## M5 — Polish
+| UX01 | web-core | Shared visual refresh: local SVG icon system, app navigation, PIN login, design tokens, accessible touch/focus styles and responsive shell | T00 | doing | codex · 2026-10-07 | Consistent polished shell at phone/tablet widths; controls at least 48px; icons have accessible labels; existing flows preserved |
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
 | T50 | web-pos | Training mode (separate DB), quick-keys, dark/light themes, language NL/EN/PAP/ES | T23 | todo | | |
