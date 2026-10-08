@@ -43,6 +43,7 @@ main { flex: 1; min-height: 0; overflow: auto; }
 .login { flex: 1; width: 100%; max-width: 1160px; margin: 0 auto; padding: clamp(24px, 6vw, 72px); display: grid; grid-template-columns: 1fr 380px; align-items: center; gap: 72px; }
 .login-story { text-align: left; }
 .login-brand { display: flex; align-items: center; gap: 12px; font-size: 22px; letter-spacing: -.6px; margin-bottom: 64px; }
+.login-language { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; font-size: 13px; padding: 0 12px; }
 .login-eyebrow { color: var(--brand); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.8px; }
 .login-story h1 { white-space: pre-line; font-size: clamp(36px, 5vw, 60px); line-height: 1.08; letter-spacing: -2px; margin: 16px 0 24px; }
 .login-intro { color: var(--muted); font-size: 18px; max-width: 370px; line-height: 1.65; }
