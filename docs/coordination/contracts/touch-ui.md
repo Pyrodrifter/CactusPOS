@@ -1,4 +1,4 @@
-# Touch UI spec (v1, UX07)
+# Touch UI spec (v2, UX08)
 
 This is a till used with fingers, often in a hurry, sometimes with wet or greasy hands, on a tablet in a food truck. Every screen follows these rules so the app feels like one thing.
 
@@ -8,7 +8,7 @@ This is a till used with fingers, often in a hurry, sometimes with wet or greasy
 | `--tap` | 56px | The minimum height **and** width of anything tappable. Nothing interactive is smaller, on any screen size. |
 | `--tap-lg` | 64px | The working controls of a screen: category tabs, list-row actions, Save, Add, steppers in the cart, filters. |
 | `--tap-xl` | 76px | The one main action of a screen or sheet (Pay, Confirm payment, Start / Ready on a ticket, Add to order) and keypad keys. |
-| `--rail` | 112px | Width of the navigation rail on wide screens. |
+| `--navh` | 0px inside the staff shell | Navigation is now above the workspace; do not reserve space for a bottom navigation bar. |
 
 - At least **10px** between neighbouring tap targets; 12px where a wrong tap costs something (Void next to Pay).
 - Text: body 17px. Button labels 17px or more; the main action 19-20px. Nothing a person must read to choose is under 15px. Prices and totals use tabular numbers.
@@ -26,8 +26,12 @@ This is a till used with fingers, often in a hurry, sometimes with wet or greasy
 - Respect `prefers-reduced-motion`; keep animations under 250ms.
 
 ## Navigation (done in the shell; screens do not add their own top-level navigation)
-- **901px and wider** (landscape tablets, desktops): a rail of large buttons on the left edge (`.topbar` restyled), with language and sign-out at the bottom. There is no top bar, so screens get the full height.
-- **900px and narrower** (phones, portrait tablets): a slim header and a tab bar fixed to the bottom, 72px buttons. `main` already reserves the space (`--navh`).
+- **761px and wider**: horizontal top navigation, with brand at the left and Screen tools at the right. The workspace uses the full width underneath it.
+- **760px and narrower**: a brand/tools row followed by large top navigation buttons. No bottom navigation; the counter's cart/pay bar can occupy the bottom edge.
+- Language and sign-out live in Screen tools alongside sunlight contrast, fullscreen, keep-awake and the 20-second cleaning lock. Unsupported browser features are disabled with an explanation.
+- Screen tools has a fixed heading/footer and a scrollable body. Background staff controls are inert while tools or cleaning are open; closing restores focus.
+- This supersedes the UX07 left rail / bottom-navigation direction at the owner's explicit request on 2026-10-08. Do not restore those layouts in other UI lanes.
+- The customer pickup board is excluded from UX08. No staff display preference, navigation or counter styling applies to it.
 - The "Install app" offer only shows on the sign-in screen and in Admin.
 
 ## Sizes to check
