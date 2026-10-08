@@ -64,3 +64,16 @@
   .kitchen .ticket-actions button { min-height: 60px; }
   .kitchen .kitchen-column-heading { margin-bottom: 12px; }
 }
+
+/* ---- UI pass 3: slim header, more room for tickets ---- */
+.kitchen.dark { padding-top: 14px; }
+.kitchen .kitchen-heading { margin-bottom: 14px; gap: 12px; }
+.kitchen h1.kitchen-title { font-size: 22px; margin: 0; gap: 10px; }
+.kitchen .kitchen-overview { gap: 12px; }
+.kitchen .kitchen-overview b { font-size: 18px; }
+.kitchen .kitchen-connection { padding: 6px 11px; }
+/* Ticket number, payment state and age share one row. */
+.kitchen .ticket .ticket-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
+.kitchen .ticket-heading .ticket-payment { margin: 0; }
+.kitchen .ticket-heading .ticket-age { margin-left: auto; }
+.kitchen .ticket .ticket-number b { font-size: 30px; line-height: 1; }

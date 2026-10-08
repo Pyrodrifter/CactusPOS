@@ -5,12 +5,14 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
-  type Ack, AvailabilityBody, BusinessSchema, CreateOrderBody, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
+  type Ack, AvailabilityBody, BusinessSchema, CloseDayBody, CreateOrderBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
   StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
 import { PrinterSettings, Printing } from './printing.js';
+import { Reports } from './reports.js';
+import { buildDayReport, renderHtml } from '@cactus/receipt';
 import type { Transport } from '@cactus/printer';
 import { HttpError, PosService, type Staff } from './service.js';
 import { renderReceiptHtml } from './receipt.js';
@@ -18,13 +20,14 @@ import type { DB } from './db.js';
 
 interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
 
-export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing } {
+export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports } {
   const svc = new PosService(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
   const throttle = new LoginThrottle();
   const printing = new Printing(db, () => svc.business(), opts.printerTransport);
   app.addHook('onClose', async () => printing.queue.stop());
+  const reports = new Reports(db, svc);
   const clients = new Set<Client>();
 
   const broadcast = (ev: ServerEvent) => {
@@ -148,6 +151,27 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), (req.query as { copy?: string }).copy === '1'));
   });
 
+  /* ----- day reports: owner only ----- */
+  app.get('/api/reports/day', async (req) => {
+    ownerOf(req);
+    const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
+    return { report: reports.day(date), closed: reports.latestFor(date), today: svc.businessDate() };
+  });
+  app.post('/api/reports/day/close', async (req, reply) => reply.code(201).send(reports.close(CloseDayBody.parse(req.body), ownerOf(req))));
+  app.get('/api/reports/z', async (req) => { ownerOf(req); return reports.list(); });
+  // Prints the closed Z report for the date if there is one, otherwise a reading of the day so far.
+  app.post('/api/reports/day/print', async (req) => {
+    ownerOf(req);
+    const date = ReportQuery.parse(req.body ?? {}).date ?? svc.businessDate();
+    if (!printing.active) throw new HttpError(409, 'No receipt printer is set up');
+    return printing.dayReport(reports.latestFor(date) ?? reports.day(date));
+  });
+  app.get('/api/reports/day/print.html', async (req, reply) => {
+    ownerOf(req);
+    const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
+    return reply.type('text/html').send(renderHtml(buildDayReport(reports.latestFor(date) ?? reports.day(date), svc.business()), { title: `Report ${date}` }));
+  });
+
   /* ----- printing ----- */
   // Tells a screen whether to send receipts to the printer or fall back to the browser's print dialog.
   app.get('/api/print/status', async (req) => { authOf(req); return { active: printing.active, pending: printing.queue.pending(), jobs: printing.queue.list().slice(0, 20) }; });
@@ -219,5 +243,5 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
       return reply.sendFile('index.html');
     });
   }
-  return { app, svc, admin, printing };
+  return { app, svc, admin, printing, reports };
 }

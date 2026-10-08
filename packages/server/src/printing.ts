@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import type { Business, Order } from '@cactus/shared';
+import type { Business, DayReport, Order, ZReport } from '@cactus/shared';
 import { NetworkTransport, PrintQueue, type PrintJob, type Transport } from '@cactus/printer';
-import { buildKitchenTicket, buildReceipt, buildTestPage, drawerKick, renderEscPos, type Block } from '@cactus/receipt';
+import { buildDayReport, buildKitchenTicket, buildReceipt, buildTestPage, drawerKick, renderEscPos, type Block } from '@cactus/receipt';
 import { getKv, setKv, type DB } from './db.js';
 
 export const PrinterSettings = z.object({
@@ -47,6 +47,7 @@ export class Printing {
   }
   kitchen(o: Order): PrintJob { return this.print(`Kitchen #${o.ticketNumber}`, buildKitchenTicket(o, this.business())); }
   test(): PrintJob { return this.print('Test page', buildTestPage(this.business())); }
+  dayReport(r: DayReport | ZReport): PrintJob { return this.print('report' in r ? `Z report #${r.number}` : 'X report', buildDayReport(r, this.business())); }
   openDrawer(): PrintJob { return this.queue.add('Open drawer', drawerKick()); }
 
   /** Called after a sale is paid. Opens the drawer for cash even if receipts are not auto-printed. */

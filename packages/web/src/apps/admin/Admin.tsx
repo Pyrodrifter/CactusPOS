@@ -5,26 +5,27 @@ import { BusinessAdmin } from './BusinessAdmin';
 import { StaffAdmin } from './StaffAdmin';
 import { TaxAdmin } from './TaxAdmin';
 import { PrinterAdmin } from './PrinterAdmin';
+import { ReportsAdmin } from './ReportsAdmin';
 import { Icon, type IconName } from '../../ui/Icon';
 import { useAdminCopy } from './copy';
 import './admin.css';
 
-const TABS = ['menu', 'business', 'staff', 'tax', 'printer'] as const;
+const TABS = ['reports', 'menu', 'business', 'staff', 'tax', 'printer'] as const;
 type Tab = (typeof TABS)[number];
-const tabIcons: Record<Tab, IconName> = { menu: 'menu', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer' };
+const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer' };
 
 export function Admin() {
   const { t } = useLang();
   const copy = useAdminCopy();
-  const [tab, setTab] = useState<Tab>('menu');
+  const [tab, setTab] = useState<Tab>('reports');
   return (
     <div className="admin">
-      <header className="admin-intro"><span className="admin-eyebrow"><Icon name="settings" size={18} />{copy.settings}</span><h1>{copy.title}</h1><p>{copy.intro}</p></header>
       <nav className="tabs admin-tabs" aria-label={t('nav.admin')}>
         {TABS.map((x) => <button key={x} className={tab === x ? 'on' : ''} aria-current={tab === x ? 'page' : undefined} onClick={() => setTab(x)}><Icon name={tabIcons[x]} />{t(`admin.${x}`)}</button>)}
       </nav>
       <div className="admin-body">
-        <div className="admin-section-heading"><span className="admin-section-icon"><Icon name={tabIcons[tab]} size={26} /></span><div><h2>{t(`admin.${tab}`)}</h2><p>{copy[tab]}</p></div></div>
+        <p className="admin-hint">{copy[tab]}</p>
+        {tab === 'reports' && <ReportsAdmin />}
         {tab === 'menu' && <MenuAdmin />}
         {tab === 'business' && <BusinessAdmin />}
         {tab === 'staff' && <StaffAdmin />}

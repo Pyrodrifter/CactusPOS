@@ -208,3 +208,13 @@
   .pos .cats { top: 0; margin: -3px -16px 0; padding: 3px 16px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .pos .cart li, .pos-item-count { animation: none; } }
+
+/* ---- UI pass 3: orders filter ---- */
+.pos-orders-filter { display: flex; gap: 8px; padding: 16px 20px 4px; flex-wrap: wrap; }
+.pos-orders-filter button { border-radius: 99px; padding: 0 18px; min-height: 50px; }
+.pos-orders-filter button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.pos-orders-filter button.on .pos-count { background: rgba(255, 255, 255, .2); color: #fff; }
+.pos-orders-filter button:disabled { opacity: .55; }
+.pos .orders .num { display: flex; flex-direction: column; line-height: 1.1; min-width: 68px; }
+.pos .orders .num small { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+@media (max-width: 860px) { .pos-orders-filter { padding: 14px 16px 2px; } .pos-orders-filter button { flex: 1 1 140px; } }

@@ -1,4 +1,4 @@
-# Database (schema version 2)
+# Database (schema version 3)
 
 SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openDb()`, which sets the pragmas and runs migrations.
 
@@ -7,6 +7,7 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 - Never edit a shipped migration; add a new one. A database newer than the program is refused.
 - v1 `base`: all original tables (`IF NOT EXISTS`, so databases from before migrations existed pass through).
 - v2 `ledger-hardening`: `payments` and `requests` tables, the triggers below, and a backfill of payments from order JSON.
+- v3 `z-reports`: the `z_reports` table.
 - Pragmas on every connection: WAL, `foreign_keys`, `synchronous = FULL`, `recursive_triggers = ON`, `busy_timeout = 5000`.
 
 ## Tables
@@ -15,13 +16,14 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 | `orders` | Current state of each order: `id`, `ticket_number`, `receipt_number`, `business_date`, `data` (Order JSON), `created_at` | Updatable projection, with limits below. Never deleted. |
 | `order_events` | One row per change (`order.created`, `order.paid`, `order.status`, `order.void`). `payload.order` is the **complete order after the change** | Append-only |
 | `payments` | One row per payment: amount, tendered, change, tip, reference, receipt number, staff, time | Append-only. The protected record of money taken |
+| `z_reports` | Closed days: `number`, `business_date`, `closed_at`, `closed_by`, `data` (ZReport JSON) | Append-only |
 | `audit_log` | Owner-side changes (menu, prices, staff, tax, business) | Append-only |
 | `counters` | `receipt` (gapless, forever) and `ticket:<date>` (daily) | Only increase; never deleted |
 | `requests` | Idempotency keys -> order id | Insert only in practice |
 | `menu_*`, `tax_categories`, `staff`, `sessions`, `kv` | Configuration | Freely editable through the admin API |
 
 ## Guarantees enforced by triggers (hold for any connection, including tools that skip `openDb`)
-- `order_events`, `payments`, `audit_log`: no UPDATE, no DELETE, and no `INSERT OR REPLACE` over an existing row.
+- `order_events`, `payments`, `audit_log`, `z_reports`: no UPDATE, no DELETE, and no `INSERT OR REPLACE` over an existing row.
 - `orders`: no DELETE; no insert over an existing `id` or an already issued `receipt_number`; `id`, `ticket_number`, `business_date`, `created_at` never change; a `receipt_number` never changes once set; `data` must stay valid JSON whose `payments` array never shrinks and never has fewer entries than the `payments` table.
 - `counters`: values never decrease; rows are never deleted.
 

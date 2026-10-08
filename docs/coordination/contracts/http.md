@@ -37,6 +37,17 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/admin/staff`, `PUT /api/admin/staff/:id` | `StaffInput`. PIN 4-8 digits, unique; at least one active owner must remain |
 | `GET /api/admin/audit` | `AuditList`: last 200 changes, newest first, each `{ seq, type, payload, staffId, at }` |
 
+## Day reports (owner only). Schemas in `packages/shared/src/reports.ts`
+| Route | Body | Returns |
+|---|---|---|
+| `GET /api/reports/day[?date=YYYY-MM-DD]` | | `{ report: DayReport, closed: ZReport \| null, today }`. Default date is today in the business time zone |
+| `POST /api/reports/day/close` | `CloseDayBody` | `201 ZReport`. Can be repeated; the latest number for a date counts. A future date is `400` |
+| `GET /api/reports/z` | | `ZReportList`, newest first (60) |
+| `POST /api/reports/day/print` | `{ date? }` | print job. `409` without a printer |
+| `GET /api/reports/day/print.html[?date=]` | | printable page (browser fallback) |
+
+Definitions of sales, refunds, tenders and cash expected: see the T33 handoff and the comments in `reports.ts`.
+
 ## WebSocket `/ws`
 - Staff: `/ws?token=...` receives `ServerEvent`: `hello`, `order.changed { order }`, `menu.changed` (refetch `/api/menu`).
 - Public pickup board: `/ws?room=pickup` receives `hello`, then only `pickup.changed { preparing, ready }`.

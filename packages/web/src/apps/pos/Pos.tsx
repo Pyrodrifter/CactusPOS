@@ -357,14 +357,22 @@ function OrdersList({ orders, onPay }: { orders: Order[]; onPay: (o: Order) => v
     catch (e) { setErr(e instanceof ApiError ? e.message : String(e)); }
     finally { voidPending.current = false; setBusy(false); }
   };
+  const [filter, setFilter] = useState<'open' | 'all'>('open');
+  const toPay = orders.filter((o) => !o.paid && o.status !== 'void');
+  // Nothing left to pay: show everything rather than an empty list.
+  const shown = filter === 'open' && toPay.length ? toPay : orders;
+  const clock = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   if (!orders.length) return <div className="pos-orders-empty"><Icon name="receipt" size={40} /><h2>{c.today}</h2><p>{t('orders.empty')}</p></div>;
   return (
     <>
-      <div className="pos-orders-heading"><p className="pos-eyebrow">{c.today}</p><h1>{t('nav.orders')} <span className="pos-count">{orders.length}</span></h1></div>
+      <div className="pos-orders-filter" role="group" aria-label={t('nav.orders')}>
+        <button aria-pressed={shown === toPay} className={shown === toPay ? 'on' : ''} disabled={!toPay.length} onClick={() => setFilter('open')}>{lang === 'nl' ? 'Te betalen' : 'To pay'}<span className="pos-count">{toPay.length}</span></button>
+        <button aria-pressed={shown === orders} className={shown === orders ? 'on' : ''} onClick={() => setFilter('all')}>{lang === 'nl' ? 'Alles vandaag' : 'All today'}<span className="pos-count">{orders.length}</span></button>
+      </div>
       <ul className="orders">
-        {orders.map((o) => (
+        {shown.map((o) => (
           <li key={o.id} className={o.status === 'void' ? 'void' : ''}>
-            <div className="num">#{o.ticketNumber}</div>
+            <div className="num">#{o.ticketNumber}<small>{clock(o.createdAt)}</small></div>
             <div className="grow">
               <div>{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</div>
               <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span></div>

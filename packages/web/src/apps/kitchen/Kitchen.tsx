@@ -54,12 +54,12 @@ function Ticket({ o, now, online }: { o: Order; now: number; online: boolean }) 
   return (
     <article className={`ticket${late ? ' late' : warm ? ' warm' : ''}${fresh ? ' ticket-fresh' : ''}${o.status === 'ready' ? ' ticket-ready' : ''}`} aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-busy={pending !== null}>
       <header className="ticket-heading">
-        <div className="ticket-number"><span>{t('ticket')}</span><b>#{o.ticketNumber}</b></div>
+        <div className="ticket-number"><b>#{o.ticketNumber}</b></div>
+        <div className={`ticket-payment ${o.paid ? 'ticket-paid' : 'ticket-unpaid'}`}>
+          <Icon name={o.paid ? 'check' : 'cash'} size={16} />{o.paid ? t('orders.paid') : t('orders.unpaid')}
+        </div>
         <span className={`ticket-age${late ? ' ticket-age-late' : warm ? ' ticket-age-warm' : ''}`} aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={18} />{mins} min</span>
       </header>
-      <div className={`ticket-payment ${o.paid ? 'ticket-paid' : 'ticket-unpaid'}`}>
-        <Icon name={o.paid ? 'check' : 'cash'} size={16} />{o.paid ? t('orders.paid') : t('orders.unpaid')}
-      </div>
       <ul className="ticket-lines">
         {o.lines.map((l) => (
           <li key={l.id}>
@@ -98,7 +98,7 @@ export function Kitchen() {
   return (
     <div className="kitchen dark">
       <header className="kitchen-heading">
-        <div className="kitchen-title"><span className="kitchen-mark"><Icon name="kitchen" size={28} /></span><div><h1>{t('nav.kitchen')}</h1><p>{c.subtitle}</p></div></div>
+        <h1 className="kitchen-title"><Icon name="kitchen" size={24} />{t('nav.kitchen')}</h1>
         <div className="kitchen-overview"><span><b>{live.length}</b> {c.active}</span><span className={`kitchen-connection${online ? '' : ' reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={18} />{online ? c.live : c.reconnect}</span></div>
       </header>
       {!online && <div className="kitchen-offline" role="status"><Icon name="wifi-off" /><span>{c.offline}</span></div>}

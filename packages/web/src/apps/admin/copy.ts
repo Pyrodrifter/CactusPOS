@@ -3,6 +3,7 @@ import { useLang } from '../../i18n';
 const copy = {
   en: {
     title: 'Make it yours', intro: 'Your menu, team and truck settings in one place.',
+    reports: 'Today at a glance, and closing the day for the books.',
     menu: 'Keep your menu ready for service. Prices include ABB.',
     business: 'Business details and the personal touches on every receipt.',
     staff: 'Manage the people who can sign in and their access.',
@@ -18,6 +19,7 @@ const copy = {
   },
   nl: {
     title: 'Maak het eigen', intro: 'Je menu, team en instellingen op één plek.',
+    reports: 'Vandaag in één oogopslag, en de dag afsluiten voor de boekhouding.',
     menu: 'Houd je menu klaar voor verkoop. Prijzen zijn inclusief ABB.',
     business: 'Bedrijfsgegevens en de persoonlijke details op elke bon.',
     staff: 'Beheer wie kan inloggen en welke toegang zij hebben.',

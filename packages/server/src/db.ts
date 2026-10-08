@@ -126,6 +126,14 @@ CREATE TABLE requests (key TEXT PRIMARY KEY, kind TEXT NOT NULL, order_id TEXT N
       }
     },
   },
+  {
+    /** Closed days. A Z report is a legal-style record: numbered, never changed, never removed. */
+    version: 3, name: 'z-reports',
+    up: (db) => db.exec(`
+CREATE TABLE z_reports (number INTEGER PRIMARY KEY, business_date TEXT NOT NULL, closed_at TEXT NOT NULL, closed_by TEXT NOT NULL, data TEXT NOT NULL);
+CREATE INDEX z_reports_date ON z_reports(business_date);
+${appendOnly('z_reports', 'number')}`),
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
