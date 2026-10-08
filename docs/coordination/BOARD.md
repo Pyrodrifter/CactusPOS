@@ -68,6 +68,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 ## M5 — Polish
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
+| UX08 | web-core | Restore top navigation; bold shell/sign-in polish; touch display tools, fullscreen and keep-awake controls (owner request; leave pickup board unchanged) | UX01 | doing | codex · 2026-10-08 | Top navigation at phone/tablet/desktop sizes; touch tools work and persist safely; pickup files and appearance unchanged; typecheck/tests pass and browser screenshots verified |
 | UX01 | web-core | Shared visual refresh: local SVG icon system, app navigation, PIN login, design tokens, accessible touch/focus styles and responsive shell | T00 | done | codex · 2026-10-07 | Consistent polished shell at phone/tablet widths; controls at least 48px; icons have accessible labels; existing flows preserved |
 | UX02 | web-pos | Polish POS menu/cart/modifier/payment/order views with icons, clear hierarchy and phone/tablet touch layouts | T00 | done | codex-pos · 2026-10-07 | Existing order/payment flows work; quantity/actions at least 48px; no horizontal overflow at 390px; visual browser verification |
 | UX03 | web-screens | Polish kitchen/pickup with consistent icons, readable status hierarchy, large touch actions and responsive boards | T00 | done | codex-screens · 2026-10-07 | Live ready/recall/pickup behavior preserved; kitchen actions at least 48px; phone/tablet/TV screenshots verified |
