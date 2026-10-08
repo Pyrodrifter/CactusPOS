@@ -1,0 +1,66 @@
+.kitchen.dark {
+  --bg: #101f29; --card: #1b2e3a; --ink: #f4f8f9; --muted: #a7bbc5; --line: #344b59;
+  padding: 24px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  min-height: 100%; background: var(--bg); color: var(--ink);
+}
+.kitchen .kitchen-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+.kitchen .kitchen-title { display: flex; align-items: center; gap: 14px; }
+.kitchen .kitchen-mark { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: #2a434d; color: #c9ee96; }
+.kitchen h1 { font-size: 28px; line-height: 1.2; margin: 0 0 5px; letter-spacing: -.6px; }
+.kitchen .kitchen-title p { margin: 0; color: var(--muted); }
+.kitchen .kitchen-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 14px; }
+.kitchen .kitchen-overview b { color: var(--ink); font-size: 22px; }
+.kitchen .kitchen-connection { display: inline-flex; align-items: center; gap: 8px; color: #c9ee96; padding: 9px 13px; border: 1px solid #40574a; border-radius: 999px; background: #203b33; }
+.kitchen .reconnecting { color: #ffca8b; border-color: #6b5236; background: #3c3025; }
+.kitchen .kitchen-offline { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid #765b3c; border-radius: 14px; background: #3c3025; color: #ffdaa9; margin-bottom: 20px; }
+.kitchen svg { flex-shrink: 0; }
+.kitchen .kcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.kitchen .kitchen-column { min-width: 0; }
+.kitchen .kitchen-column-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px 14px; margin-bottom: 16px; border-bottom: 2px solid #465667; }
+.kitchen .kitchen-column-preparing .kitchen-column-heading { border-color: #dda563; }
+.kitchen .kitchen-column-ready .kitchen-column-heading { border-color: #b9e286; }
+.kitchen .kitchen-column-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; }
+.kitchen .kitchen-count { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px; background: #2a3e4b; font-size: 14px; font-weight: 750; }
+.kitchen .kitchen-column-empty { border: 1px dashed #3d5260; border-radius: 18px; padding: 30px 16px; text-align: center; font-size: 14px; color: var(--muted); margin: 0; }
+.kitchen .ticket { border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 16px; box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
+.kitchen .ticket.warm { border-color: #e2ad6d; box-shadow: inset 4px 0 #e2ad6d, 0 5px 18px #070f1426; }
+.kitchen .ticket.late { border-color: #ef9898; box-shadow: inset 4px 0 #ef9898, 0 5px 18px #070f1426; }
+.kitchen .ticket-fresh { animation: kitchen-arrival 1.2s ease-out 2; }
+@keyframes kitchen-arrival { 0%, 100% { background-color: var(--card); } 40% { background-color: #35534c; } }
+.kitchen .ticket-ready { background: #203b38; border-color: #486859; }
+.kitchen .ticket .ticket-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.kitchen .ticket-number span { display: block; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+.kitchen .ticket-number b { display: block; font-size: 36px; line-height: 1.2; letter-spacing: -.8px; }
+.kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; font-size: 14px; font-weight: 600; white-space: nowrap; background: #293e4b; color: #c9d9df; border-radius: 10px; }
+.kitchen .ticket-age-warm { color: #ffce96; background: #513f2c; }
+.kitchen .ticket-age-late { color: #ffd0d0; background: #502e31; }
+.kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 650; border-radius: 999px; margin-top: 9px; padding: 4px 9px; }
+.kitchen .ticket-paid { background: #2b4a3e; color: #c8eeaf; }
+.kitchen .ticket-unpaid { background: #4a3b2d; color: #ffd09b; }
+.kitchen .ticket .ticket-lines { margin: 18px 0; font-size: 18px; }
+.kitchen .ticket-lines li { padding: 12px 0; border-top: 1px solid #3d526060; }
+.kitchen .ticket-line { display: flex; align-items: baseline; gap: 10px; }
+.kitchen .ticket-line strong { font-weight: 650; }
+.kitchen .ticket-quantity { color: #c9ee96; min-width: 28px; }
+.kitchen .ticket-modifiers { color: #b8cbd2; margin: 5px 0 0 38px; font-size: 14px; }
+.kitchen .ticket-exclusion { color: #ffb5b5; font-weight: 650; }
+.kitchen .ticket-line-note { color: #ffce96; margin: 5px 0 0 38px; font-size: 15px; }
+.kitchen .ticket-note, .kitchen .ticket-error { display: flex; gap: 9px; padding: 12px; border-radius: 12px; margin: 0 0 14px; background: #483a29; color: #ffdda8; font-size: 14px; }
+.kitchen .ticket-error { background: #502e31; color: #ffd0d0; }
+.kitchen .ticket .ticket-actions { display: flex; gap: 8px; }
+.kitchen .ticket-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; min-width: 0; padding: 10px 12px; border-radius: 14px; font-size: 16px; font-weight: 750; line-height: 1.2; }
+.kitchen .ticket-primary { background: #c9ee96; border-color: #c9ee96; color: #153627; }
+.kitchen .ticket-recall { background: #2a423f; border-color: #536e64; color: #edf4ee; }
+.kitchen button:disabled { opacity: .55; }
+.kitchen button:focus-visible { outline: 3px solid #e9ffcb; outline-offset: 4px; }
+.kitchen .kitchen-empty { display: flex; align-items: center; justify-content: center; gap: 16px; border: 1px solid #38574a; border-radius: 18px; padding: 24px; margin: 0 0 28px; background: #1e362f; color: #c9ee96; }
+.kitchen .kitchen-empty h2 { font-size: 20px; margin: 0 0 5px; color: var(--ink); }
+.kitchen .kitchen-empty p { color: #b5c9bf; margin: 0; font-size: 14px; }
+@media (max-width: 860px) {
+  .kitchen.dark { padding: 20px 16px; }
+  .kitchen .kcols { grid-template-columns: 1fr; gap: 24px; }
+  .kitchen .kitchen-heading { gap: 18px; margin-bottom: 20px; }
+  .kitchen .kitchen-overview { width: 100%; justify-content: space-between; gap: 10px; }
+  .kitchen .ticket-actions button { min-height: 60px; }
+  .kitchen .kitchen-column-heading { margin-bottom: 12px; }
+}
