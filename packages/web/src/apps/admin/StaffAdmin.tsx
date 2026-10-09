@@ -5,6 +5,7 @@ import { useLang } from '../../i18n';
 import { errText } from './Admin';
 import { Icon } from '../../ui/Icon';
 import { AdminDialog } from './AdminDialog';
+import { AdminSwitch } from './controls';
 import { useAdminCopy } from './copy';
 
 interface Draft { id?: string; name: string; role: 'owner' | 'staff'; active: boolean; pin: string }
@@ -34,43 +35,48 @@ export function StaffAdmin() {
   };
 
   return (
-    <div>
+    <div className="staff-admin">
       {err && !d && <div className="error" role="alert">{err}</div>}
-      <div className="row-actions pad">
-        <span className="spacer" />
-        <button className="primary" disabled={busy} onClick={() => { setErr(''); setD({ name: '', role: 'staff', active: true, pin: '' }); }}><Icon name="plus" />{t('admin.addStaff')}</button>
+      <div className="admin-toolbar">
+        <p className="admin-toolbar-hint">{staff.length > 0 && copy.staffHint}</p>
+        <button type="button" className="primary admin-add" disabled={busy} onClick={() => { setErr(''); setD({ name: '', role: 'staff', active: true, pin: '' }); }}><Icon name="plus" />{t('admin.addStaff')}</button>
       </div>
-      <ul className="orders">
+      <ul className="admin-rows">
         {staff.map((s) => (
-          <li key={s.id} className={s.active ? '' : 'inactive'}>
-            <div className="grow">
-              <b>{s.name}</b><br />
-              <small className="muted">{s.role === 'owner' ? t('admin.owner') : t('admin.staffRole')}{!s.active && ` · ${t('admin.inactive')}`}</small>
-            </div>
-            <button aria-label={`${t('admin.edit')}: ${s.name}`} onClick={() => { setErr(''); setD({ ...s, pin: '' }); }}><Icon name="edit" />{t('admin.edit')}</button>
+          <li key={s.id} className={`admin-row${s.active ? '' : ' is-off'}`}>
+            <button type="button" className="admin-row-main" aria-label={`${t('admin.edit')}: ${s.name}`} onClick={() => { setErr(''); setD({ ...s, pin: '' }); }}>
+              <span className="admin-row-lead" aria-hidden="true">{s.name.trim().slice(0, 1).toUpperCase() || '?'}</span>
+              <span className="admin-row-text">
+                <b>{s.name}</b>
+                <small>{s.role === 'owner' ? t('admin.owner') : t('admin.staffRole')}</small>
+              </span>
+              {!s.active && <span className="tag warn">{t('admin.inactive')}</span>}
+              <Icon name="edit" className="admin-row-go" />
+            </button>
           </li>
         ))}
       </ul>
       {!loaded && !err && <p className="muted center" role="status">{copy.loading}</p>}
       {loaded && staff.length === 0 && <p className="muted center">{copy.emptyStaff}</p>}
       {d && (
-        <AdminDialog title={d.id ? `${t('admin.edit')} · ${d.name}` : t('admin.addStaff')} onClose={() => setD(null)} busy={busy}>
-            <label>{t('admin.name')}<input value={d.name} autoFocus onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
-            <label>{d.id ? t('admin.newPin') : t('admin.pin')}
-              <input type="password" inputMode="numeric" autoComplete="new-password" value={d.pin} onChange={(e) => setD({ ...d, pin: e.target.value })} />
-              <small className="muted">{t('admin.pinRule')}</small>
-            </label>
-            <div className="chips">
-              <button className={d.role === 'staff' ? 'on' : ''} aria-pressed={d.role === 'staff'} disabled={busy} onClick={() => setD({ ...d, role: 'staff' })}><Icon name="staff" />{t('admin.staffRole')}</button>
-              <button className={d.role === 'owner' ? 'on' : ''} aria-pressed={d.role === 'owner'} disabled={busy} onClick={() => setD({ ...d, role: 'owner' })}><Icon name="lock" />{t('admin.owner')}</button>
-              <button className={d.active ? 'on' : ''} aria-pressed={d.active} disabled={busy} onClick={() => setD({ ...d, active: !d.active })}><Icon name={d.active ? 'check' : 'close'} />{d.active ? t('admin.active') : t('admin.inactive')}</button>
+        <AdminDialog title={d.id ? `${t('admin.edit')} · ${staff.find((s) => s.id === d.id)?.name ?? d.name}` : t('admin.addStaff')} onClose={() => setD(null)} busy={busy} error={err} footer={<>
+          <button type="button" className="ghost" disabled={busy} onClick={() => setD(null)}>{t('pay.cancel')}</button>
+          <button type="button" className="primary" disabled={busy || !d.name.trim() || (!d.id && !d.pin)} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
+        </>}>
+          <label>{t('admin.name')}<input value={d.name} autoFocus autoComplete="off" onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
+          <label>{d.id ? t('admin.newPin') : t('admin.pin')}
+            <input type="password" inputMode="numeric" autoComplete="new-password" value={d.pin} onChange={(e) => setD({ ...d, pin: e.target.value })} />
+            <small className="muted">{t('admin.pinRule')}</small>
+          </label>
+          <div className="admin-field">
+            <span className="admin-field-label" id="staff-role-label">{copy.role}</span>
+            <div className="chips admin-choice" role="group" aria-labelledby="staff-role-label">
+              <button type="button" className={d.role === 'staff' ? 'on' : ''} aria-pressed={d.role === 'staff'} disabled={busy} onClick={() => setD({ ...d, role: 'staff' })}><Icon name="staff" />{t('admin.staffRole')}</button>
+              <button type="button" className={d.role === 'owner' ? 'on' : ''} aria-pressed={d.role === 'owner'} disabled={busy} onClick={() => setD({ ...d, role: 'owner' })}><Icon name="lock" />{t('admin.owner')}</button>
             </div>
             <small className="muted">{t('admin.ownerHint')}</small>
-            {err && <div className="error" role="alert">{err}</div>}
-            <div className="actions">
-              <button className="ghost" disabled={busy} onClick={() => setD(null)}>{t('pay.cancel')}</button>
-              <button className="primary" disabled={busy || !d.name.trim() || (!d.id && !d.pin)} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
-            </div>
+          </div>
+          <AdminSwitch on={d.active} onChange={(active) => setD({ ...d, active })} label={t('admin.active')} hint={copy.activeHint} disabled={busy} />
         </AdminDialog>
       )}
     </div>

@@ -106,8 +106,8 @@ export function BooksAdmin() {
           <label>{c.to}<input type="date" value={to} min={from} max={view.today} onChange={(e) => setTo(e.target.value)} /></label>
         </div>
         <div className="books-downloads">
-          <button onClick={() => void download('days')}><Icon name="download" /><span><b>{c.days}</b><small>{c.daysHint}</small></span></button>
-          <button onClick={() => void download('journal')}><Icon name="download" /><span><b>{c.journal}</b><small>{c.journalHint}</small></span></button>
+          <button type="button" onClick={() => void download('days')}><Icon name="download" /><span><b>{c.days}</b><small>{c.daysHint}</small></span></button>
+          <button type="button" onClick={() => void download('journal')}><Icon name="download" /><span><b>{c.journal}</b><small>{c.journalHint}</small></span></button>
         </div>
       </section>
 
@@ -125,22 +125,24 @@ export function BooksAdmin() {
         {err && <div className="error" role="alert">{err}</div>}
         {msg && <div className="ok" role="status">{msg}</div>}
         <div className="actions">
-          <button disabled={busy} onClick={() => void save()}>{c.save}</button>
-          <button className="primary" disabled={busy || !pbk.ok || pbk.pendingDays.length === 0} onClick={() => void post()}><Icon name="upload" />{c.post}{pbk.pendingDays.length > 0 && ` (${pbk.pendingDays.length})`}</button>
+          <button type="button" disabled={busy} onClick={() => void save()}><Icon name="check" />{c.save}</button>
+          <button type="button" className="primary" disabled={busy || !pbk.ok || pbk.pendingDays.length === 0} onClick={() => void post()}><Icon name="upload" />{c.post}{pbk.pendingDays.length > 0 && ` (${pbk.pendingDays.length})`}</button>
         </div>
         <p className="notice">{c.note}</p>
       </section>
 
       <details className="admin-form-card books-accounts">
         <summary><Icon name="tax" />{c.accounts}</summary>
-        <p className="muted">{c.accountsHint}</p>
-        <div className="two">
-          {account('cash', c.cash)}{account('card', c.card)}{account('abbPayable', c.abb)}{account('tips', c.tips)}{account('overShort', c.overShort)}
-          {Object.keys(s.accounts.revenueByCategory).map((id) => (
-            <label key={id}>{c.revenue} {id}<input inputMode="numeric" value={s.accounts.revenueByCategory[id]} onChange={(e) => setRevenue(id, e.target.value)} /></label>
-          ))}
+        <div className="books-accounts-body">
+          <p className="muted">{c.accountsHint}</p>
+          <div className="two">
+            {account('cash', c.cash)}{account('card', c.card)}{account('abbPayable', c.abb)}{account('tips', c.tips)}{account('overShort', c.overShort)}
+            {Object.keys(s.accounts.revenueByCategory).map((id) => (
+              <label key={id}>{c.revenue} {id}<input inputMode="numeric" value={s.accounts.revenueByCategory[id]} onChange={(e) => setRevenue(id, e.target.value)} /></label>
+            ))}
+          </div>
+          <div className="actions"><button type="button" className="primary" disabled={busy} onClick={() => void save()}><Icon name="check" />{c.save}</button></div>
         </div>
-        <div className="actions"><button className="primary" disabled={busy} onClick={() => void save()}>{c.save}</button></div>
       </details>
     </div>
   );

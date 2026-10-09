@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMoney, parseMoney, type DayReport, type ZReport } from '@cactus/shared';
 import { api, getSession, serverPrints } from '../../lib/api';
 import { useLang } from '../../i18n';
@@ -49,6 +49,9 @@ export function ReportsAdmin() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const root = useRef<HTMLDivElement>(null);
+  /** The closed-days list sits below the figures, so bring the chosen day's figures into view. */
+  const showDay = (d: string) => { setDate(d); root.current?.closest('main')?.scrollTo({ top: 0 }); };
 
   const load = useCallback(async (d: string) => {
     try {
@@ -92,15 +95,15 @@ export function ReportsAdmin() {
   };
 
   return (
-    <div className="reports">
+    <div className="reports" ref={root}>
       <div className="reports-bar">
-        <label className="reports-date">{c.day}
+        <label className="reports-date"><span>{c.day}</span>
           <input type="date" value={date} max={view.today} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </label>
-        {date !== view.today && <button className="ghost" onClick={() => setDate(view.today)}>{c.today}</button>}
+        {date !== view.today && <button type="button" className="ghost" onClick={() => setDate(view.today)}>{c.today}</button>}
         <span className="spacer" />
-        <button onClick={() => void print()}><Icon name="printer" />{c.print}</button>
-        <button className="primary" onClick={() => { setErr(''); setClosing(true); }}><Icon name="lock" />{closed ? c.closeAgain : c.closeDay}</button>
+        <button type="button" className="reports-print" onClick={() => void print()}><Icon name="printer" />{c.print}</button>
+        <button type="button" className="primary reports-close" onClick={() => { setErr(''); setClosing(true); }}><Icon name="lock" />{closed ? c.closeAgain : c.closeDay}</button>
       </div>
 
       {closed && <p className={`reports-status${changed ? ' changed' : ''}`} role="status"><Icon name={changed ? 'warning' : 'check'} /><span>{c.closedAs(closed.number, time(closed.closedAt))}{changed && ` ${c.changedSince}`}</span></p>}
@@ -159,13 +162,18 @@ export function ReportsAdmin() {
       {history.length > 0 && (
         <section className="reports-history">
           <h3>{c.history}</h3>
-          <ul className="orders">
+          <ul className="admin-rows">
             {history.map((z) => (
-              <li key={z.number}>
-                <div className="num">Z{z.number}</div>
-                <div className="grow"><b>{z.businessDate}</b><small className="muted">{z.report.orders.sold} {c.sold} · {c.cash} {money(z.report.cashExpectedCents)}{z.cashDifferenceCents !== null && ` · ${c.difference} ${z.cashDifferenceCents > 0 ? '+' : ''}${money(z.cashDifferenceCents)}`}</small></div>
-                <b className="admin-item-price">{money(z.report.sales.grossCents)}</b>
-                <button aria-label={`${c.day} ${z.businessDate}`} onClick={() => setDate(z.businessDate)}><Icon name="arrow-right" /></button>
+              <li key={z.number} className={`admin-row${z.businessDate === date ? ' is-current' : ''}`}>
+                <button type="button" className="admin-row-main" aria-label={`${c.day} ${z.businessDate}`} aria-current={z.businessDate === date ? 'true' : undefined} onClick={() => showDay(z.businessDate)}>
+                  <span className="admin-row-lead num" aria-hidden="true">Z{z.number}</span>
+                  <span className="admin-row-text">
+                    <b>{z.businessDate}</b>
+                    <small>{z.report.orders.sold} {c.sold} · {c.cash} {money(z.report.cashExpectedCents)}{z.cashDifferenceCents !== null && ` · ${c.difference} ${z.cashDifferenceCents > 0 ? '+' : ''}${money(z.cashDifferenceCents)}`}</small>
+                  </span>
+                  <b className="admin-row-price">{money(z.report.sales.grossCents)}</b>
+                  <Icon name="arrow-right" className="admin-row-go" />
+                </button>
               </li>
             ))}
           </ul>
@@ -173,23 +181,21 @@ export function ReportsAdmin() {
       )}
 
       {closing && (
-        <AdminDialog title={c.closeTitle} onClose={() => setClosing(false)} busy={busy}>
-          <p className="muted">{c.closeIntro}</p>
+        <AdminDialog title={c.closeTitle} onClose={() => setClosing(false)} busy={busy} error={err} footer={<>
+          <button type="button" className="ghost" disabled={busy} onClick={() => setClosing(false)}>{c.cancel}</button>
+          <button type="button" className="primary" disabled={busy} onClick={() => void close()}><Icon name="lock" />{c.confirmClose}</button>
+        </>}>
+          <p className="muted admin-dialog-intro">{c.closeIntro}</p>
           {r.orders.unpaid > 0 && <p className="notice">{c.unpaidWarn(r.orders.unpaid, money(r.orders.unpaidCents))}</p>}
           <label>{c.counted}
             <input inputMode="decimal" autoFocus placeholder="0.00" value={counted} onChange={(e) => { setErr(''); setCounted(e.target.value); }} />
             <small>{c.countedHint}</small>
           </label>
-          <ul className="reports-rows">
+          <ul className="reports-rows reports-count">
             <li><span>{c.expected}</span><b>{money(r.cashExpectedCents)}</b></li>
             {typeof countedCents === 'number' && <li className={countedCents - r.cashExpectedCents < 0 ? 'neg' : ''}><span>{c.difference}</span><b>{countedCents - r.cashExpectedCents > 0 ? '+' : ''}{money(countedCents - r.cashExpectedCents)}</b></li>}
           </ul>
           <label>{c.note}<input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} /></label>
-          {err && <div className="error" role="alert">{err}</div>}
-          <div className="actions">
-            <button className="ghost" disabled={busy} onClick={() => setClosing(false)}>{c.cancel}</button>
-            <button className="primary" disabled={busy} onClick={() => void close()}><Icon name="lock" />{c.confirmClose}</button>
-          </div>
         </AdminDialog>
       )}
     </div>

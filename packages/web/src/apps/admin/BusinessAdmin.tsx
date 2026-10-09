@@ -59,9 +59,11 @@ export function BusinessAdmin() {
         <input type="color" value={b.brandColor ?? '#14506b'} disabled={busy} onChange={(e) => { setMsg(''); setB({ ...b, brandColor: e.target.value }); }} />
       </label>
       </section>
-      {err && <div className="error" role="alert">{err}</div>}
-      {msg && <div className="ok" role="status">{msg}</div>}
-      <div className="actions"><button className="primary" disabled={busy} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button></div>
+      <div className="admin-savebar">
+        {err && <div className="error" role="alert">{err}</div>}
+        {msg && <div className="ok" role="status">{msg}</div>}
+        <div className="actions"><button type="button" className="primary" disabled={busy} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button></div>
+      </div>
     </div>
   );
 }

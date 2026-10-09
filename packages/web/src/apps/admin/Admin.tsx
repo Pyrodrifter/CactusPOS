@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLang } from '../../i18n';
 import { MenuAdmin } from './MenuAdmin';
 import { BusinessAdmin } from './BusinessAdmin';
@@ -9,6 +9,7 @@ import { ReportsAdmin } from './ReportsAdmin';
 import { BooksAdmin } from './BooksAdmin';
 import { Icon, type IconName } from '../../ui/Icon';
 import { useAdminCopy } from './copy';
+import { ScrollRow } from './controls';
 import './admin.css';
 
 const TABS = ['reports', 'menu', 'business', 'staff', 'tax', 'printer', 'books'] as const;
@@ -19,13 +20,23 @@ export function Admin() {
   const { t } = useLang();
   const copy = useAdminCopy();
   const [tab, setTab] = useState<Tab>('reports');
+  const root = useRef<HTMLDivElement>(null);
+  /* The tabs stay pinned, so a new tab starts at its top instead of wherever the last one was scrolled to. */
+  const choose = (x: Tab) => { setTab(x); root.current?.closest('main')?.scrollTo({ top: 0 }); };
   return (
-    <div className="admin">
-      <nav className="tabs admin-tabs" aria-label={t('nav.admin')}>
-        {TABS.map((x) => <button key={x} className={tab === x ? 'on' : ''} aria-current={tab === x ? 'page' : undefined} onClick={() => setTab(x)}><Icon name={tabIcons[x]} />{t(`admin.${x}`)}</button>)}
-      </nav>
+    <div className="admin" ref={root}>
+      <div className="admin-tabbar">
+        <ScrollRow nav className="admin-tabs" label={t('nav.admin')}>
+          {TABS.map((x) => (
+            <button key={x} type="button" className={tab === x ? 'on' : ''} data-active={tab === x} aria-current={tab === x ? 'page' : undefined} onClick={() => choose(x)}>
+              <Icon name={tabIcons[x]} /><span>{t(`admin.${x}`)}</span>
+            </button>
+          ))}
+        </ScrollRow>
+      </div>
       <div className="admin-body">
-        <p className="admin-hint">{copy[tab]}</p>
+        {/* Menu and Staff show their one line of help beside their own buttons, to keep the list high on the screen. */}
+        {tab !== 'menu' && tab !== 'staff' && <p className="admin-hint">{copy[tab]}</p>}
         {tab === 'reports' && <ReportsAdmin />}
         {tab === 'menu' && <MenuAdmin />}
         {tab === 'business' && <BusinessAdmin />}
