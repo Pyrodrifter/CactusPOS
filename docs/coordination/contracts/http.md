@@ -6,7 +6,7 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 ## Public
 | Route | Notes |
 |---|---|
-| `GET /api/health` | `{ ok, business, time }` |
+| `GET /api/health` | `{ ok, app: 'cactuspos', version, startedAt, business, time }`. `app` identifies the program on the port; `startedAt` is constant for one run of the server (the launcher in `ops/app` uses both) |
 | `GET /api/pickup` | `{ preparing: number[], ready: number[] }` ticket numbers only |
 | `POST /api/login` `{ pin }` | `{ token, staff, business }`. 5 wrong PINs from one address = 429 for 30 s |
 

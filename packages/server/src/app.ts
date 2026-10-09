@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
@@ -20,6 +20,10 @@ import { renderReceiptHtml } from './receipt.js';
 import type { DB } from './db.js';
 
 interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
+
+const VERSION = (JSON.parse(readFileSync(resolve(import.meta.dirname, '../package.json'), 'utf8')) as { version: string }).version;
+/** Constant for one run of the server process; see `GET /api/health`. */
+const STARTED_AT = new Date().toISOString();
 
 export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books } {
   const svc = new PosService(db);
@@ -92,7 +96,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     });
   });
 
-  app.get('/api/health', async () => ({ ok: true, business: svc.business().name, time: new Date().toISOString() }));
+  app.get('/api/health', async () => ({ ok: true, app: 'cactuspos', version: VERSION, startedAt: STARTED_AT, business: svc.business().name, time: new Date().toISOString() }));
   app.get('/api/pickup', async () => svc.pickupBoard());
 
   app.post('/api/login', async (req) => {

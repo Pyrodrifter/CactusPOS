@@ -213,7 +213,10 @@ export const AuditRow = z.object({ seq: z.number().int().positive(), type: z.str
 export type AuditRow = z.infer<typeof AuditRow>;
 export const AuditList = z.array(AuditRow);
 export const ErrorResponse = z.object({ error: z.string(), issues: z.array(z.unknown()).optional() });
-export const HealthResponse = z.object({ ok: z.literal(true), business: z.string(), time: IsoDateTime });
+/** `app` lets the launcher tell CactusPOS from another program on the port; `startedAt` identifies one run of the server. */
+export const HealthResponse = z.object({
+  ok: z.literal(true), app: z.literal('cactuspos'), version: z.string(), startedAt: IsoDateTime, business: z.string(), time: IsoDateTime,
+});
 export const LoginResponse = z.object({ token: z.string().min(16), staff: StaffSchema, business: BusinessSchema });
 /** What the browser keeps after signing in. */
 export type Session = z.infer<typeof LoginResponse>;
