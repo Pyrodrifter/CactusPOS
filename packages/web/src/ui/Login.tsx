@@ -3,10 +3,13 @@ import { api, ApiError, type Session } from '../lib/api';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
+import { useTheme } from '../lib/theme';
 import './login.css';
+import './theme.css';
 
 export function Login({ onDone }: { onDone: (s: Session) => void }) {
   const { lang, t } = useLang();
+  const { dark, setTheme } = useTheme();
   const copy = lang === 'nl' ? {
     eyebrow: 'Gemaakt voor goede service', title: 'Klaar voor een\nmooie werkdag.',
     intro: 'Bestellingen opnemen, de keuken laten doorlopen en eenvoudig afrekenen.',
@@ -58,6 +61,7 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
     <div className="login">
       <section className="login-story">
         <div className="login-brand"><Logo size={56} /><strong>{t('app.name')}</strong><button className="ghost login-language" aria-label={lang === 'nl' ? 'Taal wijzigen' : 'Change language'} onClick={() => setLang(lang === 'en' ? 'nl' : 'en')}><Icon name="language" size={20} /><span>{lang === 'en' ? 'NL' : 'EN'}</span></button></div>
+        <button className="login-theme" aria-label={lang === 'nl' ? (dark ? 'Lichte weergave' : 'Donkere weergave') : (dark ? 'Use light theme' : 'Use dark theme')} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} /><span>{lang === 'nl' ? (dark ? 'Licht' : 'Donker') : (dark ? 'Light' : 'Dark')}</span></button>
         <p className="login-eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1><p className="login-intro">{copy.intro}</p>
         <div className="login-features">
@@ -74,7 +78,7 @@ export function Login({ onDone }: { onDone: (s: Session) => void }) {
         {err && <div className="error" role="alert">{err}</div>}
         <div className="keypad">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => <button key={d} disabled={busy} onClick={() => press(d)}>{d}</button>)}
-          <button className="ghost" disabled={busy} aria-label={copy.erase} onClick={() => setPin(pin.slice(0, -1))}><Icon name="arrow-left" size={24} /></button>
+          <button className="ghost" disabled={busy} aria-label={copy.erase} onClick={() => setPin(pin.slice(0, -1))}><Icon name="backspace" size={24} /></button>
           <button disabled={busy} onClick={() => press('0')}>0</button>
           <button className="primary login-submit" disabled={busy || pin.length < 3} onClick={() => { void submit(pin); }}><Icon name={busy ? 'clock' : 'arrow-right'} size={21} /><span>{busy ? copy.waiting : t('login.go')}</span></button>
         </div>

@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import {
   computeTotals, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
-  type AddLinesBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard,
+  type AddLinesBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard, type ServiceMode,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
-import { getKv, nextCounter, tx, type DB } from './db.js';
+import { getKv, setKv, nextCounter, tx, type DB } from './db.js';
+import { ReceiptTemplates } from './receiptTemplates.js';
 
 export type { Business, Staff };
 export const DEFAULT_BUSINESS: Business = {
@@ -21,6 +22,14 @@ export class PosService {
   constructor(private db: DB) { this.auth = new Auth(db); }
 
   business(): Business { return { ...DEFAULT_BUSINESS, ...getKv<Partial<Business>>(this.db, 'business', {}) }; }
+  serviceMode(): ServiceMode { return getKv<ServiceMode>(this.db, 'service-mode', 'board'); }
+  setServiceMode(mode: ServiceMode, staff: Staff): { mode: ServiceMode } {
+    return tx(this.db, () => {
+      setKv(this.db, 'service-mode', mode);
+      this.db.prepare('INSERT INTO audit_log(type,payload,staff_id,at) VALUES(?,?,?,?)').run('service-mode.changed', JSON.stringify({ mode }), staff.id, new Date().toISOString());
+      return { mode };
+    });
+  }
 
   /** Local business date (YYYY-MM-DD) in the business timezone. */
   businessDate(now = new Date()): string {
@@ -48,7 +57,7 @@ export class PosService {
   /** Orders still needing attention today (not collected, not void) or unpaid. */
   activeOrders(): Order[] {
     const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? ORDER BY ticket_number').all(this.businessDate()) as { data: string }[];
-    return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => o.status !== 'void' && (o.status !== 'collected' || !o.paid));
+    return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => o.serviceMode !== 'counter' && o.status !== 'void' && (o.status !== 'collected' || !o.paid));
   }
   /** Every unpaid, non-void order, whatever day it was started: the tab list. Oldest first. */
   openTabs(): Order[] {
@@ -193,6 +202,7 @@ export class PosService {
       const now = new Date().toISOString();
       const order: Order = {
         id: randomUUID(), ticketNumber: nextCounter(this.db, `ticket:${date}`), receiptNumber: null,
+        serviceMode: this.serviceMode(), templateVersion: new ReceiptTemplates(this.db).version(), printBusiness: this.business(),
         status: 'sent', paid: false, lines, payments: [], note: body.note, source: body.source,
         totalCents: figures.totalCents, taxCents: figures.taxCents, breakdown: figures.breakdown,
         tabName: body.tabName, round: 1, kitchenRound: 1, kitchenSince: now,

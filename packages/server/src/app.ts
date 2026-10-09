@@ -17,6 +17,8 @@ import { buildDayReport, renderHtml } from '@cactus/receipt';
 import type { Transport } from '@cactus/printer';
 import { HttpError, PosService, type Staff } from './service.js';
 import { renderReceiptHtml } from './receipt.js';
+import { ReceiptTemplates, previewHtml } from './receiptTemplates.js';
+import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplateBody } from '@cactus/shared';
 import type { DB } from './db.js';
 
 interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
@@ -27,6 +29,7 @@ const STARTED_AT = new Date().toISOString();
 
 export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books } {
   const svc = new PosService(db);
+  const templates = new ReceiptTemplates(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
   const throttle = new LoginThrottle();
@@ -115,6 +118,32 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   });
 
   app.get('/api/menu', async (req) => { authOf(req); return svc.menu(); });
+  app.get('/api/service-mode', async (req) => { authOf(req); return { mode: svc.serviceMode() }; });
+  app.put('/api/service-mode', async (req) => {
+    const state = svc.setServiceMode(ServiceSettings.parse(req.body).mode, authOf(req));
+    broadcast({ type: 'service-mode.changed', ...state });
+    return state;
+  });
+  app.get('/api/admin/receipt-templates', async (req) => { ownerOf(req); return templates.state(); });
+  app.put('/api/admin/receipt-templates', async (req) => {
+    const staff = ownerOf(req), body = SaveTemplateBody.parse(req.body);
+    return templates.save(body.template, body.baseVersion, staff.id);
+  });
+  app.post('/api/admin/receipt-templates/restore', async (req) => {
+    const staff = ownerOf(req), body = RestoreTemplateBody.parse(req.body);
+    return templates.save(templates.get(body.version).template, body.baseVersion, staff.id);
+  });
+  app.post('/api/admin/receipt-templates/preview', async (req, reply) => {
+    ownerOf(req);
+    const body = PreviewTemplateBody.parse(req.body);
+    return reply.type('text/html').send(previewHtml(body.template, body.kind, svc.business()));
+  });
+  app.post('/api/admin/receipt-templates/test-print', async (req) => {
+    ownerOf(req);
+    const body = PreviewTemplateBody.parse(req.body);
+    if (!printing.active) throw new HttpError(409, 'No receipt printer is set up');
+    return printing.designTest(body.template, body.kind);
+  });
   app.get('/api/orders', async (req) => {
     authOf(req);
     const scope = OrdersQuery.parse(req.query).scope;
@@ -169,7 +198,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.get('/api/orders/:id/receipt', async (req, reply) => {
     authOf(req);
     const order = svc.getOrder(idOf(req));
-    return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), (req.query as { copy?: string }).copy === '1'));
+    return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), (req.query as { copy?: string }).copy === '1', templates.get(order.templateVersion ?? 0).template.receipt));
   });
 
   /* ----- day reports: owner only ----- */

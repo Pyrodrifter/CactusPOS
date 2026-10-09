@@ -1,17 +1,19 @@
 import type { ReactNode, SVGProps } from 'react';
 
 const shapes = {
+  monitor: <><rect x="3" y="3" width="18" height="13" rx="2" /><path d="M12 16v5M8 21h8" /></>,
+  backspace: <><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-7-7 7-7Z" /><path d="m12 9 6 6m0-6-6 6" /></>,
   sliders: <><path d="M4 7h5m4 0h7M4 17h9m4 0h3" /><circle cx="11" cy="7" r="2" /><circle cx="15" cy="17" r="2" /></>,
   expand: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,
   external: <><path d="M14 3h7v7m0-7L10 14" /><path d="M10 3H3v18h18v-7" /></>,
   sparkles: <><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3ZM20 2v4m-2-2h4" /></>,
-  undo: <><path d="M9 4 3 10l6 6M3 10h11a7 7 0 0 1 0 14" transform="translate(0 -2)" /></>,
+  undo: <path d="m8 4-5 5 5 5M3 9h10a6 6 0 0 1 0 12" />,
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   cart: <><path d="m3 3 2 2 2 12h12l2-9H6" /><circle cx="9" cy="21" r="1" /><circle cx="18" cy="21" r="1" /></>,
   receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 7h6M9 11h6M9 15h3" /></>,
-  kitchen: <><path d="M7 13a5 5 0 1 1-1-9 6 6 0 0 1 12 0 5 5 0 1 1-1 9v7H7v-7Z" /><path d="M7 16h10" /></>,
+  kitchen: <><path d="M6 13a4 4 0 1 1 1-7 5 5 0 0 1 10 0 4 4 0 1 1 1 7v7H6v-7Z" /><path d="M6 16h12" /></>,
   pickup: <><path d="M4 9h16l-1 12H5L4 9ZM8 9V7a4 4 0 0 1 8 0v2" /><path d="m9 15 2 2 4-4" /></>,
-  settings: <><path d="m9 3-.5 3-2 1.2L4 6l-2 4 2.5 1.7v2.6L2 16l2 4 2.5-1.2 2 1.2.5 3h6l.5-3 2-1.2L20 20l2-4-2.5-1.7v-2.6L22 10l-2-4-2.5 1.2-2-1.2-.5-3H9Z" transform="translate(0 -1) scale(1 .95)" /><circle cx="12" cy="12" r="3" /></>,
+  settings: <><path d="m9 3-.5 3-2 1.2L4 6l-2 4 2.5 1.7v2.6L2 16l2 4 2.5-1.2 2 1.2.5 3h6l.5-3 2-1.2L20 20l2-4-2.5-1.7v-2.6L22 10l-2-4-2.5 1.2-2-1.2-.5-3H9Z" transform="translate(0 -1)" /><circle cx="12" cy="12" r="3" /></>,
   staff: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5v2" /></>,
   tax: <><path d="m6 18 12-12" /><circle cx="7" cy="7" r="3" /><circle cx="17" cy="17" r="3" /></>,
   logout: <><path d="M10 4H4v16h6M10 12h11m-4-4 4 4-4 4" /></>,
@@ -47,10 +49,10 @@ const shapes = {
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof shapes;
-export function Icon({ name, size = 22, label, ...props }: SVGProps<SVGSVGElement> & {
+export function Icon({ name, size = 22, label, className, ...props }: SVGProps<SVGSVGElement> & {
   name: IconName; size?: number; label?: string;
 }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  return <svg className={`ui-icon${className ? ` ${className}` : ''}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden={label ? undefined : true}
     role={label ? 'img' : undefined} aria-label={label} focusable="false" {...props}>{shapes[name]}</svg>;
 }

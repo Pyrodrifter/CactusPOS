@@ -3,6 +3,8 @@ import type { Business, DayReport, Order, ZReport } from '@cactus/shared';
 import { NetworkTransport, PrintQueue, type PrintJob, type Transport } from '@cactus/printer';
 import { buildDayReport, buildKitchenTicket, buildReceipt, buildTestPage, drawerKick, renderEscPos, type Block } from '@cactus/receipt';
 import { getKv, setKv, type DB } from './db.js';
+import { ReceiptTemplates, previewBlocks } from './receiptTemplates.js';
+import type { ReceiptTemplate } from '@cactus/shared';
 
 export const PrinterSettings = z.object({
   /** Off = receipts open in the browser's print dialog instead. */
@@ -43,10 +45,11 @@ export class Printing {
     return this.queue.add(label, renderEscPos(blocks, { columns: s.columns, cutter: s.cutter }));
   }
   receipt(o: Order, opts: { copy?: boolean; openDrawer?: boolean } = {}): PrintJob {
-    return this.print(`Receipt #${o.receiptNumber ?? '-'}`, buildReceipt(o, this.business(), opts));
+    return this.print(`Receipt #${o.receiptNumber ?? '-'}`, buildReceipt(o, o.printBusiness ?? this.business(), { ...opts, design: new ReceiptTemplates(this.db).get(o.templateVersion ?? 0).template.receipt }));
   }
   /** `fromRound` prints only the lines added from that round on (a tab that ordered again). */
-  kitchen(o: Order, fromRound?: number): PrintJob { return this.print(`Kitchen #${o.ticketNumber}${fromRound && fromRound > 1 ? ` (round ${fromRound})` : ''}`, buildKitchenTicket(o, this.business(), { fromRound })); }
+  kitchen(o: Order, fromRound?: number): PrintJob { return this.print(`Kitchen #${o.ticketNumber}${fromRound && fromRound > 1 ? ` (round ${fromRound})` : ''}`, buildKitchenTicket(o, o.printBusiness ?? this.business(), { fromRound, design: new ReceiptTemplates(this.db).get(o.templateVersion ?? 0).template.kitchen })); }
+  designTest(template: ReceiptTemplate, kind: 'receipt' | 'kitchen'): PrintJob { return this.print('SAMPLE receipt design', previewBlocks(template, kind, this.business())); }
   test(): PrintJob { return this.print('Test page', buildTestPage(this.business())); }
   dayReport(r: DayReport | ZReport): PrintJob { return this.print('report' in r ? `Z report #${r.number}` : 'X report', buildDayReport(r, this.business())); }
   openDrawer(): PrintJob { return this.queue.add('Open drawer', drawerKick()); }
@@ -60,10 +63,10 @@ export class Printing {
     else if (cash) this.openDrawer();
   }
   onSent(o: Order): void {
-    if (this.active && this.settings().autoKitchen) this.kitchen(o);
+    if (o.serviceMode !== 'counter' && this.active && this.settings().autoKitchen) this.kitchen(o);
   }
   /** A round was added to a tab: the kitchen printer gets just the new items. */
   onAdded(o: Order): void {
-    if (this.active && this.settings().autoKitchen) this.kitchen(o, o.round ?? 1);
+    if (o.serviceMode !== 'counter' && this.active && this.settings().autoKitchen) this.kitchen(o, o.round ?? 1);
   }
 }

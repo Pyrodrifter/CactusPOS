@@ -1,4 +1,4 @@
-import { formatMoney, type Business, type Order } from '@cactus/shared';
+import { formatMoney, type Business, type Order, type DocumentDesign } from '@cactus/shared';
 import type { Block } from './blocks.js';
 
 export type ReceiptLang = 'en' | 'nl';
@@ -25,6 +25,37 @@ export interface ReceiptOptions {
   /** Extra blocks before the footer (WiFi QR, promo): filled by the receipt editor later. */
   extra?: Block[];
   openDrawer?: boolean;
+  design?: DocumentDesign;
+}
+
+const expand = (text: string, o: Order, b: Business) => text.replace(/\{\{(business|order|receipt)\}\}/g, (_, key: string) => key === 'business' ? b.name : String(key === 'order' ? o.ticketNumber : o.receiptNumber ?? '-'));
+function decorate(blocks: Block[], o: Order, b: Business, design: DocumentDesign | undefined, kitchen = false): Block[] {
+  if (!design) return blocks;
+  const out = blocks.map((block): Block => block.t === 'rule' ? { ...block, style: design.separator } : block);
+  const start = out[0]?.t === 'drawer' ? 1 : 0;
+  const header: Block[] = [];
+  if (design.logo) header.push({ t: 'raster', image: design.logo, align: design.align });
+  if (design.title) header.push({ t: 'text', text: expand(design.title, o, b), align: design.align, bold: true });
+  if (kitchen) header.push({ t: 'text', text: b.name, align: design.align, bold: true });
+  out.splice(start, 0, ...header);
+  let firstRule = out.findIndex((block) => block.t === 'rule');
+  if (!kitchen) {
+    // Contact details occupy the header; mandatory business/CRIB/address lines remain present.
+    for (let i = start; i < firstRule; i++) {
+      const block = out[i]!;
+      if (block.t === 'text') out[i] = { ...block, align: design.align };
+    }
+    out.splice(firstRule, 0, { t: 'text', text: `${b.locale === 'nl' ? 'BESTELLING' : 'ORDER'} #${o.ticketNumber}`, align: design.align, bold: true, size: design.numberSize });
+    firstRule++;
+  } else {
+    const index = out.findIndex((block) => block.t === 'row');
+    if (index >= 0 && out[index]!.t === 'row') out[index] = { ...out[index] as Extract<Block, { t: 'row' }>, size: design.numberSize };
+  }
+  if (design.subtitle) out.splice(firstRule, 0, { t: 'text', text: expand(design.subtitle, o, b), align: design.align });
+  const footer: Block[] = design.messages.filter((message) => message.text.trim()).map((message) => ({ t: 'text', text: expand(message.text, o, b), align: message.align, bold: message.bold }));
+  if (kitchen && design.footer) footer.push({ t: 'text', text: expand(design.footer, o, b), align: design.align });
+  out.splice(out.findIndex((block) => block.t === 'feed'), 0, ...footer);
+  return out;
 }
 
 /**
@@ -41,7 +72,7 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   if (opts.openDrawer) out.push({ t: 'drawer' });
   out.push({ t: 'text', text: b.name, align: 'center', bold: true, size: 'large' });
   if (b.address) out.push({ t: 'text', text: b.address, align: 'center' });
-  if (b.phone) out.push({ t: 'text', text: b.phone, align: 'center' });
+  if (b.phone && opts.design?.showPhone !== false) out.push({ t: 'text', text: b.phone, align: 'center' });
   if (b.crib) out.push({ t: 'text', text: `CRIB ${b.crib}`, align: 'center' });
   out.push({ t: 'rule' });
   out.push({ t: 'row', left: `${t.receipt} #${o.receiptNumber ?? '-'}`, right: `${t.ticket} ${o.ticketNumber}` });
@@ -52,9 +83,9 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   else if (!o.paid) out.push({ t: 'text', text: t.unpaid, align: 'center', bold: true });
   out.push({ t: 'rule' });
   for (const l of o.lines) {
-    out.push({ t: 'row', left: `${l.qty} x ${l.name}`, right: m(l.lineTotalCents) });
-    for (const x of l.modifiers) out.push({ t: 'sub', text: `+ ${x.name}` });
-    if (l.note) out.push({ t: 'sub', text: `"${l.note}"` });
+    out.push({ t: 'row', left: `${l.qty} x ${l.name}`, right: m(l.lineTotalCents), size: opts.design?.itemSize });
+    if (opts.design?.showModifiers !== false) for (const x of l.modifiers) out.push({ t: 'sub', text: `+ ${x.name}` });
+    if (l.note && opts.design?.showNotes !== false) out.push({ t: 'sub', text: `"${l.note}"` });
   }
   out.push({ t: 'rule' });
   out.push({ t: 'row', left: t.total, right: m(o.totalCents), bold: true, size: 'large' });
@@ -75,13 +106,15 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   }
   out.push({ t: 'rule' });
   if (opts.extra?.length) out.push(...opts.extra, { t: 'rule' });
-  if (b.receiptFooter) out.push({ t: 'text', text: b.receiptFooter, align: 'center' });
+  if (opts.design?.showNotes && o.note) out.push({ t: 'text', text: `${t.note}: ${o.note}` });
+  const footer = opts.design?.footer || b.receiptFooter;
+  if (footer) out.push({ t: 'text', text: expand(footer, o, b), align: opts.design?.align ?? 'center' });
   out.push({ t: 'feed', lines: 3 }, { t: 'cut' });
-  return out;
+  return decorate(out, o, b, opts.design);
 }
 
 /** Kitchen ticket: big, no prices. Optionally only the lines for one station. */
-export function buildKitchenTicket(o: Order, b: Business, opts: { lang?: ReceiptLang; station?: string; fromRound?: number } = {}): Block[] {
+export function buildKitchenTicket(o: Order, b: Business, opts: { lang?: ReceiptLang; station?: string; fromRound?: number; design?: DocumentDesign } = {}): Block[] {
   const t = T[opts.lang ?? b.locale ?? 'en'];
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: b.timezone, hour: '2-digit', minute: '2-digit' }).format(new Date(o.createdAt));
   const from = opts.fromRound ?? 1;
@@ -93,13 +126,13 @@ export function buildKitchenTicket(o: Order, b: Business, opts: { lang?: Receipt
   if (from > 1) out.push({ t: 'text', text: t.added, bold: true });
   out.push({ t: 'rule' });
   for (const l of lines) {
-    out.push({ t: 'text', text: `${l.qty} x ${l.name}`, bold: true, size: 'large' });
+    out.push({ t: 'text', text: `${l.qty} x ${l.name}`, bold: true, size: opts.design?.itemSize ?? 'large' });
     for (const x of l.modifiers) out.push({ t: 'sub', text: `+ ${x.name}` });
     if (l.note) out.push({ t: 'sub', text: `"${l.note}"` });
   }
   if (o.note) out.push({ t: 'rule' }, { t: 'text', text: `${t.note}: ${o.note}`, bold: true });
   out.push({ t: 'feed', lines: 3 }, { t: 'cut' });
-  return out;
+  return decorate(out, o, b, opts.design, true);
 }
 
 export function buildTestPage(b: Business, lang: ReceiptLang = b.locale ?? 'en'): Block[] {

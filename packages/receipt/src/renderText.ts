@@ -41,7 +41,7 @@ export function rowLines(left: string, right: string, width: number): string[] {
  * Shared by the plain-text and ESC/POS renderers so both wrap identically.
  */
 export interface Line { text: string; bold: boolean; large: boolean; align: 'left' | 'center' | 'right' }
-export type LaidOut = { kind: 'line'; line: Line } | { kind: 'qr'; data: string } | { kind: 'cut' } | { kind: 'drawer' } | { kind: 'feed'; lines: number };
+export type LaidOut = { kind: 'line'; line: Line } | { kind: 'raster'; image: import('@cactus/shared').ReceiptLogo; align: 'left' | 'center' | 'right' } | { kind: 'qr'; data: string } | { kind: 'cut' } | { kind: 'drawer' } | { kind: 'feed'; lines: number };
 
 export function layout(blocks: readonly Block[], columns: Columns): LaidOut[] {
   const out: LaidOut[] = [];
@@ -59,7 +59,8 @@ export function layout(blocks: readonly Block[], columns: Columns): LaidOut[] {
         break;
       }
       case 'sub': for (const l of wrap(b.text, columns - 3)) push(`   ${l}`); break;
-      case 'rule': push('-'.repeat(columns)); break;
+      case 'rule': if (b.style === 'space') out.push({ kind: 'feed', lines: 1 }); else push((b.style === 'solid' ? '_' : '-').repeat(columns)); break;
+      case 'raster': out.push({ kind: 'raster', image: b.image, align: b.align ?? 'center' }); break;
       case 'feed': out.push({ kind: 'feed', lines: b.lines }); break;
       case 'qr':
         out.push({ kind: 'qr', data: b.data });
@@ -78,6 +79,7 @@ export function renderText(blocks: readonly Block[], columns: Columns = 48): str
   for (const x of layout(blocks, columns)) {
     if (x.kind === 'line') lines.push(alignLine(x.line.text, x.line.large ? Math.floor(columns / 2) : columns, x.line.align).trimEnd());
     else if (x.kind === 'qr') lines.push(alignLine(`[QR ${x.data}]`, columns, 'center'));
+    else if (x.kind === 'raster') lines.push(alignLine('[LOGO]', columns, x.align));
     else if (x.kind === 'feed') lines.push(...Array<string>(x.lines).fill(''));
   }
   return lines.join('\n');

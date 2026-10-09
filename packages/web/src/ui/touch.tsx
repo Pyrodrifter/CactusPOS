@@ -89,7 +89,7 @@ export function MoneyPad({ cents, onChange, max = 9_999_999 }: { cents: number; 
   return (
     <div className="money-pad">
       {['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0'].map((k) => <button key={k} type="button" onClick={() => press(k)}>{k}</button>)}
-      <button type="button" className="pad-back" aria-label={lang === 'nl' ? 'Laatste cijfer wissen' : 'Delete last digit'} onClick={() => press('back')}><UiIcon name="arrow-left" /></button>
+      <button type="button" className="pad-back" aria-label={lang === 'nl' ? 'Laatste cijfer wissen' : 'Delete last digit'} onClick={() => press('back')}><UiIcon name="backspace" /></button>
     </div>
   );
 }

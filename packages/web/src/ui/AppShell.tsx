@@ -2,12 +2,14 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { NavLink } from 'react-router-dom';
 import { api, setSession, type Session } from '../lib/api';
 import { keepScreenAwake } from '../lib/display';
+import { useTheme } from '../lib/theme';
 import { usePwa } from '../lib/pwa';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { Sheet, toast } from './touch';
 import './shell.css';
+import './theme.css';
 
 const copy = {
   en: {
@@ -22,6 +24,7 @@ const copy = {
     cleaning: 'A little freshen-up.', cleaningHint: 'Touch is paused. Give the screen a wipe.', resume: 'Hold to resume', resumeHint: 'Hold for 2 seconds, or press Escape.',
     seconds: 'seconds remaining', language: 'Language', signedIn: 'Signed in as', signout: 'Sign out',
     done: 'Back to work', pickup: 'Pickup board (opens in a new tab)', skip: 'Skip to content',
+    appearance: 'Appearance', light: 'Light', dark: 'Dark', system: 'Automatic', themeHint: 'Automatic follows this device’s appearance.',
   },
   nl: {
     subtitle: 'Lekker eten. Fijne service.', navigation: 'Hoofdnavigatie', tools: 'Schermopties',
@@ -35,6 +38,7 @@ const copy = {
     cleaning: 'Even opfrissen.', cleaningHint: 'Aanrakingen zijn gepauzeerd. Maak het scherm schoon.', resume: 'Ingedrukt houden om door te gaan', resumeHint: 'Houd 2 seconden vast, of druk op Escape.',
     seconds: 'seconden resterend', language: 'Taal', signedIn: 'Ingelogd als', signout: 'Uitloggen',
     done: 'Aan het werk', pickup: 'Afhaalscherm (opent in een nieuw tabblad)', skip: 'Naar inhoud',
+    appearance: 'Weergave', light: 'Licht', dark: 'Donker', system: 'Automatisch', themeHint: 'Automatisch volgt de weergave van dit apparaat.',
   },
 };
 
@@ -45,6 +49,7 @@ function preference(key: string): boolean {
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
   const { lang, t } = useLang();
   const c = copy[lang];
+  const { theme, dark, setTheme } = useTheme();
   const { connection } = usePwa();
   const [tools, setTools] = useState(false);
   const [sunlight, setSunlight] = useState(() => preference('sunlight'));
@@ -83,7 +88,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
     content.current?.removeAttribute('inert'); setCleaning(false);
     requestAnimationFrame(() => content.current?.querySelector<HTMLButtonElement>('.screen-tools-button')?.focus());
   };
-  return <div className={`shell${sunlight ? ' sunlight' : ''}`} style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as CSSProperties) : undefined}>
+  return <div className={`shell${sunlight && !dark ? ' sunlight' : ''}`} style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as CSSProperties) : undefined}>
     <div className="shell-content" ref={content}>
       <a href="#workspace" className="skip-link">{c.skip}</a>
       <header className="topbar">
@@ -104,7 +109,8 @@ export function AppShell({ session, children }: { session: Session; children: Re
     {tools && <div className="screen-tools"><Sheet title={c.tools} onClose={closeTools}>
       <div className="screen-tools-scroll">
       <div className="screen-tools-intro"><span className="screen-tool-emblem"><Icon name="sun" size={28} /></span><div><h3>{c.device}</h3><p>{c.deviceHint}</p></div></div>
-      <button className="screen-option" role="switch" aria-checked={sunlight} onClick={() => setSunlight(!sunlight)}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>
+      <fieldset className="theme-picker"><legend>{c.appearance}</legend><div>{(['light', 'dark', 'system'] as const).map((value) => <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon name={value === 'dark' ? 'moon' : value === 'light' ? 'sun' : 'monitor'} /><span>{c[value]}</span></button>)}</div><p>{c.themeHint}</p></fieldset>
+      <button className="screen-option" role="switch" aria-checked={sunlight && !dark} onClick={() => { if (dark) setTheme('light'); setSunlight(dark || !sunlight); }}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>
       <button className="screen-option" role="switch" aria-checked={awake} disabled={!navigator.wakeLock} onClick={() => setAwake(!awake)}><Icon name="eye" /><span><strong>{c.awake}</strong><small>{!navigator.wakeLock ? c.unsupported : awake ? awakeActive ? c.awakeOn : c.awakeWaiting : c.awakeHint}</small></span><i className="touch-switch" /></button>
       <button className="screen-option" disabled={!document.fullscreenEnabled} onClick={() => void toggleFullscreen()}><Icon name="expand" /><span><strong>{fullscreen ? c.exitFullscreen : c.fullscreen}</strong><small>{document.fullscreenEnabled ? c.fullscreenHint : c.unsupported}</small></span><Icon name="arrow-right" /></button>
       <button className="screen-option" onClick={() => { setTools(false); setCleaning(true); }}><Icon name="sparkles" /><span><strong>{c.clean}</strong><small>{c.cleanHint}</small></span><Icon name="arrow-right" /></button>
