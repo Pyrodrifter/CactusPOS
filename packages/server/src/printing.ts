@@ -45,7 +45,8 @@ export class Printing {
   receipt(o: Order, opts: { copy?: boolean; openDrawer?: boolean } = {}): PrintJob {
     return this.print(`Receipt #${o.receiptNumber ?? '-'}`, buildReceipt(o, this.business(), opts));
   }
-  kitchen(o: Order): PrintJob { return this.print(`Kitchen #${o.ticketNumber}`, buildKitchenTicket(o, this.business())); }
+  /** `fromRound` prints only the lines added from that round on (a tab that ordered again). */
+  kitchen(o: Order, fromRound?: number): PrintJob { return this.print(`Kitchen #${o.ticketNumber}${fromRound && fromRound > 1 ? ` (round ${fromRound})` : ''}`, buildKitchenTicket(o, this.business(), { fromRound })); }
   test(): PrintJob { return this.print('Test page', buildTestPage(this.business())); }
   dayReport(r: DayReport | ZReport): PrintJob { return this.print('report' in r ? `Z report #${r.number}` : 'X report', buildDayReport(r, this.business())); }
   openDrawer(): PrintJob { return this.queue.add('Open drawer', drawerKick()); }
@@ -60,5 +61,9 @@ export class Printing {
   }
   onSent(o: Order): void {
     if (this.active && this.settings().autoKitchen) this.kitchen(o);
+  }
+  /** A round was added to a tab: the kitchen printer gets just the new items. */
+  onAdded(o: Order): void {
+    if (this.active && this.settings().autoKitchen) this.kitchen(o, o.round ?? 1);
   }
 }

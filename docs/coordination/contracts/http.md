@@ -16,9 +16,11 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/logout` | | `Ack`. Works without a session too (logging out twice is fine) |
 | `GET /api/menu` | | `{ categories, items, taxCategories }` |
 | `POST /api/menu/items/:id/available` | `AvailabilityBody` | `MenuItem` (sold-out toggle) |
-| `GET /api/orders?scope=active\|today` | | `Order[]` |
+| `GET /api/orders?scope=active\|today\|open` | | `Order[]`. `open` = every unpaid, non-void order from any day (the tab list), oldest first |
 | `GET /api/orders/:id` | | `Order` |
 | `POST /api/orders` | `CreateOrderBody` | `201 Order` (status `sent`, ticket number assigned). Accepts `Idempotency-Key` |
+| `POST /api/orders/:id/lines` | `AddLinesBody` | `Order` with a new round of lines. `409` if paid or void. Accepts `Idempotency-Key` |
+| `POST /api/orders/:id/tab` | `TabNameBody` | `Order`. Names or renames the tab; empty clears it |
 | `POST /api/orders/:id/pay` | `PayBody` | `Order` (receipt number assigned). Accepts `Idempotency-Key` |
 | `POST /api/orders/:id/status` | `StatusBody` | `Order` |
 | `POST /api/orders/:id/void` | `VoidBody` | `Order`. Paid or started orders need an owner session or `managerPin` |
@@ -53,8 +55,17 @@ Definitions of sales, refunds, tenders and cash expected: see the T33 handoff an
 - Public pickup board: `/ws?room=pickup` receives `hello`, then only `pickup.changed { preparing, ready }`.
 - Clients must reconnect with backoff and refetch state on every (re)connect.
 
+## Tabs
+An unpaid order **is** an open tab; there is no separate tab record.
+- `CreateOrderBody.tabName` names it when it is opened ("Send, pay later"). `Order.tabName` is optional.
+- `POST /api/orders/:id/lines` adds a **round**. Each line carries `round` (absent = 1); `Order.round` is the latest. Earlier lines are never re-priced or re-taxed: only the new lines are computed, then totals and the ABB breakdown are summed.
+- Kitchen: `Order.kitchenRound` is the first round still to be made, and `kitchenLines(order)` (shared) returns those lines. If the order was `ready` or `collected` when a round is added, `kitchenRound` jumps to the new round and `status` returns to `sent` (a fresh ticket with only the new items). If it was still `sent` or `preparing`, status and `kitchenRound` stay and the new lines join the ticket the kitchen already has; screens should mark lines whose `round` is newer than the ones seen before.
+- The ticket number never changes, so the guest keeps one number for the whole tab.
+- Payment is unchanged: one payment for the full total, one receipt number, one receipt listing every round.
+- With "print kitchen ticket when sent" on, an added round prints a ticket with only its lines, marked as added.
+
 ## Retrying safely: `Idempotency-Key`
-`POST /api/orders` and `POST /api/orders/:id/pay` accept an `Idempotency-Key` header (`RequestId`: 8-80 characters of `A-Z a-z 0-9 _ -`).
+`POST /api/orders`, `POST /api/orders/:id/lines` and `POST /api/orders/:id/pay` accept an `Idempotency-Key` header (`RequestId`: 8-80 characters of `A-Z a-z 0-9 _ -`).
 - The first request with a key acts and records the key in the same transaction as the sale.
 - A repeat with the same key returns the same `Order` and does **not** broadcast or print again. A repeated pay returns the paid order rather than `409 already paid`.
 - Reusing a pay key for a different order is `409`. A malformed key is `400`.

@@ -1,79 +1,152 @@
+/* Kitchen screen: read from a metre away, tapped with busy hands.
+   Touch sizes follow docs/coordination/contracts/touch-ui.md (--tap 56px, --tap-lg 64px, --tap-xl 76px). */
 .kitchen.dark {
   --bg: #101f29; --card: #1b2e3a; --ink: #f4f8f9; --muted: #a7bbc5; --line: #344b59;
-  padding: 24px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  --kpad-l: max(20px, env(safe-area-inset-left)); --kpad-r: max(20px, env(safe-area-inset-right));
+  padding: 0 var(--kpad-r) max(24px, env(safe-area-inset-bottom)) var(--kpad-l);
   min-height: 100%; background: var(--bg); color: var(--ink);
 }
-.kitchen .kitchen-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
-.kitchen .kitchen-title { display: flex; align-items: center; gap: 14px; }
-.kitchen .kitchen-mark { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: #2a434d; color: #c9ee96; }
-.kitchen h1 { font-size: 28px; line-height: 1.2; margin: 0 0 5px; letter-spacing: -.6px; }
-.kitchen .kitchen-title p { margin: 0; color: var(--muted); }
-.kitchen .kitchen-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 14px; }
-.kitchen .kitchen-overview b { color: var(--ink); font-size: 22px; }
-.kitchen .kitchen-connection { display: inline-flex; align-items: center; gap: 8px; color: #c9ee96; padding: 9px 13px; border: 1px solid #40574a; border-radius: 999px; background: #203b33; }
-.kitchen .reconnecting { color: #ffca8b; border-color: #6b5236; background: #3c3025; }
-.kitchen .kitchen-offline { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid #765b3c; border-radius: 14px; background: #3c3025; color: #ffdaa9; margin-bottom: 20px; }
 .kitchen svg { flex-shrink: 0; }
-.kitchen .kcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.kitchen button:disabled { opacity: .55; }
+.kitchen button:focus-visible { outline: 3px solid #e9ffcb; outline-offset: 4px; }
+
+/* ---- Header. It stays in view while tickets scroll, and it always has the height of the Undo button,
+   so nothing on the board moves when Undo appears or goes away. ---- */
+.kitchen .kitchen-top { position: sticky; top: 0; z-index: 3; margin: 0 calc(-1 * var(--kpad-r)) 10px calc(-1 * var(--kpad-l)); padding: 6px var(--kpad-r) 6px var(--kpad-l); background: var(--bg); border-bottom: 1px solid #24394680; }
+.kitchen .kitchen-heading { display: flex; align-items: center; gap: 14px; min-height: var(--tap-lg); }
+.kitchen h1.kitchen-title { display: flex; align-items: center; gap: 10px; flex: none; margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -.5px; }
+.kitchen .kitchen-overview { display: flex; align-items: center; gap: 14px; flex: none; color: var(--muted); font-size: 16px; }
+.kitchen .kitchen-overview b { color: var(--ink); font-size: 20px; }
+.kitchen .kitchen-connection { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid #40574a; border-radius: 999px; background: #203b33; color: #c9ee96; font-weight: 600; white-space: nowrap; }
+.kitchen .reconnecting { color: #ffca8b; border-color: #6b5236; background: #3c3025; }
+.kitchen .kitchen-offline { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid #765b3c; border-radius: 14px; background: #3c3025; color: #ffdaa9; margin-bottom: 16px; }
+
+/* ---- Undo: shown for a few seconds after "ready" or "collected". The bar along its lower edge runs out with the time. ---- */
+.kitchen .kitchen-undo-slot { display: flex; flex: 1 1 0; min-width: 0; }
+.kitchen .kitchen-undo { position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; max-width: 480px; min-height: var(--tap-lg); padding: 0 16px; border: 0; border-radius: 16px; background: #ffce8a; color: #33230c; font-size: 20px; font-weight: 800; text-align: left; box-shadow: 0 6px 20px #05101666; animation: kitchen-undo-in .18s ease-out; }
+.kitchen .kitchen-undo-label { flex: none; }
+.kitchen .kitchen-undo-what { flex: 0 1 auto; min-width: 0; margin-left: auto; padding: 5px 12px; border-radius: 999px; background: #33230c26; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.kitchen .kitchen-undo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #8a5f1c; transform-origin: left center; animation: kitchen-undo-timer var(--undo-ms, 8s) linear forwards; }
+.kitchen .kitchen-undo:disabled::after { animation-play-state: paused; }
+.kitchen .kitchen-undo-failed { background: #ffb9b9; color: #3d1115; }
+/* The failure message takes the place of the label and may run over two lines; the ticket number stays whole. */
+.kitchen .kitchen-undo-failed .kitchen-undo-label { flex: 0 1 auto; min-width: 0; font-size: 18px; line-height: 1.15; }
+.kitchen .kitchen-undo-failed .kitchen-undo-what { flex: none; }
+.kitchen .kitchen-undo-failed::after { background: #a8484f; }
+/* Slides in but is never faded: it has to be readable from the first frame. */
+@keyframes kitchen-undo-in { from { transform: translateY(-8px); } }
+@keyframes kitchen-undo-timer { to { transform: scaleX(0); } }
+/* Where the header is tight, the ticket count steps aside while Undo is up (the connection state stays). */
+@media (max-width: 1023px) { .kitchen .kitchen-top-undo .kitchen-active { display: none; } }
+
+/* ---- Columns (wide screens: three side by side) ---- */
+.kitchen .kitchen-switch { display: none; }
+.kitchen .kcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 18px; }
 .kitchen .kitchen-column { min-width: 0; }
-.kitchen .kitchen-column-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px 14px; margin-bottom: 16px; border-bottom: 2px solid #465667; }
+.kitchen .kitchen-column-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px 8px; margin-bottom: 12px; border-bottom: 3px solid #5d7a8c; }
 .kitchen .kitchen-column-preparing .kitchen-column-heading { border-color: #dda563; }
 .kitchen .kitchen-column-ready .kitchen-column-heading { border-color: #b9e286; }
-.kitchen .kitchen-column-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; }
-.kitchen .kitchen-count { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px; background: #2a3e4b; font-size: 14px; font-weight: 750; }
-.kitchen .kitchen-column-empty { border: 1px dashed #3d5260; border-radius: 18px; padding: 30px 16px; text-align: center; font-size: 14px; color: var(--muted); margin: 0; }
-.kitchen .ticket { border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 16px; box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
+.kitchen .kitchen-column-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 20px; }
+.kitchen .kitchen-count { display: grid; place-items: center; min-width: 36px; height: 36px; padding: 0 9px; border-radius: 12px; background: #2a3e4b; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kitchen .kitchen-column-empty { border: 1px dashed #3d5260; border-radius: 18px; padding: 30px 16px; text-align: center; font-size: 17px; color: var(--muted); margin: 0; }
+.kitchen .kitchen-empty { display: flex; align-items: center; justify-content: center; gap: 16px; border: 1px solid #38574a; border-radius: 18px; padding: 24px; margin: 0 0 20px; background: #1e362f; color: #c9ee96; }
+.kitchen .kitchen-empty h2 { font-size: 22px; margin: 0 0 4px; color: var(--ink); }
+.kitchen .kitchen-empty p { color: #b5c9bf; margin: 0; font-size: 16px; }
+
+/* ---- Ticket ---- */
+.kitchen .ticket { border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
 .kitchen .ticket.warm { border-color: #e2ad6d; box-shadow: inset 4px 0 #e2ad6d, 0 5px 18px #070f1426; }
 .kitchen .ticket.late { border-color: #ef9898; box-shadow: inset 4px 0 #ef9898, 0 5px 18px #070f1426; }
 .kitchen .ticket-fresh { animation: kitchen-arrival 1.2s ease-out 2; }
 @keyframes kitchen-arrival { 0%, 100% { background-color: var(--card); } 40% { background-color: #35534c; } }
 .kitchen .ticket-ready { background: #203b38; border-color: #486859; }
-.kitchen .ticket .ticket-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.kitchen .ticket-number span { display: block; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
-.kitchen .ticket-number b { display: block; font-size: 36px; line-height: 1.2; letter-spacing: -.8px; }
-.kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; font-size: 14px; font-weight: 600; white-space: nowrap; background: #293e4b; color: #c9d9df; border-radius: 10px; }
-.kitchen .ticket-age-warm { color: #ffce96; background: #513f2c; }
-.kitchen .ticket-age-late { color: #ffd0d0; background: #502e31; }
-.kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 650; border-radius: 999px; margin-top: 9px; padding: 4px 9px; }
+/* New and preparing tickets: the whole ticket is the button for the next step.
+   Pressed is a colour change only: a ticket this size should not jump when a scroll starts on it. */
+.kitchen .ticket-tappable { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: background-color .1s ease-out; }
+.kitchen .ticket-tappable:active { background-color: #2a4757; }
+
+/* Number, payment state and age share one row. When a narrow column cannot fit all three, the payment state
+   drops under the number and the age keeps the top right corner. */
+.kitchen .ticket .ticket-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
+.kitchen .ticket-id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; flex: 1 1 auto; min-width: 0; }
+.kitchen .ticket-number b { display: block; font-size: 34px; font-weight: 800; line-height: 40px; letter-spacing: -.8px; }
+.kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 15px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
 .kitchen .ticket-paid { background: #2b4a3e; color: #c8eeaf; }
 .kitchen .ticket-unpaid { background: #4a3b2d; color: #ffd09b; }
-.kitchen .ticket .ticket-lines { margin: 18px 0; font-size: 18px; }
-.kitchen .ticket-lines li { padding: 12px 0; border-top: 1px solid #3d526060; }
-.kitchen .ticket-line { display: flex; align-items: baseline; gap: 10px; }
-.kitchen .ticket-line strong { font-weight: 650; }
-.kitchen .ticket-quantity { color: #c9ee96; min-width: 28px; }
-.kitchen .ticket-modifiers { color: #b8cbd2; margin: 5px 0 0 38px; font-size: 14px; }
-.kitchen .ticket-exclusion { color: #ffb5b5; font-weight: 650; }
-.kitchen .ticket-line-note { color: #ffce96; margin: 5px 0 0 38px; font-size: 15px; }
-.kitchen .ticket-note, .kitchen .ticket-error { display: flex; gap: 9px; padding: 12px; border-radius: 12px; margin: 0 0 14px; background: #483a29; color: #ffdda8; font-size: 14px; }
-.kitchen .ticket-error { background: #502e31; color: #ffd0d0; }
-.kitchen .ticket .ticket-actions { display: flex; gap: 8px; }
-.kitchen .ticket-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; min-width: 0; padding: 10px 12px; border-radius: 14px; font-size: 16px; font-weight: 750; line-height: 1.2; }
-.kitchen .ticket-primary { background: #c9ee96; border-color: #c9ee96; color: #153627; }
-.kitchen .ticket-recall { background: #2a423f; border-color: #536e64; color: #edf4ee; }
-.kitchen button:disabled { opacity: .55; }
-.kitchen button:focus-visible { outline: 3px solid #e9ffcb; outline-offset: 4px; }
-.kitchen .kitchen-empty { display: flex; align-items: center; justify-content: center; gap: 16px; border: 1px solid #38574a; border-radius: 18px; padding: 24px; margin: 0 0 28px; background: #1e362f; color: #c9ee96; }
-.kitchen .kitchen-empty h2 { font-size: 20px; margin: 0 0 5px; color: var(--ink); }
-.kitchen .kitchen-empty p { color: #b5c9bf; margin: 0; font-size: 14px; }
-@media (max-width: 860px) {
-  .kitchen.dark { padding: 20px 16px; }
-  .kitchen .kcols { grid-template-columns: 1fr; gap: 24px; }
-  .kitchen .kitchen-heading { gap: 18px; margin-bottom: 20px; }
-  .kitchen .kitchen-overview { width: 100%; justify-content: space-between; gap: 10px; }
-  .kitchen .ticket-actions button { min-height: 60px; }
-  .kitchen .kitchen-column-heading { margin-bottom: 12px; }
+.kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 40px; padding: 0 11px; border-radius: 12px; background: #293e4b; color: #c9d9df; font-size: 17px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kitchen .ticket-age-warm { color: #ffce96; background: #513f2c; }
+.kitchen .ticket-age-late { color: #ffd0d0; background: #502e31; }
+
+/* The order note sits right under the ticket number, before the food, so it is read first. */
+.kitchen .ticket-note, .kitchen .ticket-error { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; }
+.kitchen .ticket-note { margin: 14px 0 0; border: 2px solid #f0b560; background: #4f3c1f; color: #ffe6bd; font-size: 18px; font-weight: 700; line-height: 1.3; }
+.kitchen .ticket-error { margin: 0 0 14px; background: #502e31; color: #ffd0d0; font-size: 16px; }
+
+.kitchen .ticket .ticket-lines { margin: 14px 0; font-size: 18px; }
+.kitchen .ticket-lines li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #3d526060; }
+.kitchen .ticket-quantity { display: grid; place-items: center; flex: none; min-width: 46px; height: 36px; padding: 0 6px; border-radius: 11px; background: #29414d; color: #c9ee96; font-size: 22px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.kitchen .ticket-quantity-many { background: #c9ee96; color: #153627; }
+.kitchen .ticket-item { flex: 1; min-width: 0; }
+.kitchen .ticket-item strong { display: block; padding-top: 4px; font-size: 23px; font-weight: 700; line-height: 1.2; }
+.kitchen .ticket-modifiers { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 6px; color: #c3d4da; font-size: 18px; line-height: 1.3; }
+.kitchen .ticket-exclusion { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 7px; border: 1px solid #b0646a; border-radius: 9px; background: #57292e; color: #ffd0d0; font-weight: 750; }
+.kitchen .ticket-line-note { margin-top: 6px; color: #ffce96; font-size: 17px; font-weight: 600; }
+
+/* The step forward is the one big button; Recall is smaller and kept a clear gap away from Collected. */
+.kitchen .ticket .ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.kitchen .ticket-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; padding: 8px 14px; border-radius: 16px; font-weight: 750; line-height: 1.15; }
+.kitchen .ticket-actions .ticket-primary { flex: 3 1 auto; min-height: var(--tap-xl); background: #c9ee96; border-color: #c9ee96; color: #153627; font-size: 20px; }
+.kitchen .ticket-actions .ticket-recall { flex: 1 1 auto; min-height: var(--tap-lg); min-width: var(--tap-lg); background: #2a423f; border-color: #536e64; color: #edf4ee; font-size: 17px; }
+
+/* Three columns on a small landscape tablet are narrow: keep Recall and Collected on one row. */
+@media (min-width: 901px) and (max-width: 1279px) {
+  .kitchen .kcols { gap: 14px; }
+  .kitchen .ticket { padding: 14px; }
+  .kitchen .ticket-actions .ticket-recall { flex-direction: column; gap: 2px; padding: 6px 10px; font-size: 15px; }
+}
+@media (min-width: 901px) and (max-width: 1099px) {
+  .kitchen .ticket-ready .ticket-primary svg { display: none; }
+  /* Without their icons, number, payment state and age usually still fit on one row. */
+  .kitchen .ticket-payment svg, .kitchen .ticket-age svg { display: none; }
 }
 
-/* ---- UI pass 3: slim header, more room for tickets ---- */
-.kitchen.dark { padding-top: 14px; }
-.kitchen .kitchen-heading { margin-bottom: 14px; gap: 12px; }
-.kitchen h1.kitchen-title { font-size: 22px; margin: 0; gap: 10px; }
-.kitchen .kitchen-overview { gap: 12px; }
-.kitchen .kitchen-overview b { font-size: 18px; }
-.kitchen .kitchen-connection { padding: 6px 11px; }
-/* Ticket number, payment state and age share one row. */
-.kitchen .ticket .ticket-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
-.kitchen .ticket-heading .ticket-payment { margin: 0; }
-.kitchen .ticket-heading .ticket-age { margin-left: auto; }
-.kitchen .ticket .ticket-number b { font-size: 30px; line-height: 1; }
+/* ---- Phones and portrait tablets: one column at a time, chosen with the switcher under the header ---- */
+@media (max-width: 900px) {
+  .kitchen.dark { --kpad-l: max(16px, env(safe-area-inset-left)); --kpad-r: max(16px, env(safe-area-inset-right)); }
+  .kitchen .kitchen-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+  .kitchen .kitchen-switch button { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; min-height: var(--tap-lg); padding: 6px 10px; border-color: var(--line); border-radius: 16px; background: var(--card); color: var(--muted); font-size: 18px; font-weight: 700; line-height: 1.15; box-shadow: inset 0 -4px #5d7a8c; }
+  .kitchen .kitchen-switch .kitchen-switch-preparing { box-shadow: inset 0 -4px #dda563; }
+  .kitchen .kitchen-switch .kitchen-switch-ready { box-shadow: inset 0 -4px #b9e286; }
+  .kitchen .kitchen-switch .kitchen-count { color: var(--ink); }
+  .kitchen .kitchen-switch button[aria-pressed='true'] { background: #eaf2f4; border-color: #eaf2f4; color: #10222b; }
+  .kitchen .kitchen-switch button[aria-pressed='true'] .kitchen-count { background: #10222b; color: #f4f8f9; }
+  /* New tickets are waiting while another column is on screen. */
+  .kitchen .kitchen-switch .kitchen-switch-sent.kitchen-switch-busy[aria-pressed='false'] .kitchen-count { background: #c9ee96; color: #153627; }
+  .kitchen .kitchen-switch .kitchen-switch-fresh { animation: kitchen-arrival 1.2s ease-out 2; }
+  .kitchen .kcols { display: block; }
+  .kitchen .kitchen-column:not(.kitchen-column-current) { display: none; }
+  .kitchen .kitchen-column-heading { display: none; }
+  .kitchen .kitchen-tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); align-items: start; gap: 16px; }
+  .kitchen .kitchen-tickets .ticket { margin-bottom: 0; }
+  .kitchen.kitchen-idle .kcols { display: none; }
+}
+/* A phone on its side has no height to spare: let the header scroll away there. */
+@media (max-width: 900px) and (max-height: 560px) { .kitchen .kitchen-top { position: static; } }
+@media (max-width: 560px) {
+  .kitchen .kitchen-active { display: none; }
+  /* On a phone Undo takes the whole header row while it is up. */
+  .kitchen .kitchen-top-undo .kitchen-title, .kitchen .kitchen-top-undo .kitchen-overview { display: none; }
+  .kitchen .kitchen-undo { max-width: none; }
+  .kitchen .kitchen-switch { gap: 8px; }
+  .kitchen .kitchen-switch button { flex-direction: column-reverse; gap: 1px; padding: 4px 4px 8px; font-size: 15px; }
+  .kitchen .kitchen-switch button svg { display: none; }
+  .kitchen .kitchen-switch .kitchen-count { min-width: 0; height: auto; padding: 0 8px; border-radius: 9px; background: none; font-size: 22px; line-height: 1.15; }
+  .kitchen .kitchen-switch button[aria-pressed='true'] .kitchen-count { background: none; color: #10222b; }
+}
+
+/* ---- tabs: who it is for, which round, what was added ---- */
+.kitchen .ticket-tab { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 22px; font-weight: 750; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.kitchen .ticket-round { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 99px; background: #3a5a78; color: #dcecff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.kitchen .ticket-added { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0; padding: 3px 9px; border-radius: 99px; background: #c9ee96; color: #1f3a12; font-size: 14px; font-weight: 750; vertical-align: middle; white-space: nowrap; }
+.kitchen .ticket-line-added { background: rgba(201, 238, 150, .09); border-radius: 12px; }
+.kitchen .ticket-lines li.ticket-line-added { padding-left: 10px; padding-right: 10px; margin: 0 -10px; }

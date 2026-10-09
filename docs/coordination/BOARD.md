@@ -44,6 +44,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T25 | web-screens | Phone ordering `/order`: staff mode (roaming order taker) and guest mode (QR, order -> pending until staff confirms/pays) | T10 | todo | | Guest order shows on POS "pending" tray; staff accepts in one tap |
 | T26 | ops | Installers: Windows service (NSSM) and Linux systemd unit, auto-start, health page, update script, kiosk browser launcher | T06 | todo | | Reboot laptop -> system is up with no login |
 | T27 | ops | Backups: nightly SQLite snapshot + journal copy to USB/cloud folder, one-click restore, restore drill documented | T03 | todo | | Restore on a clean machine reproduces all orders |
+| T29 | server | Tabs: name an unpaid order, add rounds of items to it later, pay at the end; kitchen sees each round; tab list on the counter (owner request) | T22 | doing | claude · 2026-10-08 | Guest opens a tab, orders twice more, pays once; kitchen got three rounds; one receipt |
 | T28 | qa | Load/chaos tests: 8 devices, 100 orders/hour, WiFi drop, server restart mid-order | T25 | todo | | No lost or duplicated orders; recovery documented |
 
 ## M3 — Receipt editor + books
@@ -67,6 +68,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 ## M5 — Polish
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
+| UX08 | web-core / web-pos | Restore top navigation; bold shell/sign-in and counter polish; menu search, undo, touch display tools (owner authorized all UI lanes; leave pickup board unchanged) (reviewed and accepted by claude 2026-10-09, see handoffs/2026-10-09-claude-review-UX08.md) | UX01 | done | codex · 2026-10-08 | Top navigation at phone/tablet/desktop sizes; search/undo and display tools work; pickup files and appearance unchanged; typecheck/tests pass and browser screenshots verified |
 | UX01 | web-core | Shared visual refresh: local SVG icon system, app navigation, PIN login, design tokens, accessible touch/focus styles and responsive shell | T00 | done | codex · 2026-10-07 | Consistent polished shell at phone/tablet widths; controls at least 48px; icons have accessible labels; existing flows preserved |
 | UX02 | web-pos | Polish POS menu/cart/modifier/payment/order views with icons, clear hierarchy and phone/tablet touch layouts | T00 | done | codex-pos · 2026-10-07 | Existing order/payment flows work; quantity/actions at least 48px; no horizontal overflow at 390px; visual browser verification |
 | UX03 | web-screens | Polish kitchen/pickup with consistent icons, readable status hierarchy, large touch actions and responsive boards | T00 | done | codex-screens · 2026-10-07 | Live ready/recall/pickup behavior preserved; kitchen actions at least 48px; phone/tablet/TV screenshots verified |
@@ -75,9 +77,9 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T51 | server | Inventory-lite: stock counts per item, low alerts, auto-86 | T20 | todo | | |
 | T52 | web-screens | Customer-facing order status page via QR on receipt | T24 | todo | | |
 | T53 | books | Card-terminal reconciliation import; tip payout tracking | T34 | todo | | |
-| UX07 | web-core | Touch pass, shell: touch size tokens + spec (`contracts/touch-ui.md`), left navigation rail on tablets, taller bottom bar on phones, bigger login keypad, install offer off the till screens, `scripts/shot.mjs` screenshot tool (owner request) | UX06 | review | claude · 2026-10-08 | Screens follow the touch spec at the four check sizes |
-| UX07-pos | web-pos | Touch pass, counter: bigger controls per touch spec, fix squashed category chips, cart survives navigation, phone cart bar | UX07 | doing | claude-pos · 2026-10-08 | `page.measure()` clean at the four check sizes; screenshots reviewed |
-| UX07-kitchen | web-screens | Touch pass, kitchen: bigger controls per touch spec, whole ticket tappable | UX07 | doing | claude-kitchen · 2026-10-08 | Same |
+| UX07 | web-core | Touch pass, shell: touch size tokens + spec (`contracts/touch-ui.md`), left navigation rail on tablets, taller bottom bar on phones, bigger login keypad, install offer off the till screens, `scripts/shot.mjs` screenshot tool (owner request) (rail and bottom bar superseded by UX08 top bar; tokens, spec and shot tool stay) | UX06 | review | claude · 2026-10-08 | Screens follow the touch spec at the four check sizes |
+| UX07-pos | web-pos | Touch pass, counter: bigger controls per touch spec, fix squashed category chips, cart survives navigation, phone cart bar (stalled on session limit; UX08 covers it; WIP kept on agent/claude-pos/UX07, not to be merged) | UX07 | superseded | claude-pos · 2026-10-08 | `page.measure()` clean at the four check sizes; screenshots reviewed |
+| UX07-kitchen | web-screens | Touch pass, kitchen: bigger controls per touch spec, whole ticket tappable | UX07 | review | claude-kitchen · 2026-10-08 | Same |
 | UX07-admin | web-admin | Touch pass, admin: bigger controls per touch spec, whole-row editing, no native prompt/confirm dialogs | UX07 | doing | claude-admin · 2026-10-08 | Same |
 | UX06 | web-core | Third UI pass: content-first admin, slimmer kitchen header and tickets, orders filter (owner request) | UX05 | review | claude · 2026-10-08 | Owner likes it on her tablet and a phone |
 | UX05 | web-core | Cactus logo (app mark, favicon, PWA icons) and second UI pass: POS category colours, compact menu, payment sheet layout (owner request) | UX01,UX02 | review | claude · 2026-10-08 | Owner likes it on her tablet and a phone |
