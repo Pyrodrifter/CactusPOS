@@ -6,12 +6,13 @@
 export type Align = 'left' | 'center' | 'right';
 
 export type Block =
+  | { t: 'raster'; image: import('@cactus/shared').ReceiptLogo; align?: Align }
   | { t: 'text'; text: string; align?: Align; bold?: boolean; size?: 'normal' | 'large' }
   /** Left text with a right-aligned value on the same line (item ... price). */
   | { t: 'row'; left: string; right: string; bold?: boolean; size?: 'normal' | 'large' }
   /** Indented detail line under a row (options, notes). */
   | { t: 'sub'; text: string }
-  | { t: 'rule' }
+  | { t: 'rule'; style?: 'dashed' | 'solid' | 'space' }
   | { t: 'feed'; lines: number }
   | { t: 'qr'; data: string; caption?: string }
   | { t: 'cut' }

@@ -13,6 +13,7 @@ function readEvent(data: unknown): ServerEvent | null {
 
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';
+export const SERVICE_MODE_CHANGED = 'cactus:service-mode-changed';
 
 /**
  * Live list of orders: initial fetch + WebSocket updates + auto-reconnect.
@@ -52,8 +53,13 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
         const ev = readEvent(m.data);
         if (!ev) return;
         if (ev.type === 'menu.changed') window.dispatchEvent(new Event(MENU_CHANGED));
+        if (ev.type === 'service-mode.changed') window.dispatchEvent(new Event(SERVICE_MODE_CHANGED));
         if (ev.type === 'order.changed') {
           const o = ev.order;
+          if (scope === 'active' && o.serviceMode === 'counter') {
+            setOrders((previous) => { const next = new Map(previous); next.delete(o.id); return next; });
+            return;
+          }
           setOrders((prev) => new Map(prev).set(o.id, o));
           if (!known.current.has(o.id)) { known.current.add(o.id); setNewIds((p) => [...p, o.id]); }
         }

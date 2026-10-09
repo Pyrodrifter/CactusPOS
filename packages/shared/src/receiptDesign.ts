@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const printable = (max: number) => z.string().max(max).regex(/^[^\x00-\x09\x0b-\x1f\x7f]*$/);
+const printable = (max: number) => z.string().max(max).refine((value) => [...value].every((ch) => ch === '\n' || (ch.charCodeAt(0) >= 32 && ch.charCodeAt(0) !== 127)), 'Printer control characters are not allowed');
 export const ServiceMode = z.enum(['counter', 'board']);
 export type ServiceMode = z.infer<typeof ServiceMode>;
 export const ServiceSettings = z.object({ mode: ServiceMode });

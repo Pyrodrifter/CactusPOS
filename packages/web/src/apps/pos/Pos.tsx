@@ -9,6 +9,7 @@ import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
 import { haptic, MoneyPad, Stepper, toast } from '../../ui/touch';
 import './pos.css';
+import { ServiceModeControl, useServiceMode } from './ServiceModeControl';
 
 const copy = {
   en: { menu: 'On the menu', choose: 'Choose something good', current: 'Your order', items: 'items', emptyTitle: 'A fresh start', options: 'Choose options', add: 'Add one', remove: 'Remove one', sending: 'Sending…', paying: 'Processing…', today: 'Today’s orders', required: 'Choose an option to continue', optional: 'Optional', paymentHint: 'Choose how the customer is paying', close: 'Close', loading: 'Loading menu…', sent: 'Sent to the kitchen', paid: 'Payment received', noItems: 'No items in this category', priceHint: 'Enter today’s price to continue', amountDue: 'Amount due' },
@@ -69,6 +70,7 @@ function lineUnit(l: CartLine): number {
 }
 
 export function Pos() {
+  const serviceMode = useServiceMode();
   const { t, lang } = useLang();
   const c = copy[lang];
   const { cart, setCart, note, setNote, sending, setSending, placing, request } = useContext(DraftContext)!;
@@ -155,8 +157,9 @@ export function Pos() {
       request.current = { signature: '', id: newRequestId() };
       setCart([]); setNote('');
       if (reportSuccess) {
-        setSuccess(`${c.sent} · #${order.ticketNumber}`);
-        toast(`${c.sent} · #${order.ticketNumber}`);
+        const message = order.serviceMode === 'counter' ? (lang === 'nl' ? 'Bestelling opgeslagen' : 'Order saved') : c.sent;
+        setSuccess(`${message} · #${order.ticketNumber}`);
+        toast(`${message} · #${order.ticketNumber}`);
       }
       return order;
     } catch (e) { setError(e instanceof ApiError ? e.message : String(e)); return null; }
@@ -174,7 +177,7 @@ export function Pos() {
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
       <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
-        <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || o.status !== 'collected')).length}</span></button>
+        <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || (o.serviceMode !== 'counter' && o.status !== 'collected'))).length}</span></button>
       </div>
       {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
       </div>
@@ -187,7 +190,7 @@ export function Pos() {
               <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="menu" />{ui.all}</button>
               {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
-            <div className="pos-menu-caption"><span>{search ? `“${query.trim()}”` : ui.menuHint}</span><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
+            <div className="pos-menu-caption"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
             <div className="items">
               {items.map((i) => (
                 <button key={i.id} className="item" style={catStyle(menu.categories.findIndex((x) => x.id === i.categoryId))} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
@@ -229,7 +232,7 @@ export function Pos() {
               <b>{money(total)}</b>
             </div>
             <div className="actions">
-              <button disabled={!cart.length || sending || !!paying} onClick={() => void place(true)}><Icon name="send" />{sending ? c.sending : t('cart.send')}</button>
+              <button disabled={!cart.length || sending || !!paying} onClick={() => void place(true)}><Icon name={serviceMode === 'counter' ? 'receipt' : 'send'} />{sending ? c.sending : serviceMode === 'counter' ? (lang === 'nl' ? 'Opslaan' : 'Save order') : t('cart.send')}</button>
               <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.payNow')}<span className="pos-pay-amount">{money(total)}</span></button>
             </div>
           </aside>
@@ -415,7 +418,7 @@ function OrdersList({ orders, onPay }: { orders: Order[]; onPay: (o: Order) => v
             <div className="num">#{o.ticketNumber}<small>{clock(o.createdAt)}</small></div>
             <div className="grow">
               <div>{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</div>
-              <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span></div>
+              <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{o.serviceMode === 'counter' && o.status !== 'void' ? (lang === 'nl' ? 'Balieservice' : 'Counter service') : t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span></div>
             </div>
             <b>{money(o.totalCents)}</b>
             <div className="row-actions">

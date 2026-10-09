@@ -66,6 +66,10 @@ export function renderEscPos(blocks: readonly Block[], opts: EscPosOptions = {})
       if (l.bold !== bold) { bold = l.bold; out.push(ESC, 0x45, bold ? 1 : 0); }
       if (l.large !== large) { large = l.large; out.push(GS, 0x21, large ? 0x11 : 0x00); }
       out.push(...encodeText(l.text), LF);
+    } else if (x.kind === 'raster') {
+      align = x.align;
+      const bytes = x.image.hex.match(/../g)!.map((h) => parseInt(h, 16));
+      out.push(ESC, 0x61, align === 'center' ? 1 : align === 'right' ? 2 : 0, GS, 0x76, 0x30, 0, x.image.width / 8, 0, x.image.height, 0, ...bytes, LF);
     } else if (x.kind === 'qr') {
       out.push(ESC, 0x61, 1, ...qrCommands(x.data), LF);
       align = 'center';

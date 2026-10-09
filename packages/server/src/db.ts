@@ -136,6 +136,10 @@ ${appendOnly('z_reports', 'number')}`),
   },
 ];
 
+MIGRATIONS.push({ version: 4, name: 'receipt-design-versions', up: (db) => {
+  db.exec(`CREATE TABLE receipt_templates (version INTEGER PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL, staff_id TEXT NOT NULL); ${appendOnly('receipt_templates', 'version')}`);
+} });
+
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
 export function schemaVersion(db: DB): number {

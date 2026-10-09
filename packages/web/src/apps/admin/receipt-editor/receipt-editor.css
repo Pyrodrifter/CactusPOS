@@ -1,0 +1,51 @@
+.receipt-editor { color: #192f3e; }
+.re-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; }
+.re-heading h1 { font-size: clamp(30px, 4vw, 44px); letter-spacing: -1.6px; line-height: 1.1; margin: 12px 0; }
+.re-heading p { margin: 0; color: #64736c; max-width: 540px; }
+.re-heading .re-eyebrow { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.re-eyebrow span { border-radius: 99px; background: #e6efe1; color: #326040; padding: 4px 10px; }
+.re-eyebrow .re-unsaved { background: #fff0ce; color: #815b14; }
+.admin .re-publish { min-height: 64px; padding: 14px 22px; flex-shrink: 0; }
+.re-document-tabs { display: flex; gap: 12px; padding: 6px; background: #e9eee4; border-radius: 18px; margin-bottom: 24px; width: fit-content; }
+.admin .re-document-tabs button { min-height: 60px; }
+.re-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, .85fr); gap: 28px; align-items: start; }
+.re-controls { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.re-card { background: #fff; border: 1px solid #dce4d9; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.re-card h2 { display: flex; align-items: center; gap: 10px; font-size: 19px; margin: 0; letter-spacing: -.4px; }
+.re-card small, .re-hint { color: #60716b; font-size: 13px; line-height: 1.5; margin: 0; }
+.re-card .two { gap: 16px; }
+.re-presets { display: flex; gap: 10px; flex-wrap: wrap; }
+.re-presets button { flex: 1; }
+.receipt-editor textarea { font: inherit; width: 100%; min-height: 80px; padding: 12px 14px; border: 1px solid #dbe5df; border-radius: 12px; resize: vertical; color: inherit; background: #fff; }
+.re-upload { border: 1px dashed #aab9aa; border-radius: 16px; padding: 18px; background: #f5f7f0; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.re-upload p { flex: 1; min-width: 150px; margin: 0; font-size: 14px; color: #5b6e64; }
+.re-toggles { display: flex; flex-direction: column; gap: 10px; }
+.admin .re-toggles button { justify-content: space-between; min-height: 56px; }
+.re-toggles [aria-checked=true] { background: #edf4e7; border-color: #96b58a; }
+.re-message { background: #f5f7f1; border: 1px solid #dce4d9; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.re-message-tools { display: flex; flex-wrap: wrap; gap: 10px; }
+.re-message-tools select { flex: 1; width: auto; min-width: 105px; }
+.admin .re-message-tools button { min-width: 52px; }
+.re-preview { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.re-preview-heading { display: flex; justify-content: space-between; align-items: center; font-size: 14px; gap: 10px; }
+.re-preview-heading span { color: #687c70; }
+.re-paper-stage { background: #e4e9df; background-image: radial-gradient(#b9c6b7 1px, transparent 1px); background-size: 12px 12px; padding: 28px 12px; border-radius: 22px; display: flex; justify-content: center; overflow: auto; max-height: 70dvh; transition: opacity .15s; }
+.re-paper-stage.updating { opacity: .55; }
+.re-paper-stage iframe { border: 0; max-width: 100%; flex-shrink: 0; background: #fff; box-shadow: 0 6px 22px #24392722; }
+.re-print-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.re-print-actions button { flex: 1; min-width: 140px; }
+.re-mobile-tabs { display: none; }
+@media (max-width: 1000px) { .re-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; } .re-card { padding: 18px; } .re-card .two { grid-template-columns: 1fr; } }
+@media (max-width: 740px) {
+  .re-heading { align-items: stretch; flex-direction: column; gap: 18px; }
+  .re-heading h1 { font-size: 36px; }
+  .re-document-tabs { width: 100%; gap: 10px; }
+  .re-document-tabs button { flex: 1; padding: 10px !important; font-size: 15px; }
+  .re-mobile-tabs { display: flex; gap: 10px; margin: -6px 0 18px; }
+  .re-mobile-tabs button { flex: 1; }
+  .re-mobile-tabs [aria-pressed=true] { border-color: #155463; box-shadow: inset 0 0 0 1px #155463; }
+  .re-grid { display: block; }
+  .mobile-edit .re-preview, .mobile-preview .re-controls { display: none; }
+  .re-preview { position: static; }
+  .re-paper-stage { max-height: none; padding-inline: 6px; }
+}
