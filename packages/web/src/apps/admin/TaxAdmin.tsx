@@ -33,7 +33,8 @@ export function TaxAdmin() {
   const addRate = async () => {
     if (!adding) return;
     const n = Number(adding.pct.replace(',', '.'));
-    if (!Number.isFinite(n) || n < 0 || n > 100 || !/^\d{4}-\d{2}-\d{2}$/.test(adding.from)) return setErr(t('admin.badRate'));
+    // An empty field is not 0%: Number('') is 0, which used to save a zero rate starting today.
+    if (!adding.pct.trim() || !Number.isFinite(n) || n < 0 || n > 100 || !/^\d{4}-\d{2}-\d{2}$/.test(adding.from)) return setErr(t('admin.badRate'));
     const rates = [...adding.cat.rates.filter((r) => r.validFrom !== adding.from), { validFrom: adding.from, bps: Math.round(n * 100) }];
     if (await save({ ...adding.cat, rates })) setAdding(null);
   };
@@ -46,7 +47,10 @@ export function TaxAdmin() {
         {cats.map((c) => (
           <li key={c.id}>
             <div className="grow">
-              <b>{c.name}</b> {c.unverified && <span className="tag warn">{t('admin.unverified')}</span>}<br />
+              <div className="admin-card-title">
+                <b>{c.name}</b>
+                <span className={`tag ${c.unverified ? 'warn' : 'good'}`}><Icon name={c.unverified ? 'warning' : 'check'} size={16} />{c.unverified ? t('admin.unverified') : copy.verified}</span>
+              </div>
               <small className="muted">
                 {c.kind === 'taxed'
                   ? `${t('admin.now')}: ${pct(rateAt(c, today()))} · ${[...c.rates].sort((a, b) => a.validFrom.localeCompare(b.validFrom)).map((r) => `${pct(r.bps)} ${t('admin.from')} ${r.validFrom}`).join(' · ')}`
@@ -54,8 +58,8 @@ export function TaxAdmin() {
               </small>
             </div>
             <div className="row-actions">
-              {c.kind === 'taxed' && <button disabled={busy} onClick={() => { setErr(''); setAdding({ cat: c, pct: '', from: today() }); }}><Icon name="plus" />{t('admin.newRate')}</button>}
-              <button className={c.unverified ? 'primary' : 'ghost'} disabled={busy} onClick={() => void save({ ...c, unverified: !c.unverified })}>
+              {c.kind === 'taxed' && <button type="button" disabled={busy} onClick={() => { setErr(''); setAdding({ cat: c, pct: '', from: today() }); }}><Icon name="plus" />{t('admin.newRate')}</button>}
+              <button type="button" className={c.unverified ? 'primary' : 'ghost'} disabled={busy} onClick={() => void save({ ...c, unverified: !c.unverified })}>
                 <Icon name={c.unverified ? 'check' : 'warning'} />
                 {c.unverified ? t('admin.markVerified') : t('admin.markUnverified')}
               </button>
@@ -64,16 +68,14 @@ export function TaxAdmin() {
         ))}
       </ul>
       {adding && (
-        <AdminDialog title={`${t('admin.newRate')} · ${adding.cat.name}`} onClose={() => setAdding(null)} busy={busy}>
-            <div className="two">
-              <label>{t('admin.ratePct')}<input inputMode="decimal" autoFocus value={adding.pct} placeholder="6" onChange={(e) => setAdding({ ...adding, pct: e.target.value })} /></label>
-              <label>{t('admin.validFrom')}<input type="date" value={adding.from} onChange={(e) => setAdding({ ...adding, from: e.target.value })} /></label>
-            </div>
-            {err && <div className="error" role="alert">{err}</div>}
-            <div className="actions">
-              <button className="ghost" disabled={busy} onClick={() => setAdding(null)}>{t('pay.cancel')}</button>
-              <button className="primary" disabled={busy} onClick={() => void addRate()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
-            </div>
+        <AdminDialog title={`${t('admin.newRate')} · ${adding.cat.name}`} onClose={() => setAdding(null)} busy={busy} error={err} footer={<>
+          <button type="button" className="ghost" disabled={busy} onClick={() => setAdding(null)}>{t('pay.cancel')}</button>
+          <button type="button" className="primary" disabled={busy} onClick={() => void addRate()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
+        </>}>
+          <div className="two">
+            <label>{t('admin.ratePct')}<input inputMode="decimal" autoFocus value={adding.pct} placeholder="6" onChange={(e) => setAdding({ ...adding, pct: e.target.value })} /></label>
+            <label>{t('admin.validFrom')}<input type="date" value={adding.from} onChange={(e) => setAdding({ ...adding, from: e.target.value })} /></label>
+          </div>
         </AdminDialog>
       )}
     </div>

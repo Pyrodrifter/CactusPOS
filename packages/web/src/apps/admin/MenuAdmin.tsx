@@ -5,6 +5,7 @@ import { useLang } from '../../i18n';
 import { errText, newId } from './Admin';
 import { Icon } from '../../ui/Icon';
 import { AdminDialog } from './AdminDialog';
+import { AdminSwitch, ConfirmDialog, NameDialog, ScrollRow } from './controls';
 import { useAdminCopy } from './copy';
 
 type Menu = MenuResponse;
@@ -16,6 +17,8 @@ export function MenuAdmin() {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [cat, setCat] = useState('');
   const [editing, setEditing] = useState<MenuItem | null>(null);
+  const [ask, setAsk] = useState<'add' | 'rename' | 'delete' | null>(null);
+  const [pending, setPending] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -25,6 +28,8 @@ export function MenuAdmin() {
     setCat((c) => (m.categories.some((x) => x.id === c) ? c : m.categories[0]?.id ?? ''));
   }, []);
   useEffect(() => { void load().catch((e) => setErr(errText(e))); }, [load]);
+  /** After a dialog has done its work and closed: reload, and report a failed reload on the page. */
+  const refresh = () => load().catch((e) => setErr(errText(e)));
 
   const run = async (fn: () => Promise<unknown>) => {
     if (busy) return;
@@ -37,17 +42,24 @@ export function MenuAdmin() {
   const current = menu.categories.find((c) => c.id === cat);
   const items = menu.items.filter((i) => i.categoryId === cat).sort((a, b) => a.name.localeCompare(b.name));
 
-  const addCategory = () => {
-    const name = prompt(t('admin.catName'));
-    if (!name?.trim()) return;
+  const addCategory = async (name: string) => {
     const id = newId('cat');
-    void run(async () => { await api(`/admin/menu/categories/${id}`, { method: 'PUT', body: { name: name.trim(), sort: menu.categories.length + 1 } }); setCat(id); });
+    await api(`/admin/menu/categories/${id}`, { method: 'PUT', body: { name, sort: menu.categories.length + 1 } });
+    setCat(id);
+    setAsk(null);
+    await refresh();
   };
-  const renameCategory = () => {
+  const renameCategory = async (name: string) => {
     if (!current) return;
-    const name = prompt(t('admin.catName'), current.name);
-    if (!name?.trim()) return;
-    void run(() => api(`/admin/menu/categories/${current.id}`, { method: 'PUT', body: { name: name.trim(), sort: current.sort } }));
+    await api(`/admin/menu/categories/${current.id}`, { method: 'PUT', body: { name, sort: current.sort } });
+    setAsk(null);
+    await refresh();
+  };
+  const deleteCategory = async () => {
+    if (!current) return;
+    await api(`/admin/menu/categories/${current.id}`, { method: 'DELETE' });
+    setAsk(null);
+    await refresh();
   };
   const moveCategory = (dir: -1 | 1) => {
     const list = [...menu.categories];
@@ -57,6 +69,13 @@ export function MenuAdmin() {
     [list[i], list[j]] = [list[j]!, list[i]!];
     void run(() => Promise.all(list.map((c, n) => api(`/admin/menu/categories/${c.id}`, { method: 'PUT', body: { name: c.name, sort: n + 1 } }))));
   };
+  const toggleAvailable = (i: MenuItem) => {
+    if (busy) return;
+    setPending(i.id);
+    void run(() => api(`/menu/items/${i.id}/available`, { body: { available: !i.available } })).finally(() => setPending(''));
+  };
+  const open = (dialog: 'add' | 'rename' | 'delete') => { setErr(''); setAsk(dialog); };
+  const stationName = (s: string) => (s === 'kitchen' ? t('nav.kitchen') : s === 'bar' ? t('admin.bar') : s);
 
   const blank = (): MenuItem => ({
     id: newId('item'), categoryId: cat, name: '', priceCents: 0,
@@ -65,51 +84,67 @@ export function MenuAdmin() {
   });
 
   return (
-    <div aria-busy={busy}>
+    <div className="menu-admin" aria-busy={busy}>
       {err && <div className="error" role="alert">{err}</div>}
-      <div className="cats" aria-label={copy.categories}>
-        {menu.categories.map((c) => <button key={c.id} className={c.id === cat ? 'on' : ''} aria-pressed={c.id === cat} onClick={() => setCat(c.id)}>{c.name}</button>)}
-        <button className="ghost" disabled={busy} onClick={addCategory}><Icon name="plus" />{t('admin.addCat')}</button>
+      <ScrollRow className="admin-cats" label={copy.categories}>
+        {menu.categories.map((c) => <button key={c.id} type="button" className={c.id === cat ? 'on' : ''} data-active={c.id === cat} aria-pressed={c.id === cat} onClick={() => setCat(c.id)}>{c.name}</button>)}
+        <button type="button" className="ghost admin-cat-add" disabled={busy} onClick={() => open('add')}><Icon name="plus" />{t('admin.addCat')}</button>
+      </ScrollRow>
+      {/* One row on a landscape tablet (name, category tools, Add item); two rows when narrower. */}
+      <div className="menu-head">
+        <h3 className="menu-title"><span>{current?.name ?? copy.menuItems}</span> <span className="admin-count">{items.length}</span></h3>
+        {current && (
+          <div className="admin-toolbar">
+            <button type="button" className="ghost admin-move" aria-label={copy.earlier} disabled={busy || menu.categories[0]?.id === cat} onClick={() => moveCategory(-1)}><Icon name="arrow-left" /><span>{copy.earlier}</span></button>
+            <button type="button" className="ghost admin-move" aria-label={copy.later} disabled={busy || menu.categories.at(-1)?.id === cat} onClick={() => moveCategory(1)}><Icon name="arrow-right" /><span>{copy.later}</span></button>
+            <button type="button" className="ghost admin-rename" disabled={busy} onClick={() => open('rename')}><Icon name="edit" />{t('admin.rename')}</button>
+            <button type="button" className="ghost danger admin-remove" aria-label={`${t('admin.delete')}: ${current.name}`} disabled={busy} onClick={() => open('delete')}><Icon name="trash" /><span>{t('admin.delete')}</span></button>
+          </div>
+        )}
+        {current && <button type="button" className="primary admin-add" disabled={busy} onClick={() => setEditing(blank())}><Icon name="plus" />{t('admin.addItem')}</button>}
       </div>
-      {current && (
-        <div className="row-actions pad admin-toolbar">
-          <button className="ghost" disabled={busy || menu.categories[0]?.id === cat} onClick={() => moveCategory(-1)}><Icon name="arrow-left" />{copy.earlier}</button>
-          <button className="ghost" disabled={busy || menu.categories.at(-1)?.id === cat} onClick={() => moveCategory(1)}><Icon name="arrow-right" />{copy.later}</button>
-          <button className="ghost" disabled={busy} onClick={renameCategory}><Icon name="edit" />{t('admin.rename')}</button>
-          <button className="ghost danger" disabled={busy} onClick={() => confirm(t('admin.confirmDelete')) && void run(() => api(`/admin/menu/categories/${current.id}`, { method: 'DELETE' }))}><Icon name="trash" />{t('admin.delete')}</button>
-          <span className="spacer" />
-          <button className="primary" disabled={busy} onClick={() => setEditing(blank())}><Icon name="plus" />{t('admin.addItem')}</button>
-        </div>
-      )}
-      <div className="admin-list-heading"><h3>{current?.name ?? copy.menuItems} <span className="admin-count">{items.length}</span></h3><p>{copy.availableHint}</p></div>
-      <ul className="orders">
+      <ul className="admin-rows" aria-label={current?.name ?? copy.menuItems}>
         {items.map((i) => (
-          <li key={i.id}>
-            <div className="grow">
-              <div><b>{i.name}</b></div>
-              <small className="muted">
-                {menu.taxCategories.find((x) => x.id === i.taxCategoryId)?.name} · {i.station}
-                {i.modifierGroups.length > 0 && ` · ${i.modifierGroups.map((g) => g.name).join(', ')}`}
-              </small>
-            </div>
-            <b className="admin-item-price">{i.openPrice ? t('pos.market') : formatMoney(i.priceCents)}</b>
-            <div className="row-actions">
-              <button className={`admin-availability${i.available ? '' : ' on'}`} aria-pressed={i.available} aria-label={`${i.name}: ${i.available ? t('admin.inStock') : t('soldout')}`} disabled={busy} onClick={() => void run(() => api(`/menu/items/${i.id}/available`, { body: { available: !i.available } }))}>
-                <Icon name={i.available ? 'check' : 'close'} />
-                {i.available ? t('admin.inStock') : t('soldout')}
-              </button>
-              <button disabled={busy} aria-label={`${t('admin.edit')}: ${i.name}`} onClick={() => setEditing(i)}><Icon name="edit" />{t('admin.edit')}</button>
-            </div>
+          <li key={i.id} className={`admin-row${i.available ? '' : ' is-off'}`}>
+            <button type="button" className="admin-row-main" aria-label={`${t('admin.edit')}: ${i.name}`} aria-disabled={busy} onClick={() => { if (!busy) setEditing(i); }}>
+              <span className="admin-row-text">
+                <b>{i.name}</b>
+                <small>
+                  {menu.taxCategories.find((x) => x.id === i.taxCategoryId)?.name} · {stationName(i.station)}
+                  {i.modifierGroups.length > 0 && ` · ${i.modifierGroups.map((g) => g.name).join(', ')}`}
+                </small>
+              </span>
+              <b className="admin-row-price">{i.openPrice ? t('pos.market') : formatMoney(i.priceCents)}</b>
+              <Icon name="edit" className="admin-row-go" />
+            </button>
+            <button type="button" role="switch" aria-checked={i.available} className={`admin-avail${i.available ? ' is-on' : ''}`}
+              aria-label={`${i.name}: ${i.available ? t('admin.inStock') : t('soldout')}`} aria-busy={pending === i.id} onClick={() => toggleAvailable(i)}>
+              <span className="admin-switch-track" aria-hidden="true"><i /></span>
+              <span>{i.available ? t('admin.inStock') : t('soldout')}</span>
+            </button>
           </li>
         ))}
-        {current && items.length === 0 && <p className="muted center">{t('admin.noItems')}</p>}
+        {current && items.length === 0 && <li className="admin-rows-empty muted center">{t('admin.noItems')}</li>}
       </ul>
+      {items.length > 0 && <p className="admin-list-note">{copy.availableHint}</p>}
+      {ask === 'add' && (
+        <NameDialog title={copy.newCategory} label={t('admin.catName')} placeholder={copy.categoryExample} saveLabel={copy.add}
+          emptyError={copy.needCategoryName} onSave={addCategory} onClose={() => setAsk(null)} />
+      )}
+      {ask === 'rename' && current && (
+        <NameDialog title={copy.renameCategory} label={t('admin.catName')} initial={current.name} saveLabel={t('admin.save')}
+          emptyError={copy.needCategoryName} onSave={renameCategory} onClose={() => setAsk(null)} />
+      )}
+      {ask === 'delete' && current && (
+        <ConfirmDialog title={copy.deleteNamed(current.name)} text={copy.deleteCategoryText} confirmLabel={t('admin.delete')}
+          onConfirm={deleteCategory} onClose={() => setAsk(null)} />
+      )}
       {editing && (
         <ItemEditor
           item={editing} menu={menu} isNew={!menu.items.some((i) => i.id === editing.id)}
           onClose={() => setEditing(null)}
-          onSave={async (item) => { await api(`/admin/menu/items/${item.id}`, { method: 'PUT', body: item }); setEditing(null); await load(); }}
-          onDelete={async () => { await api(`/admin/menu/items/${editing.id}`, { method: 'DELETE' }); setEditing(null); await load(); }}
+          onSave={async (item) => { await api(`/admin/menu/items/${item.id}`, { method: 'PUT', body: item }); setEditing(null); await refresh(); }}
+          onDelete={async () => { await api(`/admin/menu/items/${editing.id}`, { method: 'DELETE' }); setEditing(null); await refresh(); }}
         />
       )}
     </div>
@@ -128,6 +163,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
     Object.fromEntries(item.modifierGroups.flatMap((g) => g.options.map((o) => [o.id, dollars(o.priceDeltaCents)]))));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const tax = menu.taxCategories.find((x) => x.id === d.taxCategoryId);
 
   const setGroup = (gid: string, patch: Partial<ModifierGroup>) =>
@@ -152,14 +188,13 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
     setBusy(true);
     try { await onSave({ ...d, name: d.name.trim(), description: d.description?.trim() || undefined, priceCents: d.openPrice ? 0 : cents!, modifierGroups: groups }); } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
   };
-  const remove = async () => {
-    if (busy || !confirm(t('admin.confirmDelete'))) return;
-    setBusy(true); setErr('');
-    try { await onDelete(); } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
-  };
 
   return (
-    <AdminDialog title={isNew ? t('admin.addItem') : `${t('admin.edit')} · ${item.name}`} onClose={onClose} busy={busy} wide>
+    <>
+      <AdminDialog title={isNew ? t('admin.addItem') : `${t('admin.edit')} · ${item.name}`} onClose={onClose} busy={busy} wide error={err} footer={<>
+        <button type="button" className="ghost" disabled={busy} onClick={onClose}>{t('pay.cancel')}</button>
+        <button type="button" className="primary" disabled={busy} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
+      </>}>
         <label>{t('admin.name')}<input value={d.name} autoFocus onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
         <div className="two">
           <label>{t('admin.price')}<input inputMode="decimal" value={d.openPrice ? '' : price} disabled={d.openPrice} placeholder={d.openPrice ? t('pos.market') : '0.00'} onChange={(e) => setPrice(e.target.value)} /></label>
@@ -182,42 +217,48 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
             </select>
           </label>
         </div>
-        <div className="chips"><button className={d.openPrice ? 'on' : ''} aria-pressed={d.openPrice} onClick={() => setD({ ...d, openPrice: !d.openPrice })}><Icon name="cash" />{t('admin.openPrice')}</button></div>
+        <AdminSwitch on={d.openPrice} onChange={(openPrice) => setD({ ...d, openPrice })} label={t('admin.openPrice')} />
         <label>{t('admin.description')}<input value={d.description ?? ''} onChange={(e) => setD({ ...d, description: e.target.value })} /></label>
         {tax?.unverified && <small className="warn-text">{t('admin.taxUnverified')}</small>}
 
-        <h3>{t('admin.options')}</h3>
-        <small className="muted">{copy.optionsHint}</small>
+        <div className="admin-dialog-section">
+          <h3>{t('admin.options')}</h3>
+          <small className="muted">{copy.optionsHint}</small>
+        </div>
         {d.modifierGroups.map((g) => (
           <div key={g.id} className="group-edit">
-            <div className="two">
+            <div className="group-edit-head">
               <label>{t('admin.groupName')}<input value={g.name} placeholder={t('admin.groupName')} onChange={(e) => setGroup(g.id, { name: e.target.value })} /></label>
-              <button className="ghost danger" onClick={() => setD({ ...d, modifierGroups: d.modifierGroups.filter((x) => x.id !== g.id) })}><Icon name="trash" />{t('admin.delete')}</button>
+              <button type="button" className="ghost danger" aria-label={`${t('admin.delete')}: ${g.name || t('admin.groupName')}`} onClick={() => setD({ ...d, modifierGroups: d.modifierGroups.filter((x) => x.id !== g.id) })}><Icon name="trash" /></button>
             </div>
-            <div className="chips">
-              <button className={g.required ? 'on' : ''} aria-pressed={g.required} onClick={() => setGroup(g.id, { required: !g.required })}><Icon name="check" />{t('mods.required')}</button>
-              <button className={g.multi ? 'on' : ''} aria-pressed={g.multi} onClick={() => setGroup(g.id, { multi: !g.multi })}><Icon name="plus" />{t('admin.multi')}</button>
+            <div className="two">
+              <AdminSwitch on={g.required} onChange={(required) => setGroup(g.id, { required })} label={t('mods.required')} />
+              <AdminSwitch on={g.multi} onChange={(multi) => setGroup(g.id, { multi })} label={t('admin.multi')} />
             </div>
             {g.options.map((o) => (
               <div key={o.id} className="opt-row">
                 <label>{copy.optionName}<input value={o.name} placeholder={t('admin.optName')} onChange={(e) => setGroup(g.id, { options: g.options.map((x) => (x.id === o.id ? { ...x, name: e.target.value } : x)) })} /></label>
                 <label>{copy.optionPrice}<input inputMode="decimal" value={deltas[o.id] ?? ''} placeholder="+0.00" onChange={(e) => setDeltas({ ...deltas, [o.id]: e.target.value })} /></label>
-                <button className="ghost danger" aria-label={`${t('admin.delete')}: ${o.name || copy.optionName}`} onClick={() => setGroup(g.id, { options: g.options.filter((x) => x.id !== o.id) })}><Icon name="trash" /></button>
+                <button type="button" className="ghost danger" aria-label={`${t('admin.delete')}: ${o.name || copy.optionName}`} onClick={() => setGroup(g.id, { options: g.options.filter((x) => x.id !== o.id) })}><Icon name="trash" /></button>
               </div>
             ))}
-            <button className="ghost" onClick={() => setGroup(g.id, { options: [...g.options, { id: newId('opt'), name: '', priceDeltaCents: 0 }] })}><Icon name="plus" />{t('admin.addOption')}</button>
+            <button type="button" className="ghost" onClick={() => setGroup(g.id, { options: [...g.options, { id: newId('opt'), name: '', priceDeltaCents: 0 }] })}><Icon name="plus" />{t('admin.addOption')}</button>
           </div>
         ))}
-        <button className="ghost" onClick={() => setD({ ...d, modifierGroups: [...d.modifierGroups, { id: newId('grp'), name: '', required: false, multi: false, options: [{ id: newId('opt'), name: '', priceDeltaCents: 0 }] }] })}>
+        <button type="button" className="ghost" onClick={() => setD({ ...d, modifierGroups: [...d.modifierGroups, { id: newId('grp'), name: '', required: false, multi: false, options: [{ id: newId('opt'), name: '', priceDeltaCents: 0 }] }] })}>
           <Icon name="plus" />{t('admin.addGroup')}
         </button>
 
-        {err && <div className="error" role="alert">{err}</div>}
-        <div className="actions">
-          {!isNew && <button className="ghost danger" disabled={busy} onClick={() => void remove()}><Icon name="trash" />{t('admin.delete')}</button>}
-          <button className="ghost" disabled={busy} onClick={onClose}>{t('pay.cancel')}</button>
-          <button className="primary" disabled={busy} onClick={() => void save()}><Icon name="check" />{busy ? copy.saving : t('admin.save')}</button>
-        </div>
-    </AdminDialog>
+        {!isNew && (
+          <div className="admin-danger-zone">
+            <button type="button" className="ghost danger" disabled={busy} onClick={() => setConfirming(true)}><Icon name="trash" />{copy.deleteItem}</button>
+          </div>
+        )}
+      </AdminDialog>
+      {confirming && (
+        <ConfirmDialog title={copy.deleteNamed(item.name)} text={copy.deleteItemText} confirmLabel={t('admin.delete')}
+          onConfirm={onDelete} onClose={() => setConfirming(false)} />
+      )}
+    </>
   );
 }
