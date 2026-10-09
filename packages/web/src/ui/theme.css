@@ -1,0 +1,115 @@
+/* Shared appearance and icon geometry. Loaded after each screen's styles. */
+.ui-icon { flex: none; vertical-align: middle; }
+:is(.icon-btn, .pin-clear, .pad-back, .pos-close, .admin-close) { display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+.sheet-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.sheet-head > .icon-btn { flex: 0 0 var(--tap); }
+.money-pad .pad-back { padding: 0; }
+.screen-option > .ui-icon { flex: 0 0 25px; }
+.pos-item-add { flex: 0 0 34px; }
+.pos-item-add .ui-icon { width: 18px; height: 18px; }
+.pos .qty button, .stepper button { padding: 0; flex-shrink: 0; }
+.theme-picker { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 18px; flex-shrink: 0; }
+.theme-picker legend { padding: 0 6px; font-size: 15px; font-weight: 650; }
+.theme-picker > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.theme-picker button { min-width: 0; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+.theme-picker button span { max-width: 100%; overflow-wrap: anywhere; }
+.theme-picker button[aria-pressed=true] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.theme-picker p { color: var(--muted); font-size: 12px; margin: 10px 4px 0; }
+.login-theme { position: absolute; bottom: 24px; right: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #ffffff0c; color: #fff; border-color: #ffffff33; font-size: 14px; }
+.login-service { padding-right: 110px; }
+@media (max-width: 800px) {
+  .login-brand { padding-right: 52px; gap: 8px; }
+  .login-brand > strong { font-size: clamp(16px, 5vw, 21px); }
+  .login-brand .login-language { padding: 0 10px; }
+  .login-theme { top: 18px; bottom: auto; right: 16px; width: 48px; min-height: 56px; padding: 0; }
+  .login-theme > span { display: none; }
+}
+
+/* Theme lives on html so native dialogs, sheets, toasts and sign-in inherit it. */
+:root[data-theme=dark] {
+  --bg: #0f1c25; --card: #1a2b36; --ink: #edf5f5; --muted: #a9bdc5; --line: #3b515f; --soft: #223743;
+  --brand-text: #9ddfe8; --accent: #b6e29e; --accent-soft: #243d32; --warn: #ffd092; --warn-soft: #493923;
+  --danger: #ffb2aa; --danger-soft: #482c32; --info: #a7d5f6; --info-soft: #263d50;
+  --shadow: 0 8px 28px #0002; --shadow-lg: 0 24px 80px #0006;
+}
+:root[data-theme=dark] .shell { --shell-navy: var(--ink); background: var(--bg); }
+:root[data-theme=dark] .shell .topbar { background: var(--card); border-color: var(--line); }
+:root[data-theme=dark] .shell .topbar nav { background: var(--soft); border-color: var(--line); }
+:root[data-theme=dark] .shell .topbar nav a { color: var(--muted); }
+:root[data-theme=dark] .shell .topbar nav a.active { background: #b6e29e; color: #142d27; box-shadow: 0 3px 12px #0003; }
+:root[data-theme=dark] .screen-tools-button { background: var(--soft); border-color: var(--line); }
+:root[data-theme=dark] .shell-connection { color: #b6d9c5; }
+:root[data-theme=dark] .shell-connection.offline { color: var(--warn); }
+:root[data-theme=dark] .skip-link { background: var(--card); color: var(--brand-text); }
+:root[data-theme=dark] .screen-option { background: var(--soft); }
+:root[data-theme=dark] .screen-option > svg { color: var(--brand-text); }
+:root[data-theme=dark] .screen-option[aria-checked=true] { background: var(--accent-soft); border-color: #708f78; }
+:root[data-theme=dark] .screen-tool-emblem { background: var(--warn-soft); color: var(--warn); }
+:root[data-theme=dark] .touch-switch { background: #526772; }
+:root[data-theme=dark] [aria-checked=true] .touch-switch { background: #498264; }
+:root[data-theme=dark] :is(button.primary, button.on) { background: #b6e29e; border-color: #b6e29e; color: #142d27; }
+:root[data-theme=dark] :is(button, input, select, textarea):focus-visible { outline-color: #9ddfe8; }
+
+/* Counter surfaces, amounts and status colors. Category strips retain their menu colors. */
+:root[data-theme=dark] .pos :is(.pos-search, .cats button) { background: var(--card); }
+:root[data-theme=dark] .pos .cats button.on { background: var(--c, #b6e29e); color: #fff; }
+:root[data-theme=dark] .pos .cats .pos-all.on { background: #b6e29e; color: #142d27; border-color: #b6e29e; }
+:root[data-theme=dark] .pos :is(.item b, .pos-cart-heading > span:first-child, .orders .num) { color: var(--brand-text); }
+:root[data-theme=dark] :is(.pos-payment-total, .pos-sheet .pos-price-entry .amount) { color: var(--brand-text); }
+:root[data-theme=dark] .pos :is(.pos-search button, .pos-clear-order, .pos-cart-empty > span, .pos-menu-icon) { background: var(--soft); color: var(--muted); }
+:root[data-theme=dark] .pos .cart { border-top-color: #9ddfe8; }
+:root[data-theme=dark] .pos-item-add { color: var(--ink); background: var(--soft); }
+:root[data-theme=dark] :is(.pos-count, .pos-status) { background: var(--soft); color: var(--muted); }
+:root[data-theme=dark] .pos .tabs .on .pos-count { background: #142d2720; color: #142d27; }
+:root[data-theme=dark] .pos-orders-filter button.on .pos-count { background: #142d2720; color: #142d27; }
+:root[data-theme=dark] :is(.pos-status.ready, .pos-status.paid, .pos-success, .pos-undo) { background: var(--accent-soft); color: var(--accent); }
+:root[data-theme=dark] .pos-undo > span { color: var(--accent); }
+:root[data-theme=dark] :is(.pos-status.preparing, .pos-status.unpaid, .pos-sheet .group .pos-required, .banner) { background: var(--warn-soft); color: var(--warn); }
+:root[data-theme=dark] .pos-status.void { background: var(--danger-soft); color: var(--danger); }
+:root[data-theme=dark] :is(.pos-sheet .chips .on, .service-choice.selected) { background: var(--accent-soft); color: var(--accent); border-color: #708f78; box-shadow: inset 0 0 0 1px #708f78; }
+:root[data-theme=dark] .pos .service-mode { background: var(--info-soft); color: var(--info); border-color: var(--line); }
+:root[data-theme=dark] .pos .service-mode.calm { background: var(--warn-soft); color: var(--warn); }
+:root[data-theme=dark] .pos-payment .change { background: var(--accent-soft); color: var(--accent); }
+:root[data-theme=dark] .pos-pay-change { background: var(--accent-soft) !important; }
+:root[data-theme=dark] .pos-pay-change :is(.amount, span) { color: var(--accent); }
+:root[data-theme=dark] .pos-pay-change.pos-short :is(.amount, span) { color: var(--danger); }
+
+/* Admin retains its own layout while sharing the dark semantic palette. */
+:root[data-theme=dark] .admin.admin { --admin-ink: var(--ink); --admin-muted: var(--muted); --admin-line: var(--line); background: var(--bg); }
+:root[data-theme=dark] .admin :is(.admin-tabs, .admin-count, .group-edit, .orders li.inactive) { background: var(--soft); }
+:root[data-theme=dark] .admin :is(.admin-form-card, .cats, .admin-dialog, .reports-stat, button.ghost, .re-card, textarea) { background: var(--card); border-color: var(--line); }
+:root[data-theme=dark] .admin :is(.admin-tabs button, label, .admin-eyebrow, .re-card small, .re-hint, .re-upload p, .re-preview-heading span) { color: var(--muted); }
+:root[data-theme=dark] .admin .admin-tabs button.on { background: var(--card); color: var(--brand-text); border-color: var(--line); }
+:root[data-theme=dark] .admin :is(.admin-item-price, .reports-history .num) { color: var(--brand-text); }
+:root[data-theme=dark] .admin :is(.admin-section-icon, .admin-availability:not(.on), .ok, .reports-status, .re-toggles [aria-checked=true]) { background: var(--accent-soft); color: var(--accent); border-color: #708f78; }
+:root[data-theme=dark] .admin :is(.admin-availability.on, .notice, .tag.warn, .reports-status.changed) { background: var(--warn-soft); color: var(--warn); border-color: #897351; }
+:root[data-theme=dark] .admin :is(.error, .reports-rows li.neg b) { color: var(--danger); }
+:root[data-theme=dark] .admin .error { background: var(--danger-soft); border-color: #825059; }
+:root[data-theme=dark] .admin .warn-text { color: var(--warn); }
+:root[data-theme=dark] .admin .reports-stat.main { background: var(--info-soft); border-color: var(--line); color: var(--ink); }
+:root[data-theme=dark] .admin .reports-stat.main :is(span, small) { color: var(--info); }
+:root[data-theme=dark] .admin :is(.re-upload, .re-message) { background: var(--soft); border-color: var(--line); }
+:root[data-theme=dark] .receipt-editor { color: var(--ink); }
+:root[data-theme=dark] .re-heading h1 { color: var(--ink); }
+:root[data-theme=dark] .re-heading p { color: var(--muted); }
+:root[data-theme=dark] .re-document-tabs { background: var(--soft); border-color: var(--line); }
+:root[data-theme=dark] .re-preview-heading { color: var(--ink); }
+:root[data-theme=dark] .re-paper-stage { background-color: #293f49; background-image: radial-gradient(#526772 1px, transparent 1px); }
+/* Receipt iframe stays paper-white: the preview represents a printed receipt. */
+
+:root[data-theme=dark] .login { background: var(--bg); }
+:root[data-theme=dark] .login-story { background: #101e36; }
+:root[data-theme=dark] .login-card h2 { color: var(--ink); }
+:root[data-theme=dark] .login-lock { background: var(--soft); color: var(--brand-text); }
+:root[data-theme=dark] .login .keypad button { background: var(--card); border-color: var(--line); color: var(--ink); box-shadow: 0 3px 0 #09151d; }
+:root[data-theme=dark] .login .keypad .primary { background: #b6e29e; border-color: #b6e29e; color: #142d27; }
+:root[data-theme=dark] .pin-dots span.filled { background: #b6e29e; border-color: #b6e29e; }
+:root[data-theme=dark] .pin-clear { color: var(--muted); }
+:root[data-theme=dark] .pwa-status { background: var(--accent-soft); color: var(--accent); }
+:root[data-theme=dark] .pwa-status.is-offline { background: var(--warn-soft); color: var(--warn); border-color: var(--line); }
+:root[data-theme=dark] .toast.error { background: var(--danger-soft); color: var(--danger); }
+@media (max-width: 760px) {
+  :root[data-theme=dark] .shell .topbar nav { background: transparent; }
+  :root[data-theme=dark] .shell .topbar nav a { background: var(--soft); }
+  :root[data-theme=dark] .shell .topbar nav a.active { background: #b6e29e; }
+}
