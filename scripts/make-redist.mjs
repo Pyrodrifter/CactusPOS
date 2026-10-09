@@ -130,7 +130,10 @@ console.log(`\nFolder: ${stage}  (${Math.round(size(stage) / 1e6)} MB)`);
 if (zipWanted) {
   step('Zipping');
   const zip = join(outDir, `CactusPOS-${pkg.version}-win-x64.zip`);
-  // The tar that ships with Windows 10 and 11 writes zip files; "tar" from Git Bash does not.
-  run(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe'), ['-a', '-c', '-f', zip, '-C', outDir, 'CactusPOS']);
+  // .NET's zip writer, which every Windows 10 and 11 has. (The tar.exe that ships with Windows crashed on this
+  // folder, and "tar" from Git Bash cannot write zip files.) Paths travel in the environment, so they need no quoting.
+  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory($env:CACTUS_ZIP_FROM, $env:CACTUS_ZIP_TO, 'Optimal', $true)"],
+  { env: { ...process.env, CACTUS_ZIP_FROM: stage, CACTUS_ZIP_TO: zip } });
   console.log(`Zip:    ${zip}  (${Math.round(statSync(zip).size / 1e6)} MB)`);
 }
