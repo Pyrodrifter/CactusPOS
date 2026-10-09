@@ -69,6 +69,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T43 | firmware | Hardware notes: BOM, enclosure, charging, range test | T41 | todo | | |
 
 ## M5 — Polish
+| UX11 | web-screens / web-core | Owner-requested digital menu board with live menu prices, category rotation, fullscreen and light/dark display | - | doing | codex · 2026-10-09 | Readable customer display on TV/tablet; menu edits and availability refresh; no checkout controls; checks and browser verification pass |
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
 | UX10 | web-core | Owner-requested icon fit/alignment polish and persistent light/dark theme across staff screens, login and dialogs | UX01 | review | codex · 2026-10-09 | Icons fit their controls on phone/tablet/desktop; dark theme persists and covers dialogs; typecheck/tests pass; browser visuals verified |
