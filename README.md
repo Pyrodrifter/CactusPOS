@@ -1,6 +1,22 @@
 # CactusPOS
 Self-hosted point of sale for Cactus Blue (Bonaire). Start with [AGENTS.md](AGENTS.md), then [docs/PLAN.md](docs/PLAN.md) and [docs/coordination/BOARD.md](docs/coordination/BOARD.md).
 
+## Install on the till computer
+
+The laptop in the truck runs the server and shows the till in its own window, like an installed program. Tablets
+and phones on the same WiFi open the kitchen and ordering screens in their browser.
+
+- **Windows, ready-made package:** unzip `CactusPOS-<version>-win-x64.zip` from the Releases page and double-click
+  **Install CactusPOS.bat**. It carries its own Node.js; the computer needs no internet and nothing else installed.
+- **Windows, from this repository:** clone it and double-click **Install CactusPOS.bat**. It installs Node.js LTS
+  with winget when missing, downloads the libraries and builds the screens.
+- **Linux:** `sh ops/linux/install.sh` (needs Node.js 22.13+ or 24+ and Chromium, Chrome or Edge).
+
+The installer adds a Desktop icon, starts CactusPOS at sign-in and (Windows) asks once to open the firewall for
+devices on the local network. Sales data lives outside the program folder (`%LOCALAPPDATA%\CactusPOS`,
+`~/.local/share/cactuspos`), so updating never touches it. Full guide, tablet setup, backups and troubleshooting:
+[ops/install.md](ops/install.md). Build the package yourself with `node scripts/make-redist.mjs`.
+
 ## Run locally
 
 Use Node **22.13+ or 24+**, with npm 10 or newer. The server uses Node's built-in

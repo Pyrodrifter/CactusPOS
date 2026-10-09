@@ -69,3 +69,10 @@ if __name__ == '__main__':
     ]:
         draw_logo(size, maskable).save(OUT / name, optimize=True)
         print('wrote', name)
+    # Windows shortcut icon (desktop, Start menu) and the Linux launcher icon, used by the installers in ops/.
+    ops = OUT.parents[3] / 'ops'
+    sizes = [16, 24, 32, 48, 64, 128, 256]
+    frames = [draw_logo(s) for s in sizes]
+    frames[-1].save(ops / 'windows' / 'cactuspos.ico', sizes=[(s, s) for s in sizes], append_images=frames[:-1])
+    draw_logo(256).save(ops / 'linux' / 'cactuspos.png', optimize=True)
+    print('wrote cactuspos.ico, cactuspos.png')

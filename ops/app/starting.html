@@ -1,0 +1,96 @@
+<!doctype html>
+<!-- Shown in the app window while the CactusPOS server starts (ops/app/launch.mjs opens it as a local file).
+     It asks the server every half second and moves on to the till as soon as it answers. No network, no dependencies. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1d4a">
+<title>CactusPOS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23142a66'/%3E%3Cg fill='none' stroke='%2337c8dc' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32 38H21V27' stroke-width='7'/%3E%3Cpath d='M32 44H43V32' stroke-width='7'/%3E%3Cpath d='M32 47V18' stroke-width='11'/%3E%3C/g%3E%3Ccircle cx='47' cy='17' r='6' fill='%23ffc93c'/%3E%3C/svg%3E">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 32px; text-align: center;
+    font-family: "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif; color: #14213d; background: #f4f4ef;
+  }
+  svg.logo { width: 128px; height: 128px; filter: drop-shadow(0 14px 28px #0f1d4a33); }
+  h1 { margin: 0; font-size: 34px; letter-spacing: -.03em; }
+  p { margin: 0; font-size: 19px; line-height: 1.5; color: #55607a; max-width: 560px; }
+  .dots { display: flex; gap: 10px; height: 14px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; background: #1b3a86; animation: hop 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; background: #37c8dc; }
+  .dots i:nth-child(3) { animation-delay: .3s; background: #ffc93c; }
+  @keyframes hop { 0%, 60%, 100% { transform: translateY(0); opacity: .55; } 30% { transform: translateY(-10px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; } }
+  .failed .dots { display: none; }
+  code { display: block; margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: #fff; border: 1px solid #dfe3da; font-size: 15px; color: #14213d; overflow-wrap: anywhere; user-select: all; }
+  button { min-height: 64px; padding: 0 34px; border: 0; border-radius: 18px; background: #0f1d4a; color: #fff; font: inherit; font-size: 20px; font-weight: 650; cursor: pointer; }
+  button[hidden] { display: none; }
+</style>
+</head>
+<body>
+<svg class="logo" viewBox="0 0 64 64" role="img" aria-label="CactusPOS">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b3a86"/><stop offset="1" stop-color="#0b1640"/></linearGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <circle cx="47" cy="17" r="6" fill="#ffc93c"/>
+  <g fill="none" stroke="#37c8dc" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 38H21V27" stroke-width="7"/><path d="M32 44H43V32" stroke-width="7"/><path d="M32 47V18" stroke-width="11"/>
+  </g>
+  <path d="M13 53H51" stroke="#4f74d9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M29.5 22V46" stroke="#9aeaf3" stroke-width="2" stroke-linecap="round" opacity=".75"/>
+  <circle cx="32" cy="12.5" r="3.2" fill="#ff6fae"/>
+</svg>
+<h1 id="title">Starting CactusPOS</h1>
+<div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+<p id="text" role="status">One moment, the till is getting ready.</p>
+<button id="retry" hidden>Try again</button>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const port = /^\d{1,5}$/.test(q.get('port') || '') ? q.get('port') : '3000';
+  // Only a path of this app is accepted, so a crafted link cannot send the window somewhere else.
+  const path = /^\/[a-z]+$/.test(q.get('path') || '') ? q.get('path') : '/pos';
+  const log = q.get('log') || '';
+  const nl = (navigator.language || '').toLowerCase().startsWith('nl');
+  const t = nl
+    ? { title: 'CactusPOS start op', wait: 'Een ogenblik, de kassa wordt klaargezet.', failTitle: 'CactusPOS is niet gestart', fail: 'De kassa reageert niet. Probeer het opnieuw. Blijft dit gebeuren, start dan de computer opnieuw op. Het logboek staat hier:', retry: 'Opnieuw proberen' }
+    : { title: 'Starting CactusPOS', wait: 'One moment, the till is getting ready.', failTitle: 'CactusPOS did not start', fail: 'The till is not answering. Try again. If this keeps happening, restart the computer. The log is here:', retry: 'Try again' };
+  const $ = (id) => document.getElementById(id);
+  document.documentElement.lang = nl ? 'nl' : 'en';
+  $('title').textContent = t.title; $('text').textContent = t.wait; $('retry').textContent = t.retry;
+
+  const LIMIT_MS = 75000;
+  let started = Date.now();
+  let timer;
+  const check = async () => {
+    try {
+      // "no-cors": this page is a local file, so the answer cannot be read, but a successful request proves the server is up.
+      await fetch(`http://127.0.0.1:${port}/api/health`, { mode: 'no-cors', cache: 'no-store' });
+      location.replace(`http://localhost:${port}${path}`);
+      return;
+    } catch { /* not up yet */ }
+    if (Date.now() - started > LIMIT_MS) {
+      document.body.classList.add('failed');
+      $('title').textContent = t.failTitle;
+      $('text').textContent = t.fail;
+      if (log) { const c = document.createElement('code'); c.textContent = log; $('text').append(c); }
+      $('retry').hidden = false;
+      return;
+    }
+    timer = setTimeout(check, 500);
+  };
+  $('retry').addEventListener('click', () => {
+    clearTimeout(timer);
+    document.body.classList.remove('failed');
+    $('title').textContent = t.title; $('text').textContent = t.wait; $('retry').hidden = true;
+    started = Date.now();
+    check();
+  });
+  check();
+})();
+</script>
+</body>
+</html>

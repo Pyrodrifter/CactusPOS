@@ -43,7 +43,8 @@ if (!browser) { console.error('No Edge or Chrome found. Set SHOT_BROWSER to the 
 
 mkdirSync(out, { recursive: true });
 const profile = mkdtempSync(join(tmpdir(), 'cactus-shot-')); // a throwaway profile: never the user's own browser data
-const child = spawn(browser, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+// The sign-in flags below keep Edge from signing that throwaway profile in with the Windows user's Microsoft account.
+const child = spawn(browser, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-features=msImplicitSignin', '--disable-sync', '--allow-browser-signin=false', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
 const wsUrl = await new Promise((done, fail) => {
   let buf = '';
   const timer = setTimeout(() => fail(new Error('The browser did not start within 20 seconds')), 20_000);

@@ -16,6 +16,7 @@
     "@fastify/static": "^10.1.5",
     "@cactus/receipt": "*",
     "@cactus/printer": "*",
-    "@cactus/books-bridge": "*"
+    "@cactus/books-bridge": "*",
+    "tsx": "^4.19.0"
   }
 }
