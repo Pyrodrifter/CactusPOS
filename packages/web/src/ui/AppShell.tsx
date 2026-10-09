@@ -108,6 +108,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
     </div>
     {tools && <div className="screen-tools"><Sheet title={c.tools} onClose={closeTools}>
       <div className="screen-tools-scroll">
+      <a className="screen-option" href="/menu-board" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}><Icon name="menu" /><span><strong>{lang === 'nl' ? 'Digitaal menubord' : 'Digital menu board'}</strong><small>{lang === 'nl' ? 'Open het menu op een scherm voor je klanten.' : 'Open the menu on a display for your customers.'}</small></span><Icon name="external" /></a>
       <div className="screen-tools-intro"><span className="screen-tool-emblem"><Icon name="sun" size={28} /></span><div><h3>{c.device}</h3><p>{c.deviceHint}</p></div></div>
       <fieldset className="theme-picker"><legend>{c.appearance}</legend><div>{(['light', 'dark', 'system'] as const).map((value) => <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon name={value === 'dark' ? 'moon' : value === 'light' ? 'sun' : 'monitor'} /><span>{c[value]}</span></button>)}</div><p>{c.themeHint}</p></fieldset>
       <button className="screen-option" role="switch" aria-checked={sunlight && !dark} onClick={() => { if (dark) setTheme('light'); setSunlight(dark || !sunlight); }}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>

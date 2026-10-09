@@ -12,6 +12,7 @@ import { Pos, PosDraftProvider } from './apps/pos/Pos';
 import { Kitchen } from './apps/kitchen/Kitchen';
 import { Pickup } from './apps/pickup/Pickup';
 import { Admin } from './apps/admin/Admin';
+import { MenuBoard } from './apps/order/MenuBoard';
 
 function Shell({ session }: { session: Session }) {
   return (
@@ -35,7 +36,8 @@ function App() {
         <PwaStatus />
         <Routes>
           <Route path="/pickup" element={<Pickup />} />
-          <Route path="/login" element={session ? <Navigate to="/pos" replace /> : <Login onDone={(s) => { setSession(s); setS(s); }} />} />
+          <Route path="/menu-board" element={session ? <MenuBoard session={session} /> : <Navigate to="/login?next=menu-board" replace />} />
+          <Route path="/login" element={session ? <Navigate to={new URLSearchParams(location.search).get('next') === 'menu-board' ? '/menu-board' : '/pos'} replace /> : <Login onDone={(s) => { setSession(s); setS(s); }} />} />
           <Route path="*" element={session ? <Shell session={session} /> : <Navigate to="/login" replace />} />
         </Routes>
       </div>

@@ -1,0 +1,33 @@
+.menu-board { --mb-paper: #f7f2e7; --mb-ink: #153c46; --mb-muted: #556c6d; --mb-line: #d4d7c8; --mb-accent: #086e7c; flex: 1; min-height: 0; overflow: auto; background: var(--mb-paper); color: var(--mb-ink); padding: clamp(20px, 3vw, 56px); display: flex; flex-direction: column; gap: 24px; }
+.menu-board-dark { --mb-paper: #10232b; --mb-ink: #f4f5e9; --mb-muted: #bbcec9; --mb-line: #36525a; --mb-accent: #b7e18b; }
+.mb-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; border-bottom: 2px solid var(--mb-ink); padding-bottom: 24px; }
+.mb-brand { display: flex; align-items: center; gap: 20px; }
+.mb-brand span { text-transform: uppercase; letter-spacing: .18em; font-weight: 750; font-size: 14px; color: var(--mb-accent); }
+.mb-brand h1 { font-size: clamp(30px, 3.5vw, 62px); line-height: 1.08; margin: 5px 0 0; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.mb-header > p { font-size: clamp(18px, 1.6vw, 28px); max-width: 240px; margin: 0; color: var(--mb-muted); }
+.mb-content { flex: 1; }
+.mb-category { display: flex; align-items: center; gap: 18px; margin-bottom: 26px; }
+.mb-category > span { font-weight: 800; font-size: 20px; color: var(--mb-accent); }
+.mb-category h2 { font-size: clamp(30px, 3vw, 52px); margin: 0; letter-spacing: -.03em; }
+.mb-category i { height: 1px; background: var(--mb-line); flex: 1; }
+.mb-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 3vw, 46px); }
+.mb-item { padding-bottom: 22px; border-bottom: 1px solid var(--mb-line); }
+.mb-item-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.mb-item h3 { font-size: clamp(24px, 2.2vw, 38px); margin: 0; line-height: 1.15; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.mb-item b { font-size: clamp(25px, 2.2vw, 40px); color: var(--mb-accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mb-item b.mb-market { font-size: clamp(18px, 1.4vw, 25px); white-space: normal; text-align: right; }
+.mb-item p { font-size: clamp(17px, 1.2vw, 23px); line-height: 1.45; margin: 12px 0 0; color: var(--mb-muted); overflow-wrap: anywhere; }
+.mb-footer { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; color: var(--mb-muted); font-size: 15px; }
+.mb-footer strong { font-weight: 600; }
+.mb-progress { display: flex; margin-left: auto; }
+.mb-progress button { background: transparent; border: 0; padding: 0; display: grid; place-items: center; }
+.mb-progress span { height: 8px; width: 8px; border-radius: 8px; background: var(--mb-line); }
+.mb-progress [aria-pressed=true] span { width: 28px; background: var(--mb-accent); }
+.mb-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--mb-line); padding-top: 14px; }
+.mb-controls :is(a, button) { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; background: transparent; color: var(--mb-muted); border: 1px solid var(--mb-line); text-decoration: none; border-radius: 12px; padding: 0 12px; }
+.mb-controls a { margin-right: auto; }
+.mb-error { color: var(--mb-ink); margin: 0; }
+.mb-empty { padding: 60px 20px; text-align: center; }
+@media (max-width: 650px) { .mb-header > p { display: none; } .mb-items { grid-template-columns: 1fr; gap: 22px; } .mb-brand .logo { width: 52px; height: 52px; } .mb-controls { justify-content: flex-start; } .mb-progress { margin-left: 0; } }
+@media (min-width: 900px) and (max-height: 850px) { .menu-board { padding: 24px 36px; gap: 16px; } .mb-header { padding-bottom: 16px; } .mb-brand h1 { font-size: 38px; } .mb-brand .logo { width: 56px; height: 56px; } .mb-category { margin-bottom: 18px; } .mb-category h2 { font-size: 32px; } .mb-items { gap: 20px 36px; } .mb-item { padding-bottom: 14px; } .mb-item h3, .mb-item b { font-size: 28px; } .mb-item p { font-size: 17px; margin-top: 8px; } }
+@media (prefers-reduced-motion: no-preference) { .mb-page { animation: mb-appear .4s ease-out; } @keyframes mb-appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } }
