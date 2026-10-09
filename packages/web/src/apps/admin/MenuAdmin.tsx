@@ -90,17 +90,20 @@ export function MenuAdmin() {
         {menu.categories.map((c) => <button key={c.id} type="button" className={c.id === cat ? 'on' : ''} data-active={c.id === cat} aria-pressed={c.id === cat} onClick={() => setCat(c.id)}>{c.name}</button>)}
         <button type="button" className="ghost admin-cat-add" disabled={busy} onClick={() => open('add')}><Icon name="plus" />{t('admin.addCat')}</button>
       </ScrollRow>
-      {current && (
-        <div className="admin-toolbar">
-          <button type="button" className="ghost admin-move" aria-label={copy.earlier} disabled={busy || menu.categories[0]?.id === cat} onClick={() => moveCategory(-1)}><Icon name="arrow-left" /><span>{copy.earlier}</span></button>
-          <button type="button" className="ghost admin-move" aria-label={copy.later} disabled={busy || menu.categories.at(-1)?.id === cat} onClick={() => moveCategory(1)}><Icon name="arrow-right" /><span>{copy.later}</span></button>
-          <button type="button" className="ghost admin-rename" disabled={busy} onClick={() => open('rename')}><Icon name="edit" />{t('admin.rename')}</button>
-          <button type="button" className="ghost danger admin-remove" aria-label={`${t('admin.delete')}: ${current.name}`} disabled={busy} onClick={() => open('delete')}><Icon name="trash" /><span>{t('admin.delete')}</span></button>
-          <button type="button" className="primary admin-add" disabled={busy} onClick={() => setEditing(blank())}><Icon name="plus" />{t('admin.addItem')}</button>
-        </div>
-      )}
-      <div className="admin-list-heading"><h3>{current?.name ?? copy.menuItems} <span className="admin-count">{items.length}</span></h3><p>{copy.availableHint}</p></div>
-      <ul className="admin-rows">
+      {/* One row on a landscape tablet (name, category tools, Add item); two rows when narrower. */}
+      <div className="menu-head">
+        <h3 className="menu-title"><span>{current?.name ?? copy.menuItems}</span> <span className="admin-count">{items.length}</span></h3>
+        {current && (
+          <div className="admin-toolbar">
+            <button type="button" className="ghost admin-move" aria-label={copy.earlier} disabled={busy || menu.categories[0]?.id === cat} onClick={() => moveCategory(-1)}><Icon name="arrow-left" /><span>{copy.earlier}</span></button>
+            <button type="button" className="ghost admin-move" aria-label={copy.later} disabled={busy || menu.categories.at(-1)?.id === cat} onClick={() => moveCategory(1)}><Icon name="arrow-right" /><span>{copy.later}</span></button>
+            <button type="button" className="ghost admin-rename" disabled={busy} onClick={() => open('rename')}><Icon name="edit" />{t('admin.rename')}</button>
+            <button type="button" className="ghost danger admin-remove" aria-label={`${t('admin.delete')}: ${current.name}`} disabled={busy} onClick={() => open('delete')}><Icon name="trash" /><span>{t('admin.delete')}</span></button>
+          </div>
+        )}
+        {current && <button type="button" className="primary admin-add" disabled={busy} onClick={() => setEditing(blank())}><Icon name="plus" />{t('admin.addItem')}</button>}
+      </div>
+      <ul className="admin-rows" aria-label={current?.name ?? copy.menuItems}>
         {items.map((i) => (
           <li key={i.id} className={`admin-row${i.available ? '' : ' is-off'}`}>
             <button type="button" className="admin-row-main" aria-label={`${t('admin.edit')}: ${i.name}`} aria-disabled={busy} onClick={() => { if (!busy) setEditing(i); }}>
@@ -123,6 +126,7 @@ export function MenuAdmin() {
         ))}
         {current && items.length === 0 && <li className="admin-rows-empty muted center">{t('admin.noItems')}</li>}
       </ul>
+      {items.length > 0 && <p className="admin-list-note">{copy.availableHint}</p>}
       {ask === 'add' && (
         <NameDialog title={copy.newCategory} label={t('admin.catName')} placeholder={copy.categoryExample} saveLabel={copy.add}
           emptyError={copy.needCategoryName} onSave={addCategory} onClose={() => setAsk(null)} />
