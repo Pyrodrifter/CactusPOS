@@ -18,7 +18,9 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   const token = getSession()?.token;
   const res = await fetch(`/api${path}`, {
     method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
-    headers: { 'content-type': 'application/json', ...(token ? { 'x-token': token } : {}), ...(init.requestId ? { 'idempotency-key': init.requestId } : {}) },
+    // Only name a content type when there is a body: the server refuses "application/json" with nothing in it,
+    // which made every DELETE (menu item, category) fail.
+    headers: { ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}), ...(token ? { 'x-token': token } : {}), ...(init.requestId ? { 'idempotency-key': init.requestId } : {}) },
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
   });
   const text = await res.text();
