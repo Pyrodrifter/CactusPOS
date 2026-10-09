@@ -6,7 +6,8 @@ Self-hosted point of sale for Cactus Blue (Bonaire). Start with [AGENTS.md](AGEN
 The laptop in the truck runs the server and shows the till in its own window, like an installed program. Tablets
 and phones on the same WiFi open the kitchen and ordering screens in their browser.
 
-- **Windows, ready-made package:** unzip `CactusPOS-<version>-win-x64.zip` from the Releases page and double-click
+- **Windows, ready-made package:** unzip `CactusPOS-<version>-win-x64.zip` from the
+  [Releases page](https://github.com/Pyrodrifter/CactusPOS/releases) and double-click
   **Install CactusPOS.bat**. It carries its own Node.js; the computer needs no internet and nothing else installed.
 - **Windows, from this repository:** clone it and double-click **Install CactusPOS.bat**. It installs Node.js LTS
   with winget when missing, downloads the libraries and builds the screens.

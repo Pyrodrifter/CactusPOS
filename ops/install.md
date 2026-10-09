@@ -8,7 +8,8 @@ WiFi pointed at that laptop. Nothing needs the internet once it is installed.
 
 ### A. Ready-made package (no internet needed on the till computer)
 
-1. Get `CactusPOS-<version>-win-x64.zip` from the project's Releases page on GitHub, or on a USB stick.
+1. Get `CactusPOS-<version>-win-x64.zip` from <https://github.com/Pyrodrifter/CactusPOS/releases> (the repository is
+   private: sign in to GitHub first), or carry it over on a USB stick.
 2. Unzip it somewhere it can stay, for example `C:\CactusPOS`.
 3. Double-click **Install CactusPOS.bat**.
    - If Windows warns about a file from the internet, choose **Run**.
@@ -20,10 +21,10 @@ The package carries its own copy of Node.js in `runtime\node`; nothing else is i
 
 ### B. From the source code
 
-Needs internet during installation.
+Needs internet during installation, and Git signed in to GitHub (the repository is private).
 
 ```bat
-git clone <repository address> C:\CactusPOS
+git clone https://github.com/Pyrodrifter/CactusPOS.git C:\CactusPOS
 cd C:\CactusPOS
 "Install CactusPOS.bat"
 ```
@@ -136,7 +137,7 @@ Microsoft account.
 ## Linux
 
 ```sh
-git clone <repository address> ~/cactuspos
+git clone https://github.com/Pyrodrifter/CactusPOS.git ~/cactuspos
 cd ~/cactuspos
 sh ops/linux/install.sh
 ```
