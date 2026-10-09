@@ -288,3 +288,27 @@
   .pos-mobile-bar > .primary { min-height: 64px; min-width: 118px; border-radius: 16px; font-size: 18px; }
   .pos-mobile-bar > .ghost { min-height: 64px; }
 }
+
+/* ---- T29 tabs: adding a round to an open tab, and the pay-later sheet ---- */
+.pos-tab-banner { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 6px 6px 6px 14px; border-radius: 16px; background: #fff3dc; color: #6d4a0c; border: 1px solid #edd3a0; flex-shrink: 0; }
+.pos-tab-banner > span { flex: 1; min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
+.pos-tab-banner b { font-size: 18px; }
+.pos .pos-tab-banner button { min-width: 52px; min-height: 52px; padding: 0; border-radius: 14px; background: #fff; border-color: #edd3a0; color: #6d4a0c; }
+.pos .cart .actions > .pos-later-btn { white-space: nowrap; padding-inline: 10px; }
+.pos .cart .actions:has(.pos-later-btn) { grid-template-columns: 1fr 1.15fr; }
+.pos .cart .actions.pos-actions-tab { grid-template-columns: 1fr; }
+.pos .cart .actions.pos-actions-tab .pos-pay { grid-column: 1 / -1; }
+.pos-order-tab { color: var(--brand); }
+.pos-later .sheet label { font-size: 15px; font-weight: 650; color: var(--muted); }
+.pos-later .sheet input { min-height: 64px; font-size: 20px; }
+.pos-later .actions .primary { min-height: var(--tap-xl); font-size: 19px; }
+.pos-add-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos-mobile-bar .primary { min-width: 0; }
+/* Three views (Order, Tabs, Orders) plus search on one phone row: drop the icons, keep the words and counts. */
+@media (max-width: 480px) {
+  .pos .pos-toolbar { gap: 8px; }
+  .pos .pos-toolbar .tabs { gap: 6px; min-width: 0; }
+  .pos .pos-toolbar .tabs button { padding: 0 8px; gap: 6px; font-size: 15px; min-width: 0; }
+  .pos .pos-toolbar .tabs button > svg { display: none; }
+  .pos .pos-toolbar .tabs .pos-count { min-width: 24px; min-height: 24px; padding: 2px 6px; }
+}

@@ -1,16 +1,17 @@
 /* Open tabs. Follows docs/coordination/contracts/touch-ui.md: whole card is the button, one main action per sheet. */
 .tab-list-view { padding: 16px 20px 24px; }
-.tab-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.tab-card {
+.tab-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+/* .tab-list prefix: must outrank the counter's generic `.pos button` (inline-flex, centred). */
+.tab-list .tab-card {
   width: 100%; min-height: 148px; padding: 18px 20px; border-radius: 22px; border: 1px solid var(--line); background: var(--card);
   display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'name name' 'meta meta' 'state total'; align-items: end; gap: 6px 12px;
-  text-align: left; box-shadow: 0 3px 12px #16313d0a; overflow: hidden; position: relative;
+  justify-content: stretch; font-weight: inherit; text-align: left; box-shadow: 0 3px 12px #16313d0a; overflow: hidden; position: relative;
 }
 .tab-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: var(--warn); }
 .tab-card:active { background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
 .tab-card-name { grid-area: name; font-size: 23px; font-weight: 750; letter-spacing: -.02em; line-height: 1.2; overflow-wrap: anywhere; align-self: start; }
 .tab-card-meta { grid-area: meta; color: var(--muted); font-size: 15px; font-weight: 500; align-self: start; }
-.tab-card-state { grid-area: state; justify-self: start; font-size: 14px; font-weight: 650; padding: 5px 11px; border-radius: 99px; background: var(--soft); color: var(--muted); }
+.tab-card-state { grid-area: state; justify-self: start; white-space: nowrap; font-size: 14px; font-weight: 650; padding: 5px 11px; border-radius: 99px; background: var(--soft); color: var(--muted); }
 .tab-state-sent { background: var(--info-soft); color: var(--info); }
 .tab-state-preparing { background: var(--warn-soft); color: var(--warn); }
 .tab-state-ready { background: var(--accent-soft); color: var(--accent); }
@@ -37,5 +38,5 @@
 .tab-sheet-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--tap-lg); font-size: 18px; }
 .tab-sheet-actions .tab-sheet-pay { grid-column: 1 / -1; min-height: var(--tap-xl); font-size: 21px; justify-content: space-between; padding: 0 24px; }
 .tab-sheet-pay span { margin-left: auto; font-variant-numeric: tabular-nums; }
-@media (max-width: 900px) { .tab-list-view { padding: 14px 16px 20px; } .tab-list { grid-template-columns: minmax(0, 1fr); } .tab-card { min-height: 128px; } }
+@media (max-width: 900px) { .tab-list-view { padding: 14px 16px 20px; } .tab-list { grid-template-columns: minmax(0, 1fr); } .tab-list .tab-card { min-height: 128px; } }
 @media (max-width: 420px) { .tab-sheet-actions { grid-template-columns: 1fr; } }

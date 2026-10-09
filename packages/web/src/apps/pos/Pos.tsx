@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  computeTotals, formatMoney, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
+  computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
 import { api, ApiError, browserPrintReceipt, newRequestId, printReceipt, serverPrints } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
@@ -8,6 +8,7 @@ import type { CSSProperties } from 'react';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
 import { haptic, MoneyPad, Stepper, toast } from '../../ui/touch';
+import { TabList, tabLabel } from './Tabs';
 import './pos.css';
 
 const copy = {
@@ -48,7 +49,9 @@ function useDraftState() {
   const [sending, setSending] = useState(false);
   const placing = useRef(false);
   const request = useRef({ signature: '', id: newRequestId() });
-  return { cart, setCart, note, setNote, sending, setSending, placing, request };
+  // T29: when set, the cart is a new round for this open tab instead of a new order.
+  const [tab, setTab] = useState<{ id: string; label: string } | null>(null);
+  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab };
 }
 const DraftContext = createContext<ReturnType<typeof useDraftState> | null>(null);
 export function PosDraftProvider({ children }: { children: ReactNode }) {
@@ -71,7 +74,8 @@ function lineUnit(l: CartLine): number {
 export function Pos() {
   const { t, lang } = useLang();
   const c = copy[lang];
-  const { cart, setCart, note, setNote, sending, setSending, placing, request } = useContext(DraftContext)!;
+  const { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab } = useContext(DraftContext)!;
+  const [naming, setNaming] = useState(false);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [cat, setCat] = useState('');
   const [query, setQuery] = useState('');
@@ -80,7 +84,7 @@ export function Pos() {
   const [undo, setUndo] = useState<{ cart: CartLine[]; note: string } | null>(null);
   const [picking, setPicking] = useState<MenuItem | null>(null);
   const [paying, setPaying] = useState<{ order: Order } | { cartTotal: number } | null>(null);
-  const [view, setView] = useState<'order' | 'orders'>('order');
+  const [view, setView] = useState<'order' | 'tabs' | 'orders'>('order');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const cartPanel = useRef<HTMLElement>(null);
@@ -88,6 +92,11 @@ export function Pos() {
   const ui = lang === 'nl'
     ? { all: 'Alles', search: 'Zoek in het hele menu', clearSearch: 'Zoekopdracht wissen', found: 'gevonden', noResults: 'Niets gevonden', trySearch: 'Probeer een andere naam of kies een categorie.', undo: 'Herstellen', removed: 'Bestelling aangepast', clear: 'Bestelling wissen', menuHint: 'Tik op een gerecht om toe te voegen' }
     : { all: 'All items', search: 'Find anything on the menu', clearSearch: 'Clear search', found: 'found', noResults: 'Nothing on the menu matches', trySearch: 'Try another name or choose a category.', undo: 'Undo', removed: 'Order updated', clear: 'Clear order', menuHint: 'Tap something good to add it' };
+
+  const tabUi = lang === 'nl'
+    ? { tabs: 'Rekeningen', addingTo: 'Toevoegen aan', addTo: 'Toevoegen aan', addedTo: 'Toegevoegd aan', stop: 'Stoppen met toevoegen aan deze rekening', payLater: 'Later betalen' }
+    : { tabs: 'Tabs', addingTo: 'Adding to', addTo: 'Add to', addedTo: 'Added to', stop: 'Stop adding to this tab', payLater: 'Pay later' };
+  const openTabs = orders.filter(isOpenTab).length;
 
   useEffect(() => {
     if (!undo) return;
@@ -140,21 +149,27 @@ export function Pos() {
   };
 
   // One key per cart: tapping Send again after a lost reply returns the same order instead of making a second one.
-  const place = async (reportSuccess = false): Promise<Order | null> => {
+  const place = async (reportSuccess = false, tabName?: string): Promise<Order | null> => {
     if (placing.current || !cart.length) return null;
     setUndo(null);
     placing.current = true; setSending(true); setSuccess('');
     setError('');
     try {
-      const body = { lines: cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents })), note: note || undefined };
-      const signature = JSON.stringify(body);
+      const lines = cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents }));
+      // T29: with a tab selected the cart becomes a new round on that order; otherwise it is a new order.
+      const body = tab ? { lines } : { lines, note: note || undefined, tabName: tabName?.trim() || undefined };
+      const signature = JSON.stringify([tab?.id ?? '', body]);
       if (request.current.signature !== signature) request.current = { signature, id: newRequestId() };
-      const order = await api<Order>('/orders', {
+      const order = await api<Order>(tab ? `/orders/${tab.id}/lines` : '/orders', {
         body, requestId: request.current.id,
       });
       request.current = { signature: '', id: newRequestId() };
       setCart([]); setNote('');
-      if (reportSuccess) {
+      if (tab) {
+        const message = `${tabUi.addedTo} ${tab.label}`;
+        setSuccess(message); toast(message);
+        setTab(null);
+      } else if (reportSuccess) {
         setSuccess(`${c.sent} · #${order.ticketNumber}`);
         toast(`${c.sent} · #${order.ticketNumber}`);
       }
@@ -174,6 +189,7 @@ export function Pos() {
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
       <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
+        <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="staff" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || o.status !== 'collected')).length}</span></button>
       </div>
       {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
@@ -203,6 +219,7 @@ export function Pos() {
 
           <aside ref={cartPanel} className="cart">
             <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></span><button className="pos-clear-order" aria-label={ui.clear} disabled={!cart.length || sending || !!paying} onClick={() => { setUndo({ cart, note }); setCart([]); setNote(''); }}><Icon name="trash" /></button></header>
+            {tab && <div className="pos-tab-banner" role="status"><Icon name="staff" /><span>{tabUi.addingTo} <b>{tab.label}</b></span><button aria-label={tabUi.stop} disabled={sending} onClick={() => setTab(null)}><Icon name="close" /></button></div>}
             {undo && <div className="pos-undo" role="status"><span>{ui.removed}</span><button disabled={sending || !!paying} onClick={() => { setCart(undo.cart); setNote(undo.note); setUndo(null); }}><Icon name="undo" />{ui.undo}</button></div>}
             {cart.length === 0 && <div className="pos-cart-empty"><span><Icon name="cart" size={38} /></span><h3>{c.emptyTitle}</h3><p>{t('cart.empty')}</p></div>}
             <ul>
@@ -222,26 +239,38 @@ export function Pos() {
                 );
               })}
             </ul>
-            {cart.length > 0 && <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => { setNote(e.target.value); setUndo(null); }} /></label>}
+            {cart.length > 0 && !tab && <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => { setNote(e.target.value); setUndo(null); }} /></label>}
             {error && <div className="error" role="alert">{error}</div>}
             <div className="total">
               <span>{t('cart.total')} <small className="muted">{t('cart.abb')}{totals ? ` ${money(totals.taxCents)}` : ''}</small></span>
               <b>{money(total)}</b>
             </div>
-            <div className="actions">
-              <button disabled={!cart.length || sending || !!paying} onClick={() => void place(true)}><Icon name="send" />{sending ? c.sending : t('cart.send')}</button>
-              <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.payNow')}<span className="pos-pay-amount">{money(total)}</span></button>
+            <div className={`actions${tab ? ' pos-actions-tab' : ''}`}>
+              {tab ? (
+                <button className="primary pos-pay" disabled={!cart.length || sending} onClick={() => void place(true)}><Icon name="plus" /><span className="pos-add-label">{sending ? c.sending : `${tabUi.addTo} ${tab.label}`}</span><span className="pos-pay-amount">{money(total)}</span></button>
+              ) : (<>
+                <button className="pos-later-btn" disabled={!cart.length || sending || !!paying} onClick={() => setNaming(true)}><Icon name="send" />{sending ? c.sending : tabUi.payLater}</button>
+                <button className="primary pos-pay" disabled={!cart.length || sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('cart.payNow')}<span className="pos-pay-amount">{money(total)}</span></button>
+              </>)}
             </div>
           </aside>
         </div>
+      ) : view === 'tabs' ? (
+        <TabList
+          onAdd={(order) => { setTab({ id: order.id, label: tabLabel(order, lang) }); setSuccess(''); setView('order'); }}
+          onPay={(order) => setPaying({ order })}
+        />
       ) : (
         <OrdersList orders={[...orders].reverse()} onPay={(order) => setPaying({ order })} />
       )}
 
       {view === 'order' && cart.length > 0 && <div className="pos-mobile-bar">
         <button className="ghost" onClick={() => cartPanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Icon name="cart" /><span>{c.current}<b>{money(total)}</b></span><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></button>
-        <button className="primary" disabled={sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('orders.pay')}</button>
+        {tab
+          ? <button className="primary" disabled={sending} onClick={() => void place(true)}><Icon name="plus" /><span className="pos-add-label">{tabUi.addTo} {tab.label}</span></button>
+          : <button className="primary" disabled={sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('orders.pay')}</button>}
       </div>}
+      {naming && <PayLaterSheet busy={sending} onCancel={() => setNaming(false)} onSend={async (name) => { if (await place(true, name)) setNaming(false); }} />}
 
       {picking && <ModifierSheet item={picking} onCancel={() => setPicking(null)} onAdd={(ids, price, qty) => { add(picking, ids, price, qty); setPicking(null); }} />}
       {paying && (
@@ -261,6 +290,30 @@ export function Pos() {
         />
       )}
     </div>
+  );
+}
+
+/** "Pay later": sends the order to the kitchen unpaid. A name turns it into a tab the guest can add to. */
+function PayLaterSheet({ busy, onSend, onCancel }: { busy: boolean; onSend: (tabName: string) => Promise<void>; onCancel: () => void }) {
+  const { lang } = useLang();
+  const [name, setName] = useState('');
+  const ui = lang === 'nl'
+    ? { eyebrow: 'Naar de keuken, betalen kan straks', title: 'Later betalen', label: 'Naam voor de rekening (optioneel)', placeholder: 'bijv. Mike', hint: 'Met een naam vindt u de rekening snel terug en kan de gast later bijbestellen.', cancel: 'Annuleren', send: 'Naar de keuken sturen', open: 'Rekening openen voor', sending: 'Versturen…', close: 'Sluiten' }
+    : { eyebrow: 'To the kitchen now, payment later', title: 'Pay later', label: 'Name for the tab (optional)', placeholder: 'e.g. Mike', hint: 'A name makes the tab easy to find, and the guest can order more on it later.', cancel: 'Cancel', send: 'Send to the kitchen', open: 'Open tab for', sending: 'Sending…', close: 'Close' };
+  const trimmed = name.trim();
+  return (
+    <Sheet onCancel={onCancel} busy={busy} titleId="pos-later-title" kind="pos-later">
+      <header className="pos-sheet-heading"><div><p className="pos-eyebrow">{ui.eyebrow}</p><h2 id="pos-later-title">{ui.title}</h2></div><button className="ghost pos-close" aria-label={ui.close} disabled={busy} onClick={onCancel}><Icon name="close" /></button></header>
+      <label>{ui.label}
+        <input value={name} maxLength={40} disabled={busy} placeholder={ui.placeholder} autoCapitalize="words" autoComplete="off" enterKeyHint="send"
+          onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !busy) void onSend(trimmed); }} />
+      </label>
+      <p className="pos-sheet-hint">{ui.hint}</p>
+      <div className="actions">
+        <button className="ghost" disabled={busy} onClick={onCancel}>{ui.cancel}</button>
+        <button className="primary" disabled={busy} onClick={() => void onSend(trimmed)}><Icon name={busy ? 'clock' : 'send'} />{busy ? ui.sending : trimmed ? `${ui.open} ${trimmed}` : ui.send}</button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -414,7 +467,7 @@ function OrdersList({ orders, onPay }: { orders: Order[]; onPay: (o: Order) => v
           <li key={o.id} className={o.status === 'void' ? 'void' : ''}>
             <div className="num">#{o.ticketNumber}<small>{clock(o.createdAt)}</small></div>
             <div className="grow">
-              <div>{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</div>
+              <div>{o.tabName && <b className="pos-order-tab">{o.tabName} · </b>}{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</div>
               <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span></div>
             </div>
             <b>{money(o.totalCents)}</b>
