@@ -57,7 +57,7 @@ export function normalizeConfig(raw = {}, overrides = {}) {
 
 /** Command line of the launcher. */
 export function parseArgs(argv) {
-  const out = { command: 'open', overrides: {}, json: false, ifNew: false, help: false, errors: [] };
+  const out = { command: 'open', overrides: {}, json: false, ifNew: false, gui: false, help: false, errors: [] };
   const commands = { '--server-only': 'server', '--stop': 'stop', '--status': 'status', '--configure': 'configure' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -73,6 +73,7 @@ export function parseArgs(argv) {
     else if (a === '--kiosk') out.overrides.kiosk = true;
     else if (a === '--window') out.overrides.kiosk = false;
     else if (a === '--json') out.json = true;
+    else if (a === '--gui') out.gui = true;
     else if (a === '--if-new') out.ifNew = true;
     else if (a === '--help' || a === '-h') out.help = true;
     else out.errors.push(`Unknown option ${a}`);

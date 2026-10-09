@@ -87,7 +87,7 @@ entry() {
 Type=Application
 Name=$2
 Comment=Point of sale
-Exec="$NODE" "$LAUNCHER" $3
+Exec="$NODE" "$LAUNCHER" --gui $3
 Icon=$ROOT/ops/linux/cactuspos.png
 Terminal=false
 Categories=Office;Finance;

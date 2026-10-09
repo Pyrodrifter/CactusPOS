@@ -45,6 +45,10 @@ till while the kitchen tablet connects to it; then put it on GitHub with whateve
   sign-in screen. Two launches within a second gave one window; the kitchen shortcut opened `/kitchen`.
 - The packaged server passed my screenshot scenario at four sizes and took orders, a tab round and a payment.
 - Closing the window left the server running. Uninstall removed the shortcuts, stopped the server, kept the database.
+- Error message box: started the way the shortcut starts it (`conhost --headless ... --gui`) with a broken settings
+  file; a window titled "CactusPOS" appeared and the launcher ended when it was closed. This found two bugs, both fixed:
+  a detached PowerShell has no console and died silently, and the hidden console made "is this a terminal" true, so no
+  dialog was attempted. Dialogs are now requested with `--gui`, which the shortcuts pass.
 
 ## Not run
 - The firewall step and its administrator prompt (it changes a system setting; I only read the script).

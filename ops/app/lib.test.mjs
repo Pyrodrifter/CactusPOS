@@ -54,6 +54,8 @@ describe('parseArgs', () => {
     expect(parseArgs(['--status', '--json'])).toMatchObject({ command: 'status', json: true });
     expect(parseArgs(['--screen', 'kitchen', '--kiosk', '--port', '3100']).overrides).toEqual({ screen: 'kitchen', kiosk: true, port: 3100 });
     expect(parseArgs(['--configure', '--if-new', '--seed', 'cactus-blue'])).toMatchObject({ command: 'configure', ifNew: true, overrides: { seed: 'cactus-blue' } });
+    expect(parseArgs(['--gui', '--screen', 'kitchen'])).toMatchObject({ command: 'open', gui: true, overrides: { screen: 'kitchen' } });
+    expect(parseArgs([]).gui).toBe(false);
   });
   it('reports what it does not understand instead of guessing', () => {
     expect(parseArgs(['--screeen', 'pos']).errors).toEqual(['Unknown option --screeen', 'Unknown option pos']);

@@ -10,6 +10,7 @@
 //   node ops/app/launch.mjs --status           is it running, which addresses do tablets use, where is the data
 //   node ops/app/launch.mjs --stop             stop the server this launcher started
 //   node ops/app/launch.mjs --configure --port 3000 --seed cactus-blue   write settings (add --if-new to keep existing ones)
+//   --gui   show problems in a message window as well; the shortcuts pass it, because nobody sees their console
 //
 // Settings: config.json in the data folder. Data folder: %LOCALAPPDATA%\CactusPOS on Windows,
 // ~/.local/share/cactuspos on Linux, or the folder named by CACTUS_HOME. See ops/install.md.
@@ -35,6 +36,8 @@ const paths = {
   lock: join(home, 'launch.lock'),
 };
 const START_TIMEOUT_MS = 60_000;
+// Asked for explicitly. Guessing from "is there a terminal" fails: the shortcuts run this inside a hidden console.
+const GUI = process.argv.includes('--gui') && process.env.CACTUS_NO_DIALOG !== '1';
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 class LaunchError extends Error {}
@@ -46,25 +49,34 @@ function note(message) {
   } catch { /* the log is a convenience; never fail because of it */ }
 }
 
-/** Shortcuts run this without a console, so a failure must be shown in a window or nobody sees it. */
+/**
+ * Shortcuts run this without a visible console, so with --gui a failure is also shown in a window.
+ * Resolves when the person has closed the message. The launcher has to stay alive that long: a helper started
+ * "detached" gets no console at all on Windows and PowerShell then dies before it can show anything, while a
+ * normal child is closed together with this process.
+ */
 function showError(message) {
   console.error(message);
   note(`ERROR ${message.replaceAll('\n', ' | ')}`);
-  if (process.stdout.isTTY || process.env.CACTUS_NO_DIALOG === '1') return;
-  const quiet = { detached: true, stdio: 'ignore', windowsHide: true };
-  try {
-    if (process.platform === 'win32') {
-      // The text travels in an environment variable, so nothing in it is ever read as PowerShell code.
-      spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command',
-        "Add-Type -AssemblyName PresentationFramework; [void][System.Windows.MessageBox]::Show($env:CACTUS_MESSAGE, 'CactusPOS', 'OK', 'Warning')"],
-      { ...quiet, env: { ...process.env, CACTUS_MESSAGE: message } }).on('error', () => {}).unref();
-    } else if (process.platform === 'darwin') {
-      spawn('osascript', ['-e', 'on run argv', '-e', 'display alert "CactusPOS" message (item 1 of argv)', '-e', 'end run', message], quiet).on('error', () => {}).unref();
-    } else {
-      spawn('zenity', ['--error', '--title=CactusPOS', '--no-markup', `--text=${message}`], quiet)
-        .on('error', () => spawn('notify-send', ['CactusPOS', message], quiet).on('error', () => {}).unref()).unref();
-    }
-  } catch { /* already printed and logged */ }
+  if (!GUI) return Promise.resolve();
+  const waitFor = (command, args, options = {}) => new Promise((done) => {
+    try {
+      const child = spawn(command, args, { stdio: 'ignore', windowsHide: true, ...options });
+      child.once('error', () => done(false));
+      child.once('exit', (code) => done(code === 0));
+    } catch { done(false); }
+  });
+  if (process.platform === 'win32') {
+    // The text travels in an environment variable, so nothing in it is ever read as PowerShell code.
+    return waitFor('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+      "Add-Type -AssemblyName PresentationFramework; [void][System.Windows.MessageBox]::Show($env:CACTUS_MESSAGE, 'CactusPOS', 'OK', 'Warning')"],
+    { env: { ...process.env, CACTUS_MESSAGE: message } });
+  }
+  if (process.platform === 'darwin') {
+    return waitFor('osascript', ['-e', 'on run argv', '-e', 'display alert "CactusPOS" message (item 1 of argv)', '-e', 'end run', message]);
+  }
+  return waitFor('zenity', ['--error', '--title=CactusPOS', '--no-markup', `--text=${message}`])
+    .then((shown) => (shown ? true : waitFor('notify-send', ['CactusPOS', message])));
 }
 
 function loadConfig(overrides) {
@@ -158,16 +170,18 @@ function openWindow(config, url) {
   const browser = findBrowser({ platform: process.platform, env: process.env, exists: existsSync, configured: config.browser });
   const quiet = { detached: true, stdio: 'ignore' };
   if (browser) {
-    spawn(browser, browserArgs({ url, profileDir: paths.profile, kiosk: config.kiosk, silentPrint: config.silentPrint }), quiet)
-      .on('error', (e) => showError(`The app window could not be opened with ${browser}.\n${e.message}`)).unref();
-    note(`window ${url} with ${browser}`);
-    return;
+    return new Promise((done, fail) => {
+      const child = spawn(browser, browserArgs({ url, profileDir: paths.profile, kiosk: config.kiosk, silentPrint: config.silentPrint }), quiet);
+      child.once('spawn', () => { child.unref(); note(`window ${url} with ${browser}`); done(); });
+      child.once('error', (e) => fail(new LaunchError(`The app window could not be opened with ${browser}.\n${e.message}`)));
+    });
   }
   if (config.browser) throw new LaunchError(`The browser named in the settings does not exist:\n${config.browser}\nFile: ${paths.config}`);
   // No Edge or Chrome: the default browser still works, only with its tabs and address bar around the till.
   note(`no app-mode browser found; opening ${url} in the default browser`);
   if (process.platform === 'win32') spawn('rundll32.exe', ['url.dll,FileProtocolHandler', url], quiet).on('error', () => {}).unref();
   else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], quiet).on('error', () => {}).unref();
+  return Promise.resolve();
 }
 
 /** A double-click that lands twice must not open two windows. */
@@ -187,13 +201,13 @@ async function open(config, withWindow) {
     throw new LaunchError(`Port ${config.port} on this computer is used by another program, so CactusPOS cannot start there.\nClose that program, or choose another port in ${paths.config} (tablets must then use the new address).`);
   }
   if (before.reached) {
-    if (withWindow) openWindow(config, appUrl(config.port, config.screen));
+    if (withWindow) await openWindow(config, appUrl(config.port, config.screen));
     else console.log(`CactusPOS is already running on port ${config.port}.`);
     return 0;
   }
   const started = startServer(config);
   // The server needs a few seconds. Show a window at once so nobody clicks the icon five times.
-  if (withWindow) openWindow(config, splashUrl(pathToFileURL(join(root, 'ops', 'app', 'starting.html')).href, config.port, config.screen, paths.log));
+  if (withWindow) await openWindow(config, splashUrl(pathToFileURL(join(root, 'ops', 'app', 'starting.html')).href, config.port, config.screen, paths.log));
   await waitForServer(config, started);
   if (!withWindow) console.log(`CactusPOS started on port ${config.port}.`);
   return 0;
@@ -282,6 +296,7 @@ const HELP = `CactusPOS launcher
   --status [--json]  running or not, addresses for tablets, where the data is
   --stop             stop the server this launcher started
   --configure        write settings: --port N, --seed NAME, --screen NAME, --kiosk; --if-new keeps an existing file
+  --gui              also show problems in a message window (the shortcuts use this)
 Settings file: ${paths.config}
 Standard settings: ${JSON.stringify(DEFAULTS)}`;
 
@@ -299,7 +314,8 @@ async function main() {
 try {
   process.exitCode = await main();
 } catch (e) {
+  process.exitCode = 1;
   if (!(e instanceof LaunchError)) note(`CRASH ${e?.stack ?? e}`);
-  showError(e instanceof LaunchError ? e.message : `CactusPOS launcher failed unexpectedly: ${e?.message ?? e}\nDetails: ${paths.launcherLog}`);
+  await showError(e instanceof LaunchError ? e.message : `CactusPOS launcher failed unexpectedly: ${e?.message ?? e}\nDetails: ${paths.launcherLog}`);
   process.exitCode = 1;
 }

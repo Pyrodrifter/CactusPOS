@@ -135,7 +135,7 @@ function New-CactusShortcut([string]$Path, [string]$LauncherArgs, [string]$Descr
   $shell = New-Object -ComObject WScript.Shell
   $link = $shell.CreateShortcut($Path)
   $link.TargetPath = $Conhost
-  $link.Arguments = ('--headless "{0}" "{1}" {2}' -f $node.Exe, $Launcher, $LauncherArgs).Trim()
+  $link.Arguments = ('--headless "{0}" "{1}" --gui {2}' -f $node.Exe, $Launcher, $LauncherArgs).Trim()
   $link.WorkingDirectory = $Root
   $link.IconLocation = "$Icon,0"
   $link.Description = $Description
@@ -187,7 +187,7 @@ if (-not $SkipFirewall) {
 # ---------------------------------------------------------------- 6. Start
 if (-not $NoStart) {
   Step 'Starting CactusPOS'
-  Start-Process -FilePath $Conhost -ArgumentList @('--headless', "`"$($node.Exe)`"", "`"$Launcher`"") -WorkingDirectory $Root
+  Start-Process -FilePath $Conhost -ArgumentList @('--headless', "`"$($node.Exe)`"", "`"$Launcher`"", '--gui') -WorkingDirectory $Root
 }
 
 Step 'Done'
