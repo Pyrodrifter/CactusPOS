@@ -31,26 +31,44 @@ const [w0, h0] = opt('size', '1180x820').split('x').map(Number);
 // Git Bash on Windows rewrites an argument like /pos into C:/Program Files/Git/pos; undo that, and accept "pos" too.
 const paths = args.map((p) => `/${p.replace(/^[A-Za-z]:[\\/].*?[\\/]Git[\\/]/, '').replace(/^\/+/, '')}`);
 
-const browser = [
+const browsers = [
   process.env.SHOT_BROWSER,
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/microsoft-edge',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].find((p) => p && existsSync(p));
-if (!browser) { console.error('No Edge or Chrome found. Set SHOT_BROWSER to the browser executable.'); process.exit(1); }
+].filter((p) => p && existsSync(p));
+if (!browsers.length) { console.error('No Edge or Chrome found. Set SHOT_BROWSER to the browser executable.'); process.exit(1); }
 
 mkdirSync(out, { recursive: true });
-const profile = mkdtempSync(join(tmpdir(), 'cactus-shot-')); // a throwaway profile: never the user's own browser data
-// The sign-in flags below keep Edge from signing that throwaway profile in with the Windows user's Microsoft account.
-const child = spawn(browser, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-features=msImplicitSignin', '--disable-sync', '--allow-browser-signin=false', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
-const wsUrl = await new Promise((done, fail) => {
-  let buf = '';
-  const timer = setTimeout(() => fail(new Error('The browser did not start within 20 seconds')), 20_000);
-  child.stderr.on('data', (d) => { buf += d; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) { clearTimeout(timer); done(m[1]); } });
-  child.on('exit', (c) => fail(new Error(`The browser exited early (${c})`)));
-});
+// A throwaway profile: never the user's own browser data. The sign-in flags keep Edge from signing that profile in
+// with the Windows user's Microsoft account.
+// SHOT_HEADED=1 shows the real window: needed to see browser-owned things such as the print dialog, which do not exist headless.
+const headed = process.env.SHOT_HEADED === '1';
+let profile;
+let child;
+let wsUrl;
+// Edge sometimes exits at once when another Edge is already running on this computer; then the next browser is tried.
+for (const browser of browsers) {
+  profile = mkdtempSync(join(tmpdir(), 'cactus-shot-'));
+  child = spawn(browser, [...(headed ? [] : ['--headless=new']), '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-features=msImplicitSignin', '--disable-sync', '--allow-browser-signin=false', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  try {
+    const started = child;
+    wsUrl = await new Promise((done, fail) => {
+      let buf = '';
+      const timer = setTimeout(() => fail(new Error('did not start within 20 seconds')), 20_000);
+      started.stderr.on('data', (d) => { buf += d; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) { clearTimeout(timer); done(m[1]); } });
+      started.on('exit', (c) => { clearTimeout(timer); fail(new Error(`exited early (${c})`)); });
+    });
+    break;
+  } catch (e) {
+    console.error(`${browser}: ${e.message}`);
+    child.kill();
+    try { rmSync(profile, { recursive: true, force: true }); } catch { /* it may still hold a file for a moment */ }
+  }
+}
+if (!wsUrl) { console.error('No browser could be started. Set SHOT_BROWSER to a browser executable that works here.'); process.exit(1); }
 
 const ws = new WebSocket(wsUrl);
 await new Promise((done, fail) => { ws.onopen = done; ws.onerror = () => fail(new Error('Could not connect to the browser')); });

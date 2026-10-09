@@ -28,7 +28,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T12 | web-screens | Kitchen display: live tickets, elapsed timers, bump to ready/recall, station filter, sound alert on new ticket | T04,T05 | review | claude · 2026-10-07 | New order shows within 1s on a second device; bump updates pickup state |
 | T13 | receipt | Receipt model v1 + HTML renderer + ESC/POS renderer for fixed default template (58/80mm, logo, lines, ABB table, CRIB number) | T01,T02 | review | claude · 2026-10-07 | Golden-file tests for HTML and ESC/POS bytes; visually verified in browser |
 | T14 | print | Print agent: network ESC/POS (TCP 9100), print queue with retry, cash-drawer kick, printer profiles, "print test page", on-screen fallback if printer offline | T13 | review | claude · 2026-10-07 | Prints real receipt on target printer; offline printer queues and reprints |
-| T14b | print | USB and Bluetooth printer transports; one printer per station; verify on the real printer once chosen (Q2) | T14 | todo | | Real receipt printed on her printer |
+| T14b | print | USB and Bluetooth printer transports; one printer per station; verify on the real printer once chosen (Q2) Also: a printer installed in Windows (through the browser) as a real printer type with automatic printing; since 2026-10-09 nothing prints through the browser unasked | T14 | todo | | Real receipt printed on her printer |
 | T15 | qa | Playwright e2e of M1 flow across 3 browser contexts (pos, kitchen, pickup mock) + seed fixtures | T11,T12 | todo | | CI-style `npm run e2e` green |
 
 ## M2 — Truck-ready

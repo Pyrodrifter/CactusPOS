@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import {
   computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
-import { api, ApiError, browserPrintReceipt, newRequestId, printReceipt, serverPrints } from '../../lib/api';
+import { api, ApiError, newRequestId, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import type { CSSProperties } from 'react';
 import { useLang } from '../../i18n';
@@ -282,10 +282,9 @@ export function Pos() {
             if (!order) throw new Error(t('pay.failed'));
             // Keep the created order for a payment retry; never create the cart twice.
             setPaying({ order });
-            const paid = await api<Order>(`/orders/${order.id}/pay`, { body, requestId: `pay-${order.id}` });
-            // With a receipt printer the server already printed it on payment.
-            if (!(await serverPrints())) void browserPrintReceipt(paid);
-            return paid;
+            // With a receipt printer the server prints on payment. Without one nothing prints by itself:
+            // a print dialog nobody asked for blocks the till. The paid screen has a Receipt button.
+            return api<Order>(`/orders/${order.id}/pay`, { body, requestId: `pay-${order.id}` });
           }}
         />
       )}
@@ -374,6 +373,7 @@ function PaySheet({ total, onPay, onCancel }: {
   const paying = useRef(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState<Order | null>(null);
+  const receiptPrinted = useRef(false);
   const given = tendered || total;
   const quick = [...new Set([total, ...[5, 10, 20, 50, 100].map((n) => n * 100).filter((n) => n >= total)])].slice(0, 5);
   const confirm = async () => {
@@ -390,7 +390,7 @@ function PaySheet({ total, onPay, onCancel }: {
       <div className="pos-paid-confirmation" role="status"><span className="paid-mark"><Icon name="check" size={38} /></span><h2 id="pos-paid-title">{t('pay.paid')} · #{done.ticketNumber}</h2>
         <p className="muted">{payment?.method === 'cash' ? t('pay.change') : c.paid}</p><strong className="amount big">{money(payment?.method === 'cash' ? payment.changeCents ?? 0 : done.totalCents + (payment?.tipCents ?? 0))}</strong>
       </div>
-      <div className="actions"><button onClick={() => void printReceipt(done)}><Icon name="printer" />{t('orders.reprint')}</button><button className="primary" autoFocus onClick={onCancel}>{t('pay.next')}<Icon name="arrow-right" /></button></div>
+      <div className="actions"><button onClick={() => { const original = !receiptPrinted.current; receiptPrinted.current = true; printReceipt(done, { original }).catch((e) => toast(e instanceof ApiError ? e.message : String(e), 'error')); }}><Icon name="printer" />{t('orders.reprint')}</button><button className="primary" autoFocus onClick={onCancel}>{t('pay.next')}<Icon name="arrow-right" /></button></div>
     </Sheet>;
   }
   return (

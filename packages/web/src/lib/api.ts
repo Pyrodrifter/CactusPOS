@@ -1,4 +1,5 @@
 import type { Order, Session } from '@cactus/shared';
+import { printHtml } from './print';
 
 export type { Session };
 const KEY = 'cactus.session';
@@ -31,15 +32,16 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 }
 
 /**
- * Reprint a receipt: on the receipt printer when one is set up, otherwise through the browser.
- * (The first copy prints by itself when the order is paid.)
+ * Print a receipt: on the receipt printer when one is set up, otherwise through the browser's print dialog.
+ * With a receipt printer the first copy prints by itself on payment, so this is always a copy there.
+ * Without one nothing prints by itself: pass `original` for the first print, so it is not marked as a copy.
  */
-export async function printReceipt(order: Order): Promise<void> {
+export async function printReceipt(order: Order, opts: { original?: boolean } = {}): Promise<void> {
   try {
     const st = await api<{ active: boolean }>('/print/status');
     if (st.active) { await api(`/orders/${order.id}/print`, { body: { kind: 'receipt' } }); return; }
   } catch { /* fall through to the browser */ }
-  await browserPrintReceipt(order, true);
+  await browserPrintReceipt(order, !opts.original);
 }
 
 /** True when the server prints receipts itself, so the screen should not also open a print dialog. */
@@ -47,17 +49,12 @@ export async function serverPrints(): Promise<boolean> {
   try { return (await api<{ active: boolean }>('/print/status')).active; } catch { return false; }
 }
 
-/** Open the server-rendered receipt in a window and trigger the browser's print dialog. */
+/** Print the server-rendered receipt with the browser's print dialog, inside this page (see `printHtml`). */
 export async function browserPrintReceipt(order: Order, copy = false): Promise<void> {
   const token = getSession()?.token ?? '';
   const res = await fetch(`/api/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`, { headers: { 'x-token': token } });
-  const html = await res.text();
-  const w = window.open('', '_blank', 'width=360,height=640');
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 250);
+  if (!res.ok) throw new ApiError(res.status, res.statusText);
+  await printHtml(await res.text());
 }
 
 /** A key for one intended action; reuse it when retrying that same action (see `RequestId` in shared). */
