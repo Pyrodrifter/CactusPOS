@@ -14,8 +14,38 @@ Format: `- [ ] Qn (lane, date) question — default if unanswered`
 - [x] Q10 (surprise) ANSWERED: parallel run with the old Mac system for a while to test the waters. Go-live date TBD. (orig:) Who sets this up at the truck, and when is the target go-live? Parallel-run with the old POS first? — Default: 2 weeks of parallel run.
 - [x] Q11 (server/books, 2026-10-10) ANSWERED 2026-10-10: yes, the day the money moved. (orig:) When a tab is opened on one day and paid on a later day, which day's sales and cash does it belong to? Same for a refund given on a later day than the sale. Today both are counted on the day the order was opened, so the money is in the drawer on a day whose report does not show it (audit finding 1, task A01). — **Default:** the day the money moved: a sale on the day it is paid, a refund on the day it is handed back.
 
-## Ask the sister (Allan to collect)
-Q1 tax/CRIB number + how her accountant classifies food and drinks; Q2 printer + cash drawer; Q3 card terminal provider; Q5 current menu with prices and modifiers; Q8 whether to import old sales; Q9 logo/colors. Everything else has a default.
+## Ask the sister and mom (Allan to collect)
+They have seen the app (2026-10-10) and like it, so these can go to them directly. Two parts: facts the app needs
+before real sales, and what they would like it to do. Each question is worded so it can be read out or sent as it is.
+Write the answer after the question; an agent then turns it into BOARD tasks. Anything left open gets its default.
+
+### Part 1: facts the app needs (the open questions in this file, in plain words)
+- **Tax (Q1, Q1b):** How does your accountant treat your food and drinks for ABB: 6%, 8%, or partly exempt? And the chips and bottled drinks you resell? What is your CRIB number? It goes on the receipt.
+- **Printer and cash drawer (Q2):** Which receipt printer do you have, and is a cash drawer plugged into it? A photo of the label underneath is enough. How is the printer connected: USB cable, network cable or Bluetooth?
+- **Card machine (Q3):** Which card machine or bank do you use? Is it fine that you type the amount into the card machine yourself and the till only records "paid by card"?
+- **Menu and prices (Q5b, Q5c):** Is the menu in the app complete, and are the prices right? Do you sell the Lion Fish wrap and the Flamingo Droppings dessert? What does a Lion Fish Burger usually cost?
+- **Old sales (Q8):** What is the till program on the Mac called? Do you want its old sales brought over, or is a fresh start fine?
+- **Logo and colours (Q9):** Can you send the logo as a file? Do the colours in the app feel like Cactus Blue?
+
+### Part 2: what they want in the app (added 2026-10-10)
+- [ ] Q12 (all) What did you like most? What was confusing, or took too many taps? What does the till on the Mac do that you missed here? — **Default:** nothing changes; work continues in board order.
+- [ ] Q13 (ops / web-screens) Which screens do you picture at the truck: only the laptop, a tablet by the grill, a screen that guests can see? Which of these do you already have? — **Default:** the laptop as the till and one tablet as the kitchen screen; no screen for guests (T26b, T26c).
+- [ ] Q14 (print) For the kitchen, is a screen enough, or do you want each order on paper as well? — **Default:** screen only; paper tickets stay a switch under Admin → Printer.
+- [ ] Q15 (web-screens / firmware) How do guests know their food is ready now: you call a name or a number, something else? Would a screen with order numbers help, or buzzers that guests take along? — **Default:** call the order number; the pickup board is there for whoever wants it; buzzers wait (T40–T43).
+- [ ] Q16 (server / web-pos) Do guests ever split a bill, or pay partly in cash and partly by card? Do you accept anything besides US dollars in cash and cards (another currency, a bank transfer)? — **Default:** one payment per order, cash or card, in US dollars; split bills are T22/T23.
+- [ ] Q17 (server / web-pos) Do you give discounts or free items: for locals, friends, staff meals, something on the house, a meal deal (burger with fries and a drink)? How often? — **Default:** no discount buttons; T22 builds them when wanted.
+- [ ] Q18 (server / books) Do guests tip through the card machine? Should the till keep count of tips, and are the tip buttons ($1, $2, $5) the right ones? — **Default:** card tips can be recorded with those buttons; the cash tip jar stays outside the till.
+- [ ] Q19 (web-pos) Do guests sometimes eat first and pay afterwards, or order more on the same bill? Is "Pay later" with a name the way you would do it? — **Default:** tabs stay as built.
+- [ ] Q20 (server / web-admin) When something runs out, is switching it off by hand enough, or should the till count down (say 20 lionfish burgers today) and switch it off itself? Do you have daily specials? Would photos on the buttons help? — **Default:** switch off by hand; no counting (T51), no photos (T20b); a special is added under Admin → Menu.
+- [ ] Q21 (receipt) Do most guests want a receipt? Should one print for every sale or only when asked? What would you like on it besides the legal lines: your logo, the WiFi code, Instagram or the website, a thank-you in which languages? — **Default:** one prints for every sale once a printer is connected; footer "Thank you! / Dank u wel!"; a WiFi code and promotions wait for T30/T31.
+- [ ] Q22 (books / server) What do you do when you close now: count the cash, write totals down, send something to the accountant? What does the accountant ask for, and how often? How much change is in the drawer in the morning, and do you ever pay something out of the drawer (ice, a supplier)? — **Default:** close the day under Admin → Today with the cash counted, CSV files for the accountant; money taken out of the drawer is not recorded yet (it would be a new task).
+- [ ] Q23 (web-admin) Which numbers would you like to look at: best sellers, busiest hours, this week against last week, a whole month? Also on your phone at home? — **Default:** the Today page as it is; week and month views are T35; nothing can be seen from outside the truck's own network.
+- [ ] Q24 (shared / web) Are English and Dutch enough on the screens and receipts? Would Papiamentu or Spanish help, for you or for guests reading the menu screen? — **Default:** English and Dutch (T07, T50).
+- [ ] Q25 (web-screens) Would you like guests to order from their own phone with a QR code at the truck, or to see on their phone when the order is ready? Do people order ahead by WhatsApp or phone now? — **Default:** not built (T25, T52); you enter such orders yourself with "Pay later" and a name.
+- [ ] Q26 (server / web-pos) Does anyone run a bill for a week or a month, or need an invoice with a company name on it (catering, a dive school)? — **Default:** no customer accounts and no invoices.
+- [ ] Q27 (ops) Where will the laptop stand (sun, heat, sand, spray), and does it stay on truck power all day? Is there a USB stick, or a OneDrive, Google Drive or iCloud folder, that the till may use for a second copy of the backups? — **Default:** laptop on truck power with its own battery as reserve; backups only on the laptop until a folder is named under Admin → Backups.
+- [ ] Q28 (web-pos) Would a practice mode help, where orders do not count as sales, for trying things out or teaching a helper? — **Default:** not built (T50); practise on Allan's PC.
+- [ ] Q29 (ops) When would you like to try it for real next to the Mac till? Which day of the week is quiet enough for that? — **Default:** a quiet weekday, then two weeks side by side (Q10).
 
 ## Added 2026-10-07 (from the menu board)
 - [ ] Q1b (shared) Chips (Lays/Doritos/Cheetos) and bottled drinks are resold as bought. Under ABB, reselling imported goods can be outside scope rather than taxed. How does her accountant treat them? — Default: same 6% category as food, flagged unverified.
