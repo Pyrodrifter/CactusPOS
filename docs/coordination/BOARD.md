@@ -90,6 +90,20 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | UX05 | web-core | Cactus logo (app mark, favicon, PWA icons) and second UI pass: POS category colours, compact menu, payment sheet layout (owner request) | UX01,UX02 | review | claude · 2026-10-08 | Owner likes it on her tablet and a phone |
 | T54 | web-core | UI polish + touch optimisation across login, POS, payment, kitchen, pickup (owner request) | T10,T12 | review | claude · 2026-10-07 | Looks and feels right on her tablet and a phone |
 
+## Audit 2026-10-10 — fixes
+From the app audit of master at 36f2e8d: [handoffs/2026-10-10-claude-app-audit.md](handoffs/2026-10-10-claude-app-audit.md). Highest priority first. T27 (backups) belongs at the top of this list too.
+| ID | Lane | Task | Deps | Status | Owner | Done when |
+|---|---|---|---|---|---|---|
+| A01 | server / books | Day reports by the day the money moved: a sale counts on the day it is paid, a refund on the day it is given; Z reports, cash expected, CSV and the PyroBookKeeper link follow | Q11 | todo | | Tab opened day 1 and paid day 2 is in day 2's sales and cash; a day-2 sale refunded on day 3 lowers day 3's cash and leaves day 2's closed Z report true; tests |
+| A02 | server | Limit wrong manager PINs on the void route the way sign-in is limited; record failed tries in the audit log | - | todo | | The 6th wrong manager PIN in a row answers 429; test |
+| A03 | shared / server / web-pos | Pay request carries the total the cashier saw; the server refuses with 409 when the order has changed since | - | todo | | Tab that grew on another screen cannot be paid for the old amount by card; the pay sheet shows the new total; test |
+| A04 | server / web-core | Heartbeat on the live connection (screens reconnect and reload when nothing arrived for about 40 s) and a time limit on API calls that keeps the retry key | - | todo | | Kitchen recovers by itself within a minute after a silently cut connection; a stalled send shows an error and the retry makes one order |
+| A05 | ops | One sales database however the till is started: `start.bat` / `npm start` and the installed app must not end up with different files | - | todo | | Either route opens the same sales, or the second refuses with a clear message naming both files |
+| A06 | server / web-admin | Warn the owner while an example PIN (1234 / 1111) still works | - | todo | | Fresh database shows the warning in Admin until both PINs are changed |
+| A07 | server | Small server fixes from the audit: kitchen and pickup lists include open work from an earlier day; no internal error text to screens; audit-log rows for printer and bookkeeping settings; document the three missing routes | - | todo | | Tests for the first three; contracts list every route |
+| A08 | qa | Repair `e2e/ux08-checkout.mjs` (fails since the Pay later sheet) and run the browser checks from one command (with T15) | - | todo | | Both ux08 scenarios pass on master from one command |
+| A09 | ops | `scripts/shot.mjs` leaves a headless Edge and a temp profile behind after every run on Windows | - | todo | | No `msedge.exe` on a `cactus-shot-` profile and no such folder remains after a run |
+
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06
 - **Wave 2:** T03, T04, T05, T13

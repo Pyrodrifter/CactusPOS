@@ -12,6 +12,7 @@ Format: `- [ ] Qn (lane, date) question — default if unanswered`
 - [ ] Q8 (data) Import history from the current POS (sales, customers)? — Default: no.
 - [ ] Q9 (branding) Logo, colors, fonts for the app and receipts? — Default: cactus-blue placeholder palette.
 - [x] Q10 (surprise) ANSWERED: parallel run with the old Mac system for a while to test the waters. Go-live date TBD. (orig:) Who sets this up at the truck, and when is the target go-live? Parallel-run with the old POS first? — Default: 2 weeks of parallel run.
+- [ ] Q11 (server/books, 2026-10-10) When a tab is opened on one day and paid on a later day, which day's sales and cash does it belong to? Same for a refund given on a later day than the sale. Today both are counted on the day the order was opened, so the money is in the drawer on a day whose report does not show it (audit finding 1, task A01). — **Default:** the day the money moved: a sale on the day it is paid, a refund on the day it is handed back.
 
 ## Ask the sister (Allan to collect)
 Q1 tax/CRIB number + how her accountant classifies food and drinks; Q2 printer + cash drawer; Q3 card terminal provider; Q5 current menu with prices and modifiers; Q8 whether to import old sales; Q9 logo/colors. Everything else has a default.
