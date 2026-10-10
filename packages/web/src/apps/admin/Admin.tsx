@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { api } from '../../lib/api';
 import { useLang } from '../../i18n';
 import { MenuAdmin } from './MenuAdmin';
 import { BusinessAdmin } from './BusinessAdmin';
@@ -7,15 +8,16 @@ import { TaxAdmin } from './TaxAdmin';
 import { PrinterAdmin } from './PrinterAdmin';
 import { ReportsAdmin } from './ReportsAdmin';
 import { BooksAdmin } from './BooksAdmin';
+import { BackupAdmin } from './BackupAdmin';
 import { Icon, type IconName } from '../../ui/Icon';
 import { useAdminCopy } from './copy';
 import { ScrollRow } from './controls';
 import './admin.css';
 import { ReceiptEditor } from './receipt-editor/ReceiptEditor';
 
-const TABS = ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books'] as const;
+const TABS = ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books', 'backups'] as const;
 type Tab = (typeof TABS)[number];
-const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', receipts: 'edit', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download' };
+const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', receipts: 'edit', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download', backups: 'refresh' };
 
 export function Admin() {
   const { t, lang } = useLang();
@@ -24,6 +26,15 @@ export function Admin() {
   const root = useRef<HTMLDivElement>(null);
   /* The tabs stay pinned, so a new tab starts at its top instead of wherever the last one was scrolled to. */
   const choose = (x: Tab) => { setTab(x); root.current?.closest('main')?.scrollTo({ top: 0 }); };
+  // A new database starts with the PINs 1234 and 1111. Until they are changed, the first Admin page says so
+  // (one quiet line, not on every page); checked again after a visit to Staff.
+  const [examplePins, setExamplePins] = useState<string[]>([]);
+  useEffect(() => {
+    let stale = false;
+    void api<{ staff: { name: string }[] }>('/admin/staff/example-pins')
+      .then((r) => { if (!stale) setExamplePins(r.staff.map((s) => s.name)); }).catch(() => { /* a reminder only */ });
+    return () => { stale = true; };
+  }, [tab]);
   return (
     <div className="admin" ref={root}>
       <div className="admin-tabbar">
@@ -36,6 +47,12 @@ export function Admin() {
         </ScrollRow>
       </div>
       <div className="admin-body">
+        {examplePins.length > 0 && tab === 'reports' && (
+          <p className="notice admin-pin-reminder" role="status">
+            <span>{copy.examplePins(examplePins.join(', '))}</span>
+            <button type="button" onClick={() => choose('staff')}><Icon name="staff" />{t('admin.staff')}</button>
+          </p>
+        )}
         {/* Menu and Staff show their one line of help beside their own buttons, to keep the list high on the screen. */}
         {tab !== 'menu' && tab !== 'staff' && tab !== 'receipts' && <p className="admin-hint">{copy[tab]}</p>}
         {tab === 'receipts' && <ReceiptEditor />}
@@ -46,6 +63,7 @@ export function Admin() {
         {tab === 'tax' && <TaxAdmin />}
         {tab === 'printer' && <PrinterAdmin />}
         {tab === 'books' && <BooksAdmin />}
+        {tab === 'backups' && <BackupAdmin />}
       </div>
     </div>
   );

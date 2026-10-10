@@ -11,6 +11,7 @@ Planned files (created by the owning task):
 - `receipt-template.md` — block schema & variables (T13/T30)
 - `printer.md` — print job format, profiles (T14)
 - [`books.md`](books.md) — day booking, CSV columns, PyroBookKeeper link (written)
+- [`backups.md`](backups.md) — when backups are made, where, the admin routes, how a restore works (written)
 - `beeper.md` — ESP32 protocol (T40)
 
 Rule: breaking change = bump a `contractVersion`, add a note to the next handoff, and open a REQUESTS entry for every consuming lane.

@@ -286,3 +286,9 @@
   .admin .reports-bar > :is(.reports-print, .reports-close) { flex: 1 1 140px; }
   .books-downloads { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---- reminder that an example PIN still works, and the backups page ---- */
+.admin-pin-reminder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.admin-pin-reminder span { flex: 1 1 260px; }
+.admin-pin-reminder button { flex: none; }
+.admin .form.books b, .admin .form.books .reports-rows small { overflow-wrap: anywhere; }

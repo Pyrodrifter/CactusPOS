@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ServerEventSchema, type Order, type ServerEvent } from '@cactus/shared';
 import { api, getSession } from './api';
+import { openLive } from './liveSocket';
 
 /** Parses a socket message; anything that is not a known, well-formed event is ignored. */
 function readEvent(data: unknown): ServerEvent | null {
@@ -11,13 +12,16 @@ function readEvent(data: unknown): ServerEvent | null {
   } catch { return null; }
 }
 
+const socketUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?${query}`;
+
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';
 export const SERVICE_MODE_CHANGED = 'cactus:service-mode-changed';
 
 /**
- * Live list of orders: initial fetch + WebSocket updates + auto-reconnect.
- * `active` and `today` cover the current business day; `open` is every unpaid order from any day (tabs).
+ * Live list of orders: initial fetch + WebSocket updates + auto-reconnect (see `openLive` for how a dead
+ * connection is noticed). `active` is the kitchen's work and `today` is everything that happened today;
+ * `open` is every unpaid order from any day (tabs).
  * Updates for orders outside the scope still arrive, so callers filter what they show.
  */
 export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
@@ -27,11 +31,6 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
   const known = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let timer: number | undefined;
-    let closed = false;
-    let attempt = 0;
-
     const load = async () => {
       try {
         const list = await api<Order[]>(`/orders?scope=${scope}`);
@@ -39,18 +38,17 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
         list.forEach((o) => known.current.add(o.id));
       } catch { /* retried on reconnect */ }
     };
-    const connect = () => {
-      const token = getSession()?.token;
-      if (!token || closed) return;
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}/ws?token=${token}`);
-      ws.onopen = () => {
-        attempt = 0; setOnline(true); void load();
+    void load();
+    return openLive({
+      url: () => { const token = getSession()?.token; return token ? socketUrl(`token=${token}`) : null; },
+      onState: setOnline,
+      onOpen: () => {
+        void load();
         // A failed initial menu fetch also recovers when the local server returns.
         window.dispatchEvent(new Event(MENU_CHANGED));
-      };
-      ws.onmessage = (m) => {
-        const ev = readEvent(m.data);
+      },
+      onMessage: (data) => {
+        const ev = readEvent(data);
         if (!ev) return;
         if (ev.type === 'menu.changed') window.dispatchEvent(new Event(MENU_CHANGED));
         if (ev.type === 'service-mode.changed') window.dispatchEvent(new Event(SERVICE_MODE_CHANGED));
@@ -63,15 +61,8 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
           setOrders((prev) => new Map(prev).set(o.id, o));
           if (!known.current.has(o.id)) { known.current.add(o.id); setNewIds((p) => [...p, o.id]); }
         }
-      };
-      ws.onclose = () => {
-        setOnline(false);
-        if (!closed) timer = window.setTimeout(connect, Math.min(1000 * 2 ** attempt++, 8000));
-      };
-    };
-    void load();
-    connect();
-    return () => { closed = true; clearTimeout(timer); ws?.close(); };
+      },
+    });
   }, [scope]);
 
   return { orders: [...orders.values()].sort((a, b) => a.ticketNumber - b.ticketNumber), online, newIds, clearNew: () => setNewIds([]) };
@@ -80,25 +71,15 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
 export function usePickup() {
   const [board, setBoard] = useState<{ preparing: number[]; ready: number[] }>({ preparing: [], ready: [] });
   const [online, setOnline] = useState(false);
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let timer: number | undefined;
-    let closed = false;
-    let attempt = 0;
-    const connect = () => {
-      if (closed) return;
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}/ws?room=pickup`);
-      ws.onopen = () => { attempt = 0; setOnline(true); };
-      ws.onmessage = (m) => {
-        const ev = readEvent(m.data);
-        if (ev?.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready });
-      };
-      ws.onclose = () => { setOnline(false); if (!closed) timer = window.setTimeout(connect, Math.min(1000 * 2 ** attempt++, 8000)); };
-    };
-    connect();
-    return () => { closed = true; clearTimeout(timer); ws?.close(); };
-  }, []);
+  useEffect(() => openLive({
+    url: () => socketUrl('room=pickup'),
+    onState: setOnline,
+    onOpen: () => { /* the server sends the board as soon as a pickup screen connects */ },
+    onMessage: (data) => {
+      const ev = readEvent(data);
+      if (ev?.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready });
+    },
+  }), []);
   return { board, online };
 }
 

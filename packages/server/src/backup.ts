@@ -123,20 +123,11 @@ export class Backups {
     while (existsSync(join(dir, backupName(at)))) at = new Date(at.getTime() + 1000);
     const name = backupName(at);
     const file = join(dir, name);
-    let orders = 0, lastReceipt = 0;
+    let held: { orders: number; lastReceipt: number };
     try {
       mkdirSync(dir, { recursive: true });
       this.db.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
-      // A backup only counts once it has been read back: whole, and holding as many orders as the till has.
-      const copy = new DatabaseSync(file, { readOnly: true });
-      try {
-        const check = (copy.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check;
-        if (check !== 'ok') throw new Error(`the copy did not pass its check (${check})`);
-        const count = (sql: string, from: DatabaseSync) => (from.prepare(sql).get() as { n: number | null }).n ?? 0;
-        orders = count('SELECT COUNT(*) AS n FROM orders', copy);
-        lastReceipt = count('SELECT MAX(receipt_number) AS n FROM orders', copy);
-        if (orders !== count('SELECT COUNT(*) AS n FROM orders', this.db)) throw new Error('the copy does not hold every order');
-      } finally { copy.close(); }
+      held = this.readBack(file);
     } catch (e) {
       try { if (existsSync(file)) unlinkSync(file); } catch { /* leave it; it is not listed as good */ }
       const problem = `The backup could not be made: ${e instanceof Error ? e.message : String(e)}`;
@@ -156,9 +147,22 @@ export class Backups {
       } catch (e) { problem = `Saved on this computer, but not in ${second}: ${e instanceof Error ? e.message : String(e)}`; }
     }
     this.prune(dir, at);
-    const run: BackupRun = { name, at: at.toISOString(), orders, lastReceipt, copied };
+    const run: BackupRun = { name, at: at.toISOString(), orders: held.orders, lastReceipt: held.lastReceipt, copied };
     setKv(this.db, 'backup.status', { last: { ...run, fingerprint }, problem } satisfies Status);
     return run;
+  }
+
+  /** A backup only counts once it has been read back: whole, and holding as many orders as the till has. */
+  private readBack(file: string): { orders: number; lastReceipt: number } {
+    const count = (sql: string, from: DatabaseSync) => (from.prepare(sql).get() as { n: number | null }).n ?? 0;
+    const copy = new DatabaseSync(file, { readOnly: true });
+    try {
+      const check = (copy.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check;
+      if (check !== 'ok') throw new Error(`the copy did not pass its check (${check})`);
+      const orders = count('SELECT COUNT(*) AS n FROM orders', copy);
+      if (orders !== count('SELECT COUNT(*) AS n FROM orders', this.db)) throw new Error('the copy does not hold every order');
+      return { orders, lastReceipt: count('SELECT MAX(receipt_number) AS n FROM orders', copy) };
+    } finally { copy.close(); }
   }
 
   private prune(dir: string, now: Date): void {

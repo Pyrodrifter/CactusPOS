@@ -15,7 +15,7 @@ Everything is built from **closed days** (Z reports); a day closed more than onc
 | Tips | `tips` (1800): owed to staff, not revenue | credit |
 | Cash over/short, when cash was counted | `cash` and `overShort` (4550) | either way |
 
-Refunded sales (voided after payment) net to nothing and are not booked. Defaults follow PyroBookKeeper's chart of accounts; every code is editable in Admin > Bookkeeping. Whether card takings belong on the bank account or a clearing account is the bookkeeper's call.
+A day is booked on the money that moved that day (see "Day reports" in `http.md`). A sale paid and refunded on the same day nets to nothing and is not booked. A refund of an **earlier** day's sale is in that day's figures as negative amounts, so the same lines book it in reverse: cash or card credited, revenue and ABB debited. Defaults follow PyroBookKeeper's chart of accounts; every code is editable in Admin > Bookkeeping. Whether card takings belong on the bank account or a clearing account is the bookkeeper's call.
 
 ## CSV (for any accountant or program)
 `GET /api/books/days.csv?from=&to=` and `GET /api/books/journal.csv?from=&to=` (dates optional, `YYYY-MM-DD`).

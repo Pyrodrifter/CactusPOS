@@ -5,13 +5,13 @@ import type { ReceiptLang } from './build.js';
 const T = {
   en: {
     x: 'X REPORT (not closed)', z: 'Z REPORT', day: 'Day', printed: 'Printed', closed: 'Closed', sales: 'SALES', gross: 'Total incl. ABB', net: 'Net',
-    orders: 'Orders sold', receipts: 'Receipts', tax: 'ABB', over: 'over', exempt: 'Exempt', outside: 'Outside scope', tenders: 'PAYMENTS', cash: 'Cash', card: 'Card',
+    orders: 'Orders sold', receipts: 'Receipts', earlier: 'Refunds of earlier days', tax: 'ABB', over: 'over', exempt: 'Exempt', outside: 'Outside scope', tenders: 'PAYMENTS', cash: 'Cash', card: 'Card',
     tips: 'Tips', refunds: 'REFUNDS (voided after payment)', unpaid: 'Unpaid open orders', voided: 'Voided before payment', drawer: 'CASH DRAWER',
     expected: 'Expected from sales', counted: 'Counted', diff: 'Over / short', items: 'ITEMS SOLD', none: 'No sales',
   },
   nl: {
     x: 'X-RAPPORT (niet afgesloten)', z: 'Z-RAPPORT', day: 'Dag', printed: 'Afgedrukt', closed: 'Afgesloten', sales: 'OMZET', gross: 'Totaal incl. ABB', net: 'Netto',
-    orders: 'Verkochte bestellingen', receipts: 'Bonnen', tax: 'ABB', over: 'over', exempt: 'Vrijgesteld', outside: 'Buiten toepassing', tenders: 'BETALINGEN', cash: 'Contant', card: 'Pin',
+    orders: 'Verkochte bestellingen', receipts: 'Bonnen', earlier: 'Terugbetaald van eerdere dagen', tax: 'ABB', over: 'over', exempt: 'Vrijgesteld', outside: 'Buiten toepassing', tenders: 'BETALINGEN', cash: 'Contant', card: 'Pin',
     tips: 'Fooien', refunds: 'TERUGBETAALD (geannuleerd na betaling)', unpaid: 'Open onbetaalde bestellingen', voided: 'Geannuleerd voor betaling', drawer: 'KASSALADE',
     expected: 'Verwacht uit verkoop', counted: 'Geteld', diff: 'Verschil', items: 'VERKOCHTE ITEMS', none: 'Geen verkoop',
   },
@@ -40,6 +40,8 @@ export function buildDayReport(input: DayReport | ZReport, b: Business, lang: Re
     if (x.kind === 'taxed') out.push({ t: 'row', left: `${t.tax} ${pct(x.bps)} ${t.over} ${m(x.netCents)}`, right: m(x.taxCents) });
     else out.push({ t: 'row', left: x.kind === 'exempt' ? t.exempt : t.outside, right: m(x.grossCents) });
   }
+  // Already inside the totals above; shown so a total lower than the day's own sales explains itself.
+  if (r.refundedEarlier) out.push({ t: 'row', left: `${t.earlier} (${r.refundedEarlier.count})`, right: `-${m(r.refundedEarlier.grossCents)}` });
   out.push({ t: 'row', left: t.orders, right: String(r.orders.sold) });
   if (r.receipts.first !== null) out.push({ t: 'row', left: t.receipts, right: `#${r.receipts.first} - #${r.receipts.last}` });
   out.push({ t: 'rule' }, { t: 'text', text: t.tenders, bold: true });

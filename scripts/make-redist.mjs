@@ -45,7 +45,7 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 const skip = (source) => /\.test\.(ts|mjs)$/.test(source) || /[\\/](testing|node_modules|private)$/.test(source);
 const copy = (from, to = from) => cpSync(join(root, from), join(stage, to), { recursive: true, filter: (source) => !skip(source) });
-for (const file of ['package.json', 'package-lock.json', 'Install CactusPOS.bat']) copy(file);
+for (const file of ['package.json', 'package-lock.json', 'Install CactusPOS.bat', 'Restore CactusPOS backup.bat']) copy(file);
 copy('seed');
 copy('ops/app');
 copy('ops/windows');
@@ -119,7 +119,7 @@ writeFileSync(join(stage, 'READ ME FIRST.txt'), [
 ].join('\r\n'));
 
 // Windows scripts need Windows line endings, whatever the building computer checked out.
-for (const file of ['Install CactusPOS.bat', ...readdirSync(join(stage, 'ops', 'windows')).filter((f) => f.endsWith('.ps1')).map((f) => join('ops', 'windows', f))]) {
+for (const file of ['Install CactusPOS.bat', 'Restore CactusPOS backup.bat', ...readdirSync(join(stage, 'ops', 'windows')).filter((f) => f.endsWith('.ps1')).map((f) => join('ops', 'windows', f))]) {
   const path = join(stage, file);
   writeFileSync(path, readFileSync(path, 'utf8').replace(/\r?\n/g, '\r\n'));
 }

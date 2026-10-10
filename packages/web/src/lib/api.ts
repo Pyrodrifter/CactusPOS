@@ -15,17 +15,38 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+/** How long a screen waits for the till. Long enough for a slow tablet, short enough that nobody stands at "Sending…". */
+export const REQUEST_TIMEOUT_MS = 12_000;
+
+/**
+ * One request to the till, reply text included, with a time limit. No answer at all (stalled WiFi, server off)
+ * becomes an `ApiError` with status 0 and words fit for the screen. The caller still holds its cart and its
+ * request id, so sending again cannot make a second order or payment.
+ */
+export async function send(url: string, init: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<{ res: Response; text: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    return { res, text: await res.text() };
+  } catch {
+    throw new ApiError(0, controller.signal.aborted
+      ? 'The till did not answer in time. Check the connection and try again.'
+      : 'Cannot reach the till. Check the connection and try again.');
+  } finally { clearTimeout(timer); }
+}
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown; requestId?: string } = {}): Promise<T> {
   const token = getSession()?.token;
-  const res = await fetch(`/api${path}`, {
+  const { res, text } = await send(`/api${path}`, {
     method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
     // Only name a content type when there is a body: the server refuses "application/json" with nothing in it,
     // which made every DELETE (menu item, category) fail.
     headers: { ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}), ...(token ? { 'x-token': token } : {}), ...(init.requestId ? { 'idempotency-key': init.requestId } : {}) },
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
   });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: { error?: string } | null = null;
+  try { data = text ? JSON.parse(text) : null; } catch { /* not JSON (a proxy's error page): fall back to the status text */ }
   if (res.status === 401 && path !== '/login') { setSession(null); location.assign('/login'); }
   if (!res.ok) throw new ApiError(res.status, data?.error ?? res.statusText);
   return data as T;
@@ -52,9 +73,9 @@ export async function serverPrints(): Promise<boolean> {
 /** Print the server-rendered receipt with the browser's print dialog, inside this page (see `printHtml`). */
 export async function browserPrintReceipt(order: Order, copy = false): Promise<void> {
   const token = getSession()?.token ?? '';
-  const res = await fetch(`/api/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`, { headers: { 'x-token': token } });
+  const { res, text } = await send(`/api/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`, { headers: { 'x-token': token } });
   if (!res.ok) throw new ApiError(res.status, res.statusText);
-  await printHtml(await res.text());
+  await printHtml(text);
 }
 
 /** A key for one intended action; reuse it when retrying that same action (see `RequestId` in shared). */

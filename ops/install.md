@@ -41,7 +41,7 @@ screens. To build the ready-made package yourself: `node scripts/make-redist.mjs
 | Kitchen screen and pickup board on this computer | Start menu → CactusPOS |
 | Start when this Windows user signs in | Startup folder (till window opens by itself) |
 | Firewall rule "CactusPOS" | incoming TCP on the till's port, from the local network only |
-| Settings, sales database, logs | `%LOCALAPPDATA%\CactusPOS` (paste that into the Explorer address bar) |
+| Settings, sales database, backups, logs | `%LOCALAPPDATA%\CactusPOS` (paste that into the Explorer address bar) |
 
 Options, for example from a terminal in the program folder:
 
@@ -100,11 +100,42 @@ Good to know:
 
 - **Start:** the Desktop icon. The server keeps running when the till window is closed, so the kitchen keeps working.
 - **Stop the server:** `node ops\app\launch.mjs --stop` in the program folder (or shut the computer down).
-- **Back up:** copy the folder `%LOCALAPPDATA%\CactusPOS\data` to a USB stick or cloud folder, ideally while the
-  server is stopped. That folder is the whole sales record.
+- **Back up:** CactusPOS does it by itself, see [Backups](#backups) below.
 - **Update:** replace the program folder with the new version (or `git pull`), then run **Install CactusPOS.bat**
   again. Data and settings are outside the program folder and stay as they are.
 - **Log:** `%LOCALAPPDATA%\CactusPOS\logs\server.log`.
+
+## Backups
+
+CactusPOS copies the whole sales record by itself: when it starts, when you close the day, and every half hour
+while there is something new. Each copy is checked after it is written. They are in
+`%LOCALAPPDATA%\CactusPOS\data\backups` (Linux: `~/.local/share/cactuspos/data/backups`), one file per backup,
+named by date and time. The newest 30 are kept, and the last one of each day for 90 days.
+
+**Set up a second copy.** A backup on the same laptop does not help when the laptop is stolen or dies. Under
+**Admin → Backups**, name a folder on a USB stick, or a folder that OneDrive, Dropbox or Google Drive keeps in
+sync. Every backup is then copied there too, and the page says so when the folder cannot be reached.
+
+Do not make backups by copying `cactus.sqlite` yourself while CactusPOS runs: the newest sales are not in that
+file yet. Use **Admin → Backups → Back up now** and take the file it makes.
+
+**Put a backup back** (the laptop was replaced, or the data got damaged):
+
+1. On a new computer, install CactusPOS first.
+2. Double-click **Restore CactusPOS backup.bat** in the program folder to use the newest backup on this
+   computer. To use a file from a USB stick, drag that file onto **Restore CactusPOS backup.bat**.
+3. It shows how many orders the backup holds and how many are on the computer now, and warns when the backup is
+   older. Type `yes` to go ahead.
+4. CactusPOS is stopped, the backup is put in place, and CactusPOS starts again. Reload the open screens.
+
+The data that was replaced is not deleted. It is moved to a folder named `replaced-<date>-<time>` inside
+`%LOCALAPPDATA%\CactusPOS\data`; restoring `cactus.sqlite` from that folder undoes the restore.
+On Linux, or from a terminal: `node ops/app/launch.mjs --restore [file]`.
+
+Restoring an older backup takes the till back to that moment: sales made after it are no longer in the till, and
+their receipt numbers will be given out again. Keep the `replaced-...` folder; it is the record of those sales.
+
+**Try it once before you need it:** make a backup, restore it, and check that today's orders are still there.
 
 ## Settings file
 
@@ -164,3 +195,5 @@ folder yourself only when the records are no longer needed.
 | Tablet cannot open the address | Same WiFi? Laptop on and signed in? Run the installer again and answer **Yes** to the firewall question. Guest WiFi often blocks devices from seeing each other: use the normal network |
 | Address stopped working after a few days | The laptop got another IP address: reserve it in the router (see above) |
 | Two till windows | Close one. A double-click within four seconds opens only one; later clicks open another |
+| The till is empty after starting it another way | CactusPOS started by hand (`start.bat`, `npm start`) now opens the same data as the installed app. A database from an earlier hand-started run is copied over once; when both places already hold data the server names both files when it starts and uses the one in `%LOCALAPPDATA%\CactusPOS\data` |
+| Kitchen screen shows "Reconnecting" for a moment now and then | It noticed a dead connection and made a new one; nothing was lost. If it stays that way, check the WiFi and that the laptop is on |

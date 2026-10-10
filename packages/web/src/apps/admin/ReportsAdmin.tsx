@@ -19,6 +19,7 @@ const copy = {
     closeTitle: 'Close the day', closeIntro: 'This stores today’s figures as a numbered Z report for the bookkeeping. Sales can continue afterwards; close again if anything changes.',
     counted: 'Cash counted in the drawer (without the float)', countedHint: 'Leave empty if you did not count.', note: 'Note (optional)',
     expected: 'Expected', difference: 'Over / short', confirmClose: 'Close day', cancel: 'Cancel', badAmount: 'Enter an amount like 152.50',
+    earlier: (n: number, amount: string) => `Includes ${n} refund${n === 1 ? '' : 's'} of sales from an earlier day (${amount}). That money left the drawer today, so it is taken off today's sales, ABB and cash.`,
     closedToast: (n: number) => `Day closed: Z report #${n}`, history: 'Closed days', receipts: 'Receipts', loading: 'Loading…', sold: 'sold', printed: 'Sent to the printer',
   },
   nl: {
@@ -31,6 +32,7 @@ const copy = {
     closeTitle: 'Dag afsluiten', closeIntro: 'Hiermee worden de cijfers van vandaag vastgelegd als genummerd Z-rapport voor de boekhouding. Verkopen kan daarna gewoon; sluit opnieuw af als er iets verandert.',
     counted: 'Contant geteld in de lade (zonder wisselgeld)', countedHint: 'Leeg laten als u niet heeft geteld.', note: 'Opmerking (optioneel)',
     expected: 'Verwacht', difference: 'Verschil', confirmClose: 'Dag afsluiten', cancel: 'Annuleren', badAmount: 'Vul een bedrag in zoals 152,50',
+    earlier: (n: number, amount: string) => `Inclusief ${n} terugbetaling${n === 1 ? '' : 'en'} van verkopen van een eerdere dag (${amount}). Dat geld ging vandaag uit de lade en is dus van de omzet, ABB en kas van vandaag afgetrokken.`,
     closedToast: (n: number) => `Dag afgesloten: Z-rapport #${n}`, history: 'Afgesloten dagen', receipts: 'Bonnen', loading: 'Laden…', sold: 'verkocht', printed: 'Naar de printer gestuurd',
   },
 };
@@ -108,6 +110,7 @@ export function ReportsAdmin() {
 
       {closed && <p className={`reports-status${changed ? ' changed' : ''}`} role="status"><Icon name={changed ? 'warning' : 'check'} /><span>{c.closedAs(closed.number, time(closed.closedAt))}{changed && ` ${c.changedSince}`}</span></p>}
       {r.orders.unpaid > 0 && <p className="notice" role="status">{c.unpaidWarn(r.orders.unpaid, money(r.orders.unpaidCents))}</p>}
+      {r.refundedEarlier && <p className="notice" role="status">{c.earlier(r.refundedEarlier.count, money(r.refundedEarlier.grossCents))}</p>}
       {err && !closing && <div className="error" role="alert">{err}</div>}
 
       <div className="reports-stats">

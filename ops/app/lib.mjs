@@ -57,7 +57,7 @@ export function normalizeConfig(raw = {}, overrides = {}) {
 
 /** Command line of the launcher. */
 export function parseArgs(argv) {
-  const out = { command: 'open', overrides: {}, json: false, ifNew: false, gui: false, help: false, errors: [] };
+  const out = { command: 'open', overrides: {}, json: false, ifNew: false, gui: false, help: false, file: '', yes: false, errors: [] };
   const commands = { '--server-only': 'server', '--stop': 'stop', '--status': 'status', '--configure': 'configure' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -72,6 +72,9 @@ export function parseArgs(argv) {
     else if (a === '--seed') { const v = value(); if (v !== undefined) out.overrides.seed = v; }
     else if (a === '--kiosk') out.overrides.kiosk = true;
     else if (a === '--window') out.overrides.kiosk = false;
+    // --restore [file]: the file is optional (the newest backup is used), so it is only taken when it is not another option.
+    else if (a === '--restore') { out.command = 'restore'; if (argv[i + 1] !== undefined && !argv[i + 1].startsWith('--')) out.file = argv[++i]; }
+    else if (a === '--yes') out.yes = true;
     else if (a === '--json') out.json = true;
     else if (a === '--gui') out.gui = true;
     else if (a === '--if-new') out.ifNew = true;

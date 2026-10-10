@@ -16,14 +16,14 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/logout` | | `Ack`. Works without a session too (logging out twice is fine) |
 | `GET /api/menu` | | `{ categories, items, taxCategories }` |
 | `POST /api/menu/items/:id/available` | `AvailabilityBody` | `MenuItem` (sold-out toggle) |
-| `GET /api/orders?scope=active\|today\|open` | | `Order[]`. `open` = every unpaid, non-void order from any day (the tab list), oldest first |
+| `GET /api/orders?scope=active\|today\|open` | | `Order[]`. `active` = today's orders still needing attention, plus kitchen work carried over from an earlier day for up to 16 hours (an order sent before midnight, an older tab that ordered again). `today` = opened, paid or voided today. `open` = every unpaid, non-void order from any day (the tab list), oldest first |
 | `GET /api/orders/:id` | | `Order` |
 | `POST /api/orders` | `CreateOrderBody` | `201 Order` (status `sent`, ticket number assigned). Accepts `Idempotency-Key` |
 | `POST /api/orders/:id/lines` | `AddLinesBody` | `Order` with a new round of lines. `409` if paid or void. Accepts `Idempotency-Key` |
 | `POST /api/orders/:id/tab` | `TabNameBody` | `Order`. Names or renames the tab; empty clears it |
-| `POST /api/orders/:id/pay` | `PayBody` | `Order` (receipt number assigned). Accepts `Idempotency-Key` |
+| `POST /api/orders/:id/pay` | `PayBody` | `Order` (receipt number assigned, `paidDate` set). `PayBody.expectedTotalCents` is the total the cashier saw: when the order has changed since, `409` and nothing is recorded; the screen reloads the order and asks again. Accepts `Idempotency-Key` |
 | `POST /api/orders/:id/status` | `StatusBody` | `Order` |
-| `POST /api/orders/:id/void` | `VoidBody` | `Order`. Paid or started orders need an owner session or `managerPin` |
+| `POST /api/orders/:id/void` | `VoidBody` | `Order` (`voidedAt`, `voidDate` set). Paid or started orders need an owner session or `managerPin`. Five wrong manager PINs by one signed-in person = `429` for 30 s; each refused PIN is written to the audit log (`void.manager_pin_refused`) |
 | `GET /api/orders/:id/receipt[?copy=1]` | | Printable HTML receipt (browser fallback). `copy=1` marks a reprint. See `printer.md` |
 
 ## Owner only (`403` otherwise). Every change is written to the append-only `audit_log`.
@@ -37,7 +37,12 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `PUT /api/admin/tax/:id` | `TaxCategorySchema`. Change a rate by adding a `validFrom` row, never by editing one |
 | `GET /api/admin/staff` | `StaffRow[]` (PINs are never returned) |
 | `POST /api/admin/staff`, `PUT /api/admin/staff/:id` | `StaffInput`. PIN 4-8 digits, unique; at least one active owner must remain |
+| `GET /api/admin/staff/example-pins` | `{ staff: Staff[] }`: active people who can still sign in with a PIN every new database starts with (1234, 1111). Admin shows a reminder |
 | `GET /api/admin/audit` | `AuditList`: last 200 changes, newest first, each `{ seq, type, payload, staffId, at }` |
+| `POST /api/admin/receipt-templates/restore` | `RestoreTemplateBody` `{ baseVersion, version }`. Publishes an earlier design again as a new version. `409` when another screen saved meanwhile. See `service-and-receipts.md` |
+| `POST /api/admin/receipt-templates/test-print` | `PreviewTemplateBody`. Prints a sample of an unsaved design. `409` without a printer |
+| `PUT /api/books/settings` | `BooksSettings` (PyroBookKeeper folder, account codes). See `books.md` |
+| `GET /api/admin/backups`, `PUT /api/admin/backups/settings`, `POST /api/admin/backups/run` | See `backups.md` |
 
 ## Day reports (owner only). Schemas in `packages/shared/src/reports.ts`
 | Route | Body | Returns |
@@ -48,12 +53,18 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/reports/day/print` | `{ date? }` | print job. `409` without a printer |
 | `GET /api/reports/day/print.html[?date=]` | | printable page (browser fallback) |
 
-Definitions of sales, refunds, tenders and cash expected: see the T33 handoff and the comments in `reports.ts`.
+A day's report is about the money that moved on that day (owner decision Q11, 2026-10-10): a sale counts on the day it was
+**paid** (`Order.paidDate`), a refund on the day the paid order was **voided** (`Order.voidDate`), whatever day the order was
+opened. A sale paid and refunded on the same day is in neither the sales nor the payments. A refund of an earlier day's sale
+is taken off that day's `sales`, `tax` and `tenders` (which can therefore be negative) and reported in `refundedEarlier`.
+`refunds` lists every refund given that day. `orders.unpaid` and `orders.voidedUnpaid` still count orders opened that day.
+Closing the day also makes a backup. Other definitions: the comments in `packages/shared/src/reports.ts`.
 
 ## WebSocket `/ws`
 - Staff: `/ws?token=...` receives `ServerEvent`: `hello`, `order.changed { order }`, `menu.changed` (refetch `/api/menu`).
 - Public pickup board: `/ws?room=pickup` receives `hello`, then only `pickup.changed { preparing, ready }`.
-- Clients must reconnect with backoff and refetch state on every (re)connect.
+- Heartbeat: the server repeats `hello` to every connection every 15 s and pings it; a connection that did not answer the previous ping is dropped.
+- Clients must reconnect with backoff and refetch state on every (re)connect, and must treat 40 s without any message as a dead connection (`web/src/lib/liveSocket.ts`).
 
 ## Tabs
 An unpaid order **is** an open tab; there is no separate tab record.
@@ -74,4 +85,6 @@ An unpaid order **is** an open tab; there is no separate tab record.
 
 ## Other responses
 - Deletes, logout and `POST /api/print/retry` return `Ack` (`{ "ok": true }`).
-- `400` invalid body, option chosen twice, or a price that would go below zero; `409` sold out, tax setup problem, already paid/void; `503` database busy (nothing written, retry).
+- `400` invalid body, option chosen twice, or a price that would go below zero; `409` sold out, tax setup problem, already paid/void, or the order changed since the pay sheet opened; `503` database busy (nothing written, retry).
+- `500` always carries the same sentence ("Something went wrong on the till. Please try again."); the cause is in the server log, not on the screen.
+- The web client gives every request 12 s. No answer becomes an error on the screen; the cart and its `Idempotency-Key` are kept, so sending again cannot double an order.

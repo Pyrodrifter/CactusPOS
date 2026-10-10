@@ -15,8 +15,8 @@
 //   page.wait(ms)
 //   page.shot('name')               writes <out>/<name>.png and prints its path
 //   page.measure()                  { width, height, overflowX: [...], small: [...] } for touch-target checks
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -46,27 +46,54 @@ mkdirSync(out, { recursive: true });
 // with the Windows user's Microsoft account.
 // SHOT_HEADED=1 shows the real window: needed to see browser-owned things such as the print dialog, which do not exist headless.
 const headed = process.env.SHOT_HEADED === '1';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let profile;
 let child;
 let wsUrl;
-// Edge sometimes exits at once when another Edge is already running on this computer; then the next browser is tried.
+
+/**
+ * The browser writes its debugging address into its profile folder. That is read instead of the first process's
+ * output, because on Windows the Edge that is started can hand over to another msedge.exe and exit at once with
+ * code 0: the browser is up, but the process we started is gone. (Judging by that exit left a headless Edge and
+ * its profile behind after every run.)
+ */
+async function debugAddress(dir, ms) {
+  const file = join(dir, 'DevToolsActivePort');
+  for (const until = Date.now() + ms; Date.now() < until; await sleep(100)) {
+    try {
+      const [port, path] = readFileSync(file, 'utf8').trim().split(/\r?\n/);
+      if (port && path) return `ws://127.0.0.1:${port}${path}`;
+    } catch { /* not written yet */ }
+  }
+  return null;
+}
+/** Last resort for a browser we cannot talk to: stop every process that runs on this throwaway profile. */
+function stopStrays(dir) {
+  if (process.platform !== 'win32') return;
+  // The folder travels in an environment variable, so nothing in it is read as PowerShell code.
+  spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+    "Get-CimInstance Win32_Process | Where-Object { $_.Name -ne 'powershell.exe' -and $_.CommandLine -and $_.CommandLine.Contains($env:SHOT_PROFILE) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+  { env: { ...process.env, SHOT_PROFILE: dir }, stdio: 'ignore', windowsHide: true });
+}
+async function removeProfile(dir) {
+  for (let i = 0; i < 20; i++) {
+    try { rmSync(dir, { recursive: true, force: true }); } catch { /* the browser is still letting go of a file */ }
+    if (!existsSync(dir)) return true;
+    await sleep(250);
+  }
+  return false;
+}
+
 for (const browser of browsers) {
   profile = mkdtempSync(join(tmpdir(), 'cactus-shot-'));
-  child = spawn(browser, [...(headed ? [] : ['--headless=new']), '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-features=msImplicitSignin', '--disable-sync', '--allow-browser-signin=false', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
-  try {
-    const started = child;
-    wsUrl = await new Promise((done, fail) => {
-      let buf = '';
-      const timer = setTimeout(() => fail(new Error('did not start within 20 seconds')), 20_000);
-      started.stderr.on('data', (d) => { buf += d; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) { clearTimeout(timer); done(m[1]); } });
-      started.on('exit', (c) => { clearTimeout(timer); fail(new Error(`exited early (${c})`)); });
-    });
-    break;
-  } catch (e) {
-    console.error(`${browser}: ${e.message}`);
-    child.kill();
-    try { rmSync(profile, { recursive: true, force: true }); } catch { /* it may still hold a file for a moment */ }
-  }
+  child = spawn(browser, [...(headed ? [] : ['--headless=new']), '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-features=msImplicitSignin', '--disable-sync', '--allow-browser-signin=false', '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
+  child.on('error', () => { /* reported below as "did not start" */ });
+  wsUrl = await debugAddress(profile, 20_000);
+  if (wsUrl) break;
+  console.error(`${browser}: did not start within 20 seconds`);
+  child.kill();
+  stopStrays(profile);
+  await removeProfile(profile);
 }
 if (!wsUrl) { console.error('No browser could be started. Set SHOT_BROWSER to a browser executable that works here.'); process.exit(1); }
 
@@ -89,7 +116,6 @@ const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
 await send('Page.enable');
 await send('Runtime.enable');
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const page = {
   async size(width, height) {
     const mobile = width < 700;
@@ -162,10 +188,11 @@ try {
   failed = true;
   console.error(e instanceof Error ? e.message : e);
 } finally {
-  try { await send('Target.closeTarget', { targetId }); } catch { /* already gone */ }
-  ws.close();
+  // Ask the browser itself to quit: that ends every process it started, whichever one of them we launched.
+  const gone = new Promise((done) => { ws.onclose = done; setTimeout(done, 5000); });
+  try { ws.send(JSON.stringify({ id: nextId++, method: 'Browser.close' })); } catch { /* connection already lost */ }
+  await gone;
   child.kill();
-  await sleep(300);
-  try { rmSync(profile, { recursive: true, force: true }); } catch { /* the browser may still hold a file for a moment */ }
+  if (!(await removeProfile(profile))) { stopStrays(profile); await removeProfile(profile); }
 }
 process.exit(failed ? 1 : 0);

@@ -51,15 +51,23 @@ the API. `start.bat` is the Windows convenience launcher. Development and local
 service operation require no cloud account; the initial dependency installation
 requires access to npm.
 
+`npm run check` runs typecheck, lint, the unit tests and the build. `npm run e2e` builds the
+screens and runs the browser checks in `e2e/` against a throwaway till (temporary database,
+port 3082) in headless Edge or Chrome.
+
 To test HTTPS from a phone on the same WiFi, follow the [LAN setup guide](ops/lan.md).
 It covers `npm run lan:setup`, `npm run dev:lan`, `cactus.local`, the IP fallback,
 and one-time local CA installation on each device.
 
 ## Data and configuration
 
-`CACTUS_DB` sets the SQLite file path. Use an absolute path when configuring it.
-Without it, the server uses `data/cactus.sqlite` relative to the server process's
-working directory (`packages/server` when launched by the npm workspace scripts).
+The sales database is one file, in the same place however the till is started
+(installed app, `start.bat`, `npm start`): `%LOCALAPPDATA%\CactusPOS\data\cactus.sqlite`
+on Windows, `~/.local/share/cactuspos/data/cactus.sqlite` on Linux. `CACTUS_DB` names
+another file (use an absolute path); `npm run dev` sets it to
+`packages/server/data/cactus.sqlite`, so development never writes to the till's sales.
+Backups are made automatically into `backups/` beside the database; see
+[ops/install.md](ops/install.md#backups).
 An empty database loads the sample menu automatically. `npm run seed` explicitly
 loads sample fixtures into the selected database; use it only with development
 data.

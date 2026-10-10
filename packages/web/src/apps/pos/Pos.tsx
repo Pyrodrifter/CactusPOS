@@ -42,7 +42,7 @@ function Sheet({ children, onCancel, busy = false, dismissable = true, titleId, 
 type Menu = MenuResponse;
 interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
 
-// Lives above the routes, so both the draft and an in-flight send survive screen changes.
+// Lives above the routes, so the draft, an in-flight send and the reason a send failed survive screen changes.
 // Reload/sign-out clears it. The request identity survives a lost reply and a return to the till.
 function useDraftState() {
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -52,7 +52,8 @@ function useDraftState() {
   const request = useRef({ signature: '', id: newRequestId() });
   // T29: when set, the cart is a new round for this open tab instead of a new order.
   const [tab, setTab] = useState<{ id: string; label: string } | null>(null);
-  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab };
+  const [error, setError] = useState('');
+  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError };
 }
 const DraftContext = createContext<ReturnType<typeof useDraftState> | null>(null);
 export function PosDraftProvider({ children }: { children: ReactNode }) {
@@ -76,7 +77,7 @@ export function Pos() {
   const serviceMode = useServiceMode();
   const { t, lang } = useLang();
   const c = copy[lang];
-  const { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab } = useContext(DraftContext)!;
+  const { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError } = useContext(DraftContext)!;
   const [naming, setNaming] = useState(false);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [cat, setCat] = useState('');
@@ -87,7 +88,6 @@ export function Pos() {
   const [picking, setPicking] = useState<MenuItem | null>(null);
   const [paying, setPaying] = useState<{ order: Order } | { cartTotal: number } | null>(null);
   const [view, setView] = useState<'order' | 'tabs' | 'orders'>('order');
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const cartPanel = useRef<HTMLElement>(null);
   const { orders, online } = useOrders('today');
@@ -281,13 +281,25 @@ export function Pos() {
           total={'order' in paying ? paying.order.totalCents : paying.cartTotal}
           onCancel={() => setPaying(null)}
           onPay={async (body) => {
+            // The amount on the sheet is what the cashier agreed with the guest (and typed into the card terminal).
+            const shown = 'order' in paying ? paying.order.totalCents : paying.cartTotal;
             const order = 'order' in paying ? paying.order : await place();
             if (!order) throw new Error(t('pay.failed'));
             // Keep the created order for a payment retry; never create the cart twice.
             setPaying({ order });
             // With a receipt printer the server prints on payment. Without one nothing prints by itself:
             // a print dialog nobody asked for blocks the till. The paid screen has a Receipt button.
-            return api<Order>(`/orders/${order.id}/pay`, { body, requestId: `pay-${order.id}` });
+            try {
+              return await api<Order>(`/orders/${order.id}/pay`, { body: { ...body, expectedTotalCents: shown }, requestId: `pay-${order.id}` });
+            } catch (e) {
+              // 409: the order is no longer what this sheet shows (a round was added on another screen, or it was
+              // paid there). Show it as it is now; nothing was recorded, and the cashier confirms the new amount.
+              if (e instanceof ApiError && e.status === 409) {
+                const current = await api<Order>(`/orders/${order.id}`).catch(() => null);
+                if (current) setPaying({ order: current });
+              }
+              throw e;
+            }
           }}
         />
       )}

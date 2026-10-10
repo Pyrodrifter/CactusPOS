@@ -9,6 +9,7 @@
 //   node ops/app/launch.mjs --server-only      server only, no window
 //   node ops/app/launch.mjs --status           is it running, which addresses do tablets use, where is the data
 //   node ops/app/launch.mjs --stop             stop the server this launcher started
+//   node ops/app/launch.mjs --restore [file]   put a backup back (the newest one, or the file named); asks first
 //   node ops/app/launch.mjs --configure --port 3000 --seed cactus-blue   write settings (add --if-new to keep existing ones)
 //   --gui   show problems in a message window as well; the shortcuts pass it, because nobody sees their console
 //
@@ -288,6 +289,54 @@ function configure(args) {
   return 0;
 }
 
+async function confirmed(question) {
+  if (!process.stdin.isTTY) throw new LaunchError('Nobody is here to answer, so nothing was changed. Add --yes to restore without being asked.');
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try { return /^(y|yes|j|ja)$/i.test((await rl.question(question)).trim()); } finally { rl.close(); }
+}
+
+/** Puts a backup in place of the database. What it replaces is moved aside, never deleted. */
+async function restore(config, args) {
+  const { inspectDatabase, listBackups, restoreBackup } = await import('./restore.mjs');
+  const backups = join(dirname(paths.db), 'backups');
+  const file = args.file ? resolve(args.file) : listBackups(backups)[0]?.path;
+  if (!file) throw new LaunchError(`There is no backup in ${backups}.\nTo use a backup kept somewhere else (a USB stick): drag that file onto "Restore CactusPOS backup.bat", or run --restore <file>`);
+  const say = (d) => `${d.orders} order${d.orders === 1 ? '' : 's'}, last receipt #${d.lastReceipt}${d.lastChange ? `, last change ${new Date(d.lastChange).toLocaleString()}` : ''}`;
+  let backup;
+  try { backup = await inspectDatabase(file); } catch (e) { throw new LaunchError(e.message); }
+  let current = null;
+  if (existsSync(paths.db)) { try { current = await inspectDatabase(paths.db); } catch { /* unreadable: all the more reason to restore */ } }
+
+  // The server holds the database open; only the copy this launcher started can be stopped from here.
+  const h = await health(config.port);
+  const running = h.reached && isCactusHealth(h.body);
+  if (running && readState()?.startedAt !== h.body.startedAt) {
+    throw new LaunchError(`CactusPOS is running on port ${config.port}, but this launcher did not start it (start.bat or "npm start").\nStop it where it was started, then restore again. Nothing was changed.`);
+  }
+
+  console.log(`Backup to put back:   ${file}`);
+  console.log(`                      ${say(backup)}`);
+  console.log(`On this computer now: ${current ? say(current) : existsSync(paths.db) ? 'a database that cannot be read' : 'no database yet'}`);
+  if (current && current.orders > backup.orders) {
+    console.log(`\n!! The backup is OLDER: ${current.orders - backup.orders} order(s) made since then would no longer be in the till.`);
+  }
+  if (existsSync(paths.db)) console.log(`\nThe data on this computer now is kept, in a folder named replaced-... inside ${dirname(paths.db)}`);
+  if (!args.yes && !(await confirmed('\nPut this backup back? Type yes and press Enter: '))) { console.log('Nothing was changed.'); return 0; }
+
+  if (running && (await stop(config)) !== 0) throw new LaunchError('CactusPOS could not be stopped, so nothing was changed.');
+  let done;
+  try { done = restoreBackup({ dbPath: paths.db, backupFile: file }); } catch (e) { throw new LaunchError(`The backup could not be put back: ${e.message}`); }
+  note(`restored ${file}${done.aside ? `, previous data in ${done.aside}` : ''}`);
+  console.log(`\nDone. CactusPOS now has ${say(backup)}.`);
+  if (done.aside) console.log(`The data it replaced is in ${done.aside}`);
+  if (running) {
+    await waitForServer(config, startServer(config));
+    console.log('CactusPOS is running again. Reload the screens that are open.');
+  } else console.log('Start CactusPOS as usual.');
+  return 0;
+}
+
 const HELP = `CactusPOS launcher
   (no option)        start the server if needed and open the till window
   --screen NAME      open pos, kitchen, pickup or admin
@@ -295,6 +344,7 @@ const HELP = `CactusPOS launcher
   --server-only      start the server, no window
   --status [--json]  running or not, addresses for tablets, where the data is
   --stop             stop the server this launcher started
+  --restore [FILE]   put a backup back: the newest one, or FILE; asks first (--yes skips the question)
   --configure        write settings: --port N, --seed NAME, --screen NAME, --kiosk; --if-new keeps an existing file
   --gui              also show problems in a message window (the shortcuts use this)
 Settings file: ${paths.config}
@@ -308,6 +358,7 @@ async function main() {
   const { config } = loadConfig(args.overrides);
   if (args.command === 'status') return status(config, args.json);
   if (args.command === 'stop') return stop(config);
+  if (args.command === 'restore') return restore(config, args);
   return open(config, args.command === 'open');
 }
 
