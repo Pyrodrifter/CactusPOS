@@ -140,6 +140,45 @@ MIGRATIONS.push({ version: 4, name: 'receipt-design-versions', up: (db) => {
   db.exec(`CREATE TABLE receipt_templates (version INTEGER PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL, staff_id TEXT NOT NULL); ${appendOnly('receipt_templates', 'version')}`);
 } });
 
+/** The business date of a moment in a time zone, the way `PosService.businessDate` names it. */
+function dateIn(timeZone: string, iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(iso));
+}
+
+MIGRATIONS.push({
+  /**
+   * Records the day the money moved on each order, so day reports count a sale on the day it was paid
+   * and a refund on the day it was handed back (before, both landed on the day the order was opened).
+   * Like a receipt number, neither date can change once it is set.
+   */
+  version: 5, name: 'money-dates',
+  up: (db) => {
+    db.exec(`ALTER TABLE orders ADD COLUMN paid_date TEXT;
+ALTER TABLE orders ADD COLUMN void_date TEXT;
+CREATE INDEX orders_paid_date ON orders(paid_date);
+CREATE INDEX orders_void_date ON orders(void_date);`);
+    // Orders already in the database: the payment time and the time of the void event say which day it was.
+    let zone = 'America/Kralendijk';
+    try {
+      const row = db.prepare("SELECT v FROM kv WHERE k = 'business'").get() as { v: string } | undefined;
+      const saved = (JSON.parse(row?.v ?? '{}') as { timezone?: string }).timezone;
+      if (saved) { dateIn(saved, '2026-01-01T00:00:00Z'); zone = saved; }
+    } catch { /* an unusable saved zone: keep the default */ }
+    const paid = db.prepare('SELECT order_id, MIN(at) AS at FROM payments GROUP BY order_id').all() as { order_id: string; at: string }[];
+    const setPaid = db.prepare('UPDATE orders SET paid_date = ? WHERE id = ?');
+    for (const p of paid) setPaid.run(dateIn(zone, p.at), p.order_id);
+    const voided = db.prepare(`SELECT o.id AS id,
+      COALESCE((SELECT MAX(e.at) FROM order_events e WHERE e.order_id = o.id AND e.type = 'order.void'), json_extract(o.data, '$.updatedAt')) AS at
+      FROM orders o WHERE json_extract(o.data, '$.status') = 'void'`).all() as { id: string; at: string | null }[];
+    const setVoid = db.prepare('UPDATE orders SET void_date = ? WHERE id = ?');
+    for (const v of voided) if (v.at) setVoid.run(dateIn(zone, v.at), v.id);
+    db.exec(`CREATE TRIGGER orders_money_dates_fixed BEFORE UPDATE ON orders
+WHEN (OLD.paid_date IS NOT NULL AND NEW.paid_date IS NOT OLD.paid_date)
+  OR (OLD.void_date IS NOT NULL AND NEW.void_date IS NOT OLD.void_date)
+BEGIN SELECT RAISE(ABORT, 'the day an order was paid or voided cannot change once recorded'); END;`);
+  },
+});
+
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
 export function schemaVersion(db: DB): number {

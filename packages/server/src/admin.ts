@@ -13,7 +13,8 @@ export class AdminService {
       CREATE TRIGGER IF NOT EXISTS audit_log_no_delete BEFORE DELETE ON audit_log BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;`);
   }
 
-  private log(type: string, payload: unknown, by: Staff): void {
+  /** Appends one row to the audit log. Also used by routes for changes that have no method here. */
+  log(type: string, payload: unknown, by: Staff): void {
     this.db.prepare('INSERT INTO audit_log(type, payload, staff_id, at) VALUES (?,?,?,?)').run(type, JSON.stringify(payload), by.id, new Date().toISOString());
   }
 

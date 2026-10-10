@@ -3,18 +3,20 @@ import { CentsZ, IsoDateTime, PaymentMethod, PriceZ } from './domain.js';
 import { IsoDate, TaxBreakdownRow } from './tax.js';
 
 /**
- * Day report: everything sold on one business date.
+ * Day report: the money that moved on one business date.
  *  - Viewed any time during the day it is the "X report" (a reading, nothing is stored).
  *  - Closing the day stores it as a numbered "Z report", the figure the books are posted from.
- * "Sales" are paid orders that were not voided. Orders voided after payment are shown separately
- * as refunds and are not part of sales.
+ * A sale belongs to the day it was paid, a refund to the day the money was handed back, whatever day the
+ * order was opened. A sale paid and refunded on the same day nets to nothing and is left out of the sales
+ * figures; a refund of an earlier day's sale is taken off this day's sales, ABB and payments, so those can
+ * be negative on a day with little else. Refunds are also listed separately.
  */
 export const TenderTotal = z.object({
   method: PaymentMethod,
   count: z.number().int().nonnegative(),
-  /** Money taken for sales by this method (excludes tips). */
-  amountCents: PriceZ,
-  tipCents: PriceZ,
+  /** Money taken for sales by this method, less refunds of earlier days' sales (excludes tips). */
+  amountCents: CentsZ,
+  tipCents: CentsZ,
 });
 export type TenderTotal = z.infer<typeof TenderTotal>;
 
@@ -22,27 +24,32 @@ export const DayReport = z.object({
   businessDate: IsoDate,
   generatedAt: IsoDateTime,
   orders: z.object({
-    /** Paid, not voided. */
+    /** Paid on this day and not refunded on this day. */
     sold: z.number().int().nonnegative(),
-    /** Sent but not paid yet, not voided. */
+    /** Opened on this day, not paid yet, not voided. */
     unpaid: z.number().int().nonnegative(),
     unpaidCents: PriceZ,
-    /** Voided before any payment. */
+    /** Opened on this day and voided before any payment. */
     voidedUnpaid: z.number().int().nonnegative(),
-    /** Voided after payment: money handed back. */
+    /** Refunds given on this day (voided after payment), whatever day the sale was. */
     refunded: z.number().int().nonnegative(),
   }),
-  sales: z.object({ grossCents: PriceZ, taxCents: PriceZ, netCents: PriceZ }),
+  sales: z.object({ grossCents: CentsZ, taxCents: CentsZ, netCents: CentsZ }),
   /** One row per tax category and rate, summed over the day's receipts. */
   tax: z.array(TaxBreakdownRow),
   tenders: z.array(TenderTotal),
-  tipsCents: PriceZ,
+  tipsCents: CentsZ,
   refunds: z.array(z.object({ method: PaymentMethod, count: z.number().int().nonnegative(), amountCents: PriceZ })),
-  /** Cash that should be in the drawer from today's trading: cash from sales that stand (refunded sales net to nothing). Excludes any float. */
+  /**
+   * Refunds given on this day for sales of an earlier day. Already taken off `sales`, `tax` and `tenders`
+   * above; listed so the reader can see why. Absent when there were none (and on reports stored before 2026-10-10).
+   */
+  refundedEarlier: z.object({ count: z.number().int().positive(), grossCents: PriceZ, taxCents: PriceZ }).optional(),
+  /** Cash this day's trading put in the drawer: cash taken for sales less cash handed back. Excludes any float. */
   cashExpectedCents: CentsZ,
   receipts: z.object({ first: z.number().int().positive().nullable(), last: z.number().int().positive().nullable(), count: z.number().int().nonnegative() }),
   items: z.array(z.object({ name: z.string(), qty: z.number().int().positive(), grossCents: PriceZ })),
-  /** Sales per hour of the day in the business time zone. */
+  /** Sales per hour of the day they were paid, in the business time zone. */
   hours: z.array(z.object({ hour: z.number().int().min(0).max(23), orders: z.number().int().nonnegative(), grossCents: PriceZ })),
 });
 export type DayReport = z.infer<typeof DayReport>;

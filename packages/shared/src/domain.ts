@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MAX_CENTS } from './money.js';
-import { TaxBreakdownRow, TaxCategorySchema } from './tax.js';
+import { IsoDate, TaxBreakdownRow, TaxCategorySchema } from './tax.js';
 import { ServiceMode } from './receiptDesign.js';
 
 /**
@@ -108,6 +108,14 @@ export const Order = z.object({
   breakdown: z.array(TaxBreakdownRow),
   voidReason: z.string().optional(),
   /**
+   * The business date the money moved on, which is the day a sale or refund belongs to in the day reports:
+   * `paidDate` when the payment was taken, `voidDate` when the order was voided (for a paid order: when the
+   * money was handed back). Absent on orders stored before these were recorded; the database row has them.
+   */
+  paidDate: IsoDate.optional(),
+  voidedAt: IsoDateTime.optional(),
+  voidDate: IsoDate.optional(),
+  /**
    * Tabs. An unpaid order is an open tab: it can be given a name, more rounds of items can be added
    * to it, and it is paid once at the end, on one receipt.
    */
@@ -182,6 +190,11 @@ export type CreateOrderBodyT = z.infer<typeof CreateOrderBody>;
 export const PayBody = z.object({
   method: PaymentMethod, tenderedCents: PriceZ.optional(),
   reference: z.string().max(60).optional(), tipCents: PriceZ.default(0),
+  /**
+   * The total the cashier saw when confirming. When it no longer matches the order (a round was added on
+   * another screen), the server answers 409 instead of recording a payment for a different amount.
+   */
+  expectedTotalCents: PriceZ.optional(),
 });
 export type PayBodyT = z.infer<typeof PayBody>;
 export const StatusBody = z.object({ status: z.enum(['preparing', 'ready', 'collected']) });

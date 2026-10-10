@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  computeTotals, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
+  computeTotals, formatMoney, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
   type AddLinesBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard, type ServiceMode,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
@@ -12,6 +12,10 @@ export const DEFAULT_BUSINESS: Business = {
   name: 'Cactus Blue', crib: '', address: 'Bonaire', phone: '',
   timezone: 'America/Kralendijk', currency: 'USD', locale: 'en', receiptFooter: 'Thank you! / Dank u wel!',
 };
+
+/** How long unfinished kitchen work from an earlier business day stays on the kitchen and pickup screens. */
+const KITCHEN_CARRY_MS = 16 * 3600_000;
+const inKitchen = (o: Order) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -54,18 +58,32 @@ export class PosService {
     if (!row) throw new HttpError(404, 'Order not found');
     return JSON.parse(row.data);
   }
-  /** Orders still needing attention today (not collected, not void) or unpaid. */
+  /**
+   * Orders still needing attention: today's that are not void and not both collected and paid, plus
+   * kitchen work left from an earlier business day (an order sent just before midnight, an older tab
+   * that ordered another round). Old tickets nobody finished drop off after KITCHEN_CARRY_MS.
+   */
   activeOrders(): Order[] {
-    const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? ORDER BY ticket_number').all(this.businessDate()) as { data: string }[];
-    return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => o.serviceMode !== 'counter' && o.status !== 'void' && (o.status !== 'collected' || !o.paid));
+    const today = this.businessDate();
+    const dayBefore = new Date(Date.parse(`${today}T12:00:00Z`) - 86400_000).toISOString().slice(0, 10);
+    const rows = this.db.prepare('SELECT business_date, data FROM orders WHERE business_date >= ? OR receipt_number IS NULL ORDER BY business_date, ticket_number')
+      .all(dayBefore) as { business_date: string; data: string }[];
+    const fresh = Date.now() - KITCHEN_CARRY_MS;
+    return rows.map((r) => ({ date: r.business_date, o: JSON.parse(r.data) as Order }))
+      .filter(({ date, o }) => o.serviceMode !== 'counter' && o.status !== 'void' && (date === today
+        ? o.status !== 'collected' || !o.paid
+        : inKitchen(o) && Date.parse(o.kitchenSince ?? o.createdAt) >= fresh))
+      .map(({ o }) => o);
   }
   /** Every unpaid, non-void order, whatever day it was started: the tab list. Oldest first. */
   openTabs(): Order[] {
     const rows = this.db.prepare('SELECT data FROM orders WHERE receipt_number IS NULL ORDER BY created_at').all() as { data: string }[];
     return rows.map((r) => JSON.parse(r.data) as Order).filter((o) => !o.paid && o.status !== 'void');
   }
+  /** Everything that happened today: orders opened today, and older ones paid or voided today (their receipt can be reprinted). */
   todaysOrders(): Order[] {
-    const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? ORDER BY ticket_number DESC').all(this.businessDate()) as { data: string }[];
+    const today = this.businessDate();
+    const rows = this.db.prepare('SELECT data FROM orders WHERE business_date = ? OR paid_date = ? OR void_date = ? ORDER BY business_date DESC, ticket_number DESC').all(today, today, today) as { data: string }[];
     return rows.map((r) => JSON.parse(r.data));
   }
 
@@ -82,7 +100,9 @@ export class PosService {
       this.db.prepare('INSERT INTO orders(id, ticket_number, receipt_number, business_date, data, created_at) VALUES (?,?,?,?,?,?)')
         .run(order.id, order.ticketNumber, order.receiptNumber, date, data, order.createdAt);
     } else {
-      this.db.prepare('UPDATE orders SET receipt_number = ?, data = ? WHERE id = ?').run(order.receiptNumber, data, order.id);
+      // The money dates are written once: COALESCE keeps what an older order already has in its row.
+      this.db.prepare('UPDATE orders SET receipt_number = ?, data = ?, paid_date = COALESCE(paid_date, ?), void_date = COALESCE(void_date, ?) WHERE id = ?')
+        .run(order.receiptNumber, data, order.paidDate ?? null, order.voidDate ?? null, order.id);
     }
     this.db.prepare('INSERT INTO order_events(order_id, type, payload, staff_id, at) VALUES (?,?,?,?,?)')
       .run(order.id, type, JSON.stringify({ ...payload, order }), staff.id, now);
@@ -114,7 +134,7 @@ export class PosService {
    */
   verifyLedger(): string[] {
     const problems: string[] = [];
-    const orders = this.db.prepare('SELECT id, receipt_number, data FROM orders').all() as { id: string; receipt_number: number | null; data: string }[];
+    const orders = this.db.prepare('SELECT id, receipt_number, paid_date, void_date, data FROM orders').all() as { id: string; receipt_number: number | null; paid_date: string | null; void_date: string | null; data: string }[];
     for (const row of orders) {
       const order = JSON.parse(row.data) as Order;
       const snapshot = this.orderFromEvents(row.id);
@@ -124,6 +144,8 @@ export class PosService {
         problems.push(`order ${row.id}: payments on the order do not match the payments table`);
       }
       if ((row.receipt_number ?? null) !== order.receiptNumber) problems.push(`order ${row.id}: receipt number mismatch`);
+      if ((order.paidDate && order.paidDate !== row.paid_date) || (order.voidDate && order.voidDate !== row.void_date)) problems.push(`order ${row.id}: the day it was paid or voided does not match its record`);
+      if ((order.paid && !row.paid_date) || (order.status === 'void' && !row.void_date)) problems.push(`order ${row.id}: no day recorded for its payment or void`);
     }
     const max = (this.db.prepare('SELECT MAX(receipt_number) AS m, COUNT(receipt_number) AS n FROM orders').get() as { m: number | null; n: number });
     if ((max.m ?? 0) !== max.n) problems.push(`receipt numbers have a gap: highest is ${max.m ?? 0} but ${max.n} were issued`);
@@ -134,7 +156,10 @@ export class PosService {
   repairOrder(id: string): boolean {
     const snapshot = this.orderFromEvents(id);
     if (!snapshot) return false;
-    tx(this.db, () => { this.db.prepare('UPDATE orders SET receipt_number = ?, data = ? WHERE id = ?').run(snapshot.receiptNumber, JSON.stringify(snapshot), id); });
+    tx(this.db, () => {
+      this.db.prepare('UPDATE orders SET receipt_number = ?, data = ?, paid_date = COALESCE(paid_date, ?), void_date = COALESCE(void_date, ?) WHERE id = ?')
+        .run(snapshot.receiptNumber, JSON.stringify(snapshot), snapshot.paidDate ?? null, snapshot.voidDate ?? null, id);
+    });
     return true;
   }
 
@@ -236,7 +261,9 @@ export class PosService {
       order.round = round;
       // If the kitchen had finished everything so far, this round is a fresh ticket for them.
       // If they are still on an earlier round, the new lines simply join the ticket they have.
-      if (order.status === 'ready' || order.status === 'collected') {
+      // A ticket left over from an earlier day has dropped off the kitchen screen, so that one starts fresh too.
+      const gone = this.rowDate(id) !== this.businessDate() && Date.parse(order.kitchenSince ?? order.createdAt) < Date.now() - KITCHEN_CARRY_MS;
+      if (order.status === 'ready' || order.status === 'collected' || gone) {
         order.kitchenRound = round;
         order.kitchenSince = new Date().toISOString();
         order.status = 'sent';
@@ -269,6 +296,11 @@ export class PosService {
       const order = this.getOrder(id);
       if (order.status === 'void') throw new HttpError(409, 'Order is void');
       if (order.paid) throw new HttpError(409, 'Order already paid');
+      // The cashier confirmed an amount. If the order grew since (a round added on another screen), stop: for a
+      // card payment nothing else would catch that the terminal was charged a different total.
+      if (body.expectedTotalCents !== undefined && body.expectedTotalCents !== order.totalCents) {
+        throw new HttpError(409, `This order changed while you were taking payment. The total is now ${formatMoney(order.totalCents, 'en-US', this.business().currency)}.`);
+      }
       let tendered: number | undefined, change: number | undefined;
       if (body.method === 'cash') {
         tendered = body.tenderedCents ?? order.totalCents;
@@ -281,6 +313,8 @@ export class PosService {
       };
       order.payments.push(payment);
       order.paid = true;
+      // The sale belongs to today's report and drawer, whatever day the order was opened.
+      order.paidDate = this.businessDate();
       order.receiptNumber = nextCounter(this.db, 'receipt');
       // The payments table is the protected record of money taken; the order keeps a copy for display.
       this.db.prepare('INSERT INTO payments(id, order_id, receipt_number, method, amount_cents, tendered_cents, change_cents, tip_cents, reference, staff_id, at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
@@ -310,6 +344,9 @@ export class PosService {
       }
       order.status = 'void';
       order.voidReason = reason;
+      // For a paid order this is the day the money goes back, which is the day the refund is reported on.
+      order.voidedAt = new Date().toISOString();
+      order.voidDate = this.businessDate();
       this.save(order, 'order.void', { reason }, staff, this.rowDate(id));
       return order;
     });
@@ -321,10 +358,12 @@ export class PosService {
 
   /** What the public pickup board may see: numbers and states only. */
   pickupBoard(): PickupBoard {
-    const active = this.activeOrders().filter((o) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready');
+    const active = this.activeOrders().filter(inKitchen);
+    // Ticket numbers restart each day, so work carried over from yesterday can share a number with today's.
+    const numbers = (orders: Order[]) => [...new Set(orders.map((o) => o.ticketNumber))];
     return {
-      preparing: active.filter((o) => o.status !== 'ready').map((o) => o.ticketNumber),
-      ready: active.filter((o) => o.status === 'ready').map((o) => o.ticketNumber),
+      preparing: numbers(active.filter((o) => o.status !== 'ready')),
+      ready: numbers(active.filter((o) => o.status === 'ready')),
     };
   }
 }

@@ -5,6 +5,8 @@ import type { DB } from './db.js';
 export type { Staff };
 
 const SESSION_DAYS = 30;
+/** The PINs a new database starts with (see seedData.ts). Fine for trying the till out, not for trading. */
+export const EXAMPLE_PINS = ['1234', '1111'];
 
 export function hashPin(pin: string): string {
   const salt = randomBytes(16).toString('hex');
@@ -51,11 +53,17 @@ export class Auth {
     return r ?? null;
   }
 
+  /** Active staff who can still sign in with one of the example PINs. */
+  withExamplePin(): Staff[] {
+    const rows = this.db.prepare('SELECT id, name, role, pin FROM staff WHERE active = 1 ORDER BY name').all() as unknown as (Staff & { pin: string })[];
+    return rows.filter((r) => EXAMPLE_PINS.some((pin) => verifyPin(pin, r.pin))).map((r) => ({ id: r.id, name: r.name, role: r.role }));
+  }
+
   logout(token: string): void { this.db.prepare('DELETE FROM sessions WHERE token = ?').run(token); }
   logoutStaff(staffId: string): void { this.db.prepare('DELETE FROM sessions WHERE staff_id = ?').run(staffId); }
 }
 
-/** Slows PIN guessing: 5 wrong tries from one address locks it out for 30 seconds. */
+/** Slows PIN guessing: 5 wrong tries under one key (an address, a signed-in person) locks it out for 30 seconds. */
 export class LoginThrottle {
   private fails = new Map<string, { n: number; until: number }>();
   blocked(key: string, now = Date.now()): boolean { return (this.fails.get(key)?.until ?? 0) > now; }

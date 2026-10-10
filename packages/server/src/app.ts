@@ -18,16 +18,30 @@ import type { Transport } from '@cactus/printer';
 import { HttpError, PosService, type Staff } from './service.js';
 import { renderReceiptHtml } from './receipt.js';
 import { ReceiptTemplates, previewHtml } from './receiptTemplates.js';
+import { Backups, BackupSettings } from './backup.js';
 import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplateBody } from '@cactus/shared';
 import type { DB } from './db.js';
 
-interface Client { send(data: string): void; kind: 'staff' | 'pickup' }
+interface Client {
+  send(data: string): void; kind: 'staff' | 'pickup';
+  /** Answered the last heartbeat. A screen that stops answering is dropped, see the heartbeat below. */
+  alive: boolean; ping(): void; drop(): void;
+}
 
 const VERSION = (JSON.parse(readFileSync(resolve(import.meta.dirname, '../package.json'), 'utf8')) as { version: string }).version;
 /** Constant for one run of the server process; see `GET /api/health`. */
 const STARTED_AT = new Date().toISOString();
 
-export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s: PrinterSettings) => Transport | null } = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books } {
+export interface AppOptions {
+  webDist?: string;
+  printerTransport?: (s: PrinterSettings) => Transport | null;
+  /** Folder for database backups. Left out = no backups (in-memory databases in tests). */
+  backupDir?: string;
+  /** How often every live connection gets a sign of life. Tests shorten it. */
+  heartbeatMs?: number;
+}
+
+export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books; backups: Backups } {
   const svc = new PosService(db);
   const templates = new ReceiptTemplates(db);
   const app = Fastify({ logger: false });
@@ -37,6 +51,8 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.addHook('onClose', async () => printing.queue.stop());
   const reports = new Reports(db, svc);
   const books = new Books(db, svc);
+  const backups = new Backups(db, opts.backupDir ?? null);
+  app.addHook('onClose', async () => backups.stop());
   const clients = new Set<Client>();
 
   const broadcast = (ev: ServerEvent) => {
@@ -49,7 +65,7 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     for (const c of clients) if (c.kind === 'pickup') c.send(board);
   };
 
-  app.setErrorHandler((err: unknown, _req, reply) => {
+  app.setErrorHandler((err: unknown, req, reply) => {
     if (err instanceof HttpError) return reply.code(err.status).send({ error: err.message });
     if (err instanceof ZodError) return reply.code(400).send({ error: 'Invalid request', issues: err.issues });
     if (err instanceof MoneyError) return reply.code(400).send({ error: err.message });
@@ -59,8 +75,13 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     }
     // A sale the tax setup cannot price must stop loudly rather than go through untaxed.
     if (err instanceof TaxConfigError) return reply.code(409).send({ error: `Tax setup problem: ${err.message}` });
+    // Fastify's own refusals (unreadable JSON, a body that is too large) and the 404/409 raised with a status
+    // carry a message meant for the screen.
     const e = err as { statusCode?: number; message?: string };
-    return reply.code(e.statusCode ?? 500).send({ error: e.message ?? 'Server error' });
+    if (e.statusCode && e.statusCode >= 400 && e.statusCode < 500) return reply.code(e.statusCode).send({ error: e.message ?? 'Request refused' });
+    // Anything else is a fault in the till itself. The details belong in the server log, not on a screen.
+    console.error(`[${new Date().toISOString()}] ${req.method} ${req.url.split('?')[0]} failed:`, err);
+    return reply.code(500).send({ error: 'Something went wrong on the till. Please try again.' });
   });
 
   const authOf = (req: FastifyRequest): Staff => {
@@ -91,13 +112,36 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
       const q = req.query as { token?: string; room?: string };
       const pickup = q.room === 'pickup';
       if (!pickup && !svc.auth.staffFor(q.token)) { socket.close(4401, 'login required'); return; }
-      const client: Client = { send: (d) => socket.send(d), kind: pickup ? 'pickup' : 'staff' };
+      const client: Client = {
+        send: (d) => socket.send(d), kind: pickup ? 'pickup' : 'staff', alive: true,
+        ping: () => { try { socket.ping(); } catch { /* closing; the next round drops it */ } },
+        drop: () => socket.terminate(),
+      };
       clients.add(client);
+      socket.on('pong', () => { client.alive = true; });
       socket.on('close', () => clients.delete(client));
       socket.send(JSON.stringify({ type: 'hello', serverTime: new Date().toISOString() } satisfies ServerEvent));
       if (pickup) socket.send(JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() } satisfies ServerEvent));
     });
   });
+
+  /**
+   * Heartbeat. A connection can die without a goodbye (laptop restarted while a tablet slept, a WiFi gap), and
+   * neither side would notice by itself. So every `heartbeatMs` each screen is sent a `hello`: a screen that hears
+   * nothing for a while knows to reconnect and reload. Each screen is also pinged, and one that did not answer the
+   * previous ping is dropped here, so dead connections do not pile up.
+   */
+  const heartbeat = setInterval(() => {
+    const hello = JSON.stringify({ type: 'hello', serverTime: new Date().toISOString() } satisfies ServerEvent);
+    for (const c of clients) {
+      if (!c.alive) { clients.delete(c); c.drop(); continue; }
+      c.alive = false;
+      c.ping();
+      c.send(hello);
+    }
+  }, opts.heartbeatMs ?? 15_000);
+  heartbeat.unref();
+  app.addHook('onClose', async () => clearInterval(heartbeat));
 
   app.get('/api/health', async () => ({ ok: true, app: 'cactuspos', version: VERSION, startedAt: STARTED_AT, business: svc.business().name, time: new Date().toISOString() }));
   app.get('/api/pickup', async () => svc.pickupBoard());
@@ -191,7 +235,17 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.post('/api/orders/:id/void', async (req) => {
     const staff = authOf(req);
     const b = VoidBody.parse(req.body);
-    const order = svc.voidOrder(idOf(req), b.reason, b.managerPin, staff);
+    // The manager PIN is the owner's sign-in PIN, so guessing it here is limited the way sign-in is.
+    const guesses = `manager-pin:${staff.id}`;
+    if (b.managerPin && throttle.blocked(guesses)) throw new HttpError(429, 'Too many wrong manager PINs. Wait 30 seconds.');
+    let order: Order;
+    try { order = svc.voidOrder(idOf(req), b.reason, b.managerPin, staff); } catch (e) {
+      if (b.managerPin && e instanceof HttpError && e.status === 403) {
+        throttle.fail(guesses);
+        admin.log('void.manager_pin_refused', { orderId: idOf(req) }, staff);
+      }
+      throw e;
+    }
     broadcastOrder(order);
     return order;
   });
@@ -207,7 +261,11 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
     const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
     return { report: reports.day(date), closed: reports.latestFor(date), today: svc.businessDate() };
   });
-  app.post('/api/reports/day/close', async (req, reply) => reply.code(201).send(reports.close(CloseDayBody.parse(req.body), ownerOf(req))));
+  app.post('/api/reports/day/close', async (req, reply) => {
+    const z = reports.close(CloseDayBody.parse(req.body), ownerOf(req));
+    backups.runIfChanged(); // a closed day is worth a copy straight away; a failed backup never fails the close
+    return reply.code(201).send(z);
+  });
   app.get('/api/reports/z', async (req) => { ownerOf(req); return reports.list(); });
   // Prints the closed Z report for the date if there is one, otherwise a reading of the day so far.
   app.post('/api/reports/day/print', async (req) => {
@@ -224,7 +282,12 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
 
   /* ----- bookkeeping exports: owner only ----- */
   app.get('/api/books', async (req) => { ownerOf(req); return { settings: books.settings(), pbk: books.status(), today: svc.businessDate() }; });
-  app.put('/api/books/settings', async (req) => { ownerOf(req); return books.save(BooksSettings.parse(req.body)); });
+  app.put('/api/books/settings', async (req) => {
+    const by = ownerOf(req);
+    const saved = books.save(BooksSettings.parse(req.body));
+    admin.log('books.saved', saved, by);
+    return saved;
+  });
   app.post('/api/books/pbk/post', async (req) => { ownerOf(req); return books.postToPbk(); });
   const csv = (reply: import('fastify').FastifyReply, name: string, body: string) =>
     reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${name}"`).send(body);
@@ -256,7 +319,12 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   });
   app.post('/api/print/retry', async (req) => { authOf(req); printing.queue.retryFailed(); return ok; });
   app.get('/api/admin/printer', async (req) => { ownerOf(req); return printing.settings(); });
-  app.put('/api/admin/printer', async (req) => { ownerOf(req); return printing.save(PrinterSettings.parse(req.body)); });
+  app.put('/api/admin/printer', async (req) => {
+    const by = ownerOf(req);
+    const saved = printing.save(PrinterSettings.parse(req.body));
+    admin.log('printer.saved', saved, by);
+    return saved;
+  });
   app.post('/api/admin/printer/test', async (req) => {
     ownerOf(req);
     if (!printing.active) throw new HttpError(409, 'Turn the printer on and enter its address first');
@@ -300,7 +368,18 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
   app.get('/api/admin/staff', async (req) => { ownerOf(req); return admin.listStaff(); });
   app.post('/api/admin/staff', async (req, reply) => reply.code(201).send(admin.saveStaff(undefined, StaffInput.parse(req.body), ownerOf(req))));
   app.put('/api/admin/staff/:id', async (req) => admin.saveStaff(idOf(req), StaffInput.parse(req.body), ownerOf(req)));
+  // Who can still sign in with a PIN every new database starts with (1234, 1111). Admin shows a reminder.
+  app.get('/api/admin/staff/example-pins', async (req) => { ownerOf(req); return { staff: svc.auth.withExamplePin() }; });
   app.get('/api/admin/audit', async (req) => { ownerOf(req); return admin.auditLog(); });
+
+  /* ----- backups: owner only ----- */
+  app.get('/api/admin/backups', async (req) => { ownerOf(req); return backups.state(); });
+  app.put('/api/admin/backups/settings', async (req) => {
+    const by = ownerOf(req);
+    admin.log('backup.settings', backups.save(BackupSettings.parse(req.body)), by);
+    return backups.state();
+  });
+  app.post('/api/admin/backups/run', async (req) => { ownerOf(req); backups.run(); return backups.state(); });
 
   const dist = opts.webDist ?? resolve(import.meta.dirname, '../../web/dist');
   if (existsSync(dist)) {
@@ -310,5 +389,5 @@ export function buildApp(db: DB, opts: { webDist?: string; printerTransport?: (s
       return reply.sendFile('index.html');
     });
   }
-  return { app, svc, admin, printing, reports, books };
+  return { app, svc, admin, printing, reports, books, backups };
 }

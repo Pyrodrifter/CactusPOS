@@ -1,12 +1,15 @@
-import { resolve } from 'node:path';
-import { networkInterfaces } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { homedir, networkInterfaces } from 'node:os';
 import { createServer } from 'node:net';
 import { openDb } from './db.js';
 import { buildApp } from './app.js';
 import { seedSample } from './seedData.js';
 import { applyProfile } from './seedProfile.js';
+import { chooseDb, prepareDb } from './dataHome.js';
 
-const dbPath = process.env.CACTUS_DB ?? resolve(process.cwd(), 'data/cactus.sqlite');
+// One database however the till is started; CACTUS_DB names another file (development, tests).
+const choice = chooseDb(process.env, process.platform, homedir(), process.cwd());
+const dbPath = resolve(choice.path);
 const wanted = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(wanted) || wanted < 1 || wanted > 65535) {
   console.error('PORT must be an integer between 1 and 65535.');
@@ -33,6 +36,7 @@ while (!(await isFree(port))) {
 if (port !== wanted) console.warn(`
 !! Port ${wanted} is already in use (is CactusPOS already running?). Using ${port} instead.
 `);
+for (const line of prepareDb(choice)) console.warn(line);
 const db = openDb(dbPath);
 if (!db.prepare('SELECT 1 FROM tax_categories LIMIT 1').get()) {
   seedSample(db);
@@ -40,9 +44,12 @@ if (!db.prepare('SELECT 1 FROM tax_categories LIMIT 1').get()) {
   if (profile) applyProfile(db, profile);
   console.log(`Empty database: loaded ${profile ? `seed/${profile}.json` : 'SAMPLE menu'}. Default PINs: owner 1234, staff 1111 — change them in Admin.`);
 }
-const { app } = buildApp(db);
+const backupDir = join(dirname(dbPath), 'backups');
+const { app, backups } = buildApp(db, { backupDir });
 await app.listen({ port, host: '0.0.0.0' });
+backups.start();
 const ips = Object.values(networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n!.address);
 console.log(`CactusPOS running. DB: ${dbPath}`);
+console.log(`Backups: ${backupDir}`);
 console.log(`  http://localhost:${port}   (this computer)`);
 for (const ip of ips) console.log(`  http://${ip}:${port}   (phones and tablets on the same WiFi)`);
