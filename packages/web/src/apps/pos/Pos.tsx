@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import {
   computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
 } from '@cactus/shared';
-import { api, ApiError, newRequestId, printReceipt } from '../../lib/api';
+import { api, ApiError, getSession, newRequestId, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
 import type { CSSProperties } from 'react';
 import { useLang } from '../../i18n';
@@ -264,7 +264,7 @@ export function Pos() {
           onPay={(order) => setPaying({ order })}
         />
       ) : (
-        <OrdersList orders={[...orders].reverse()} onPay={(order) => setPaying({ order })} />
+        <OrdersList orders={[...orders].reverse()} menu={menu} onPay={(order) => setPaying({ order })} />
       )}
 
       {view === 'order' && cart.length > 0 && <div className="pos-mobile-bar">
@@ -449,7 +449,116 @@ function PaySheet({ total, onPay, onCancel }: {
   );
 }
 
-function OrdersList({ orders, onPay }: { orders: Order[]; onPay: (o: Order) => void }) {
+/**
+ * Fixes a paid order without voiding it by hand: change quantities, take items off, add items, switch the
+ * payment method. The server keeps the original on record as void and makes a replacement sale with its own
+ * receipt number; this sheet only says what to give back or collect.
+ */
+function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: Menu; onDone: () => void; onCancel: () => void }) {
+  const { t, lang } = useLang();
+  const c = copy[lang];
+  const ui = lang === 'nl' ? {
+    eyebrow: 'Bon', title: 'Bestelling corrigeren', addItem: 'Iets toevoegen', search: 'Zoek op het menu', added: 'Toegevoegd', was: 'Was', now: 'Wordt',
+    reason: 'Wat ging er mis?', reasons: ['Verkeerd artikel', 'Verkeerd aantal', 'Verkeerde betaalwijze'], save: 'Correctie opslaan', done: 'Gecorrigeerd',
+    same: 'Het totaal blijft gelijk.', moved: (m: string) => `Het totaal blijft gelijk. De betaling telt nu als ${m}.`,
+    back: (a: string, card: boolean) => (card ? `Stort ${a} terug op het pinapparaat.` : `Geef ${a} terug uit de lade.`),
+    more: (a: string, card: boolean) => (card ? `Reken ${a} extra af op het pinapparaat.` : `Vraag ${a} extra.`),
+    keeps: 'De eerste bon blijft bewaard als geannuleerd. De gecorrigeerde verkoop krijgt een nieuw bonnummer.', empty: 'Er moet minstens één artikel overblijven. Annuleer de bestelling als alles weg moet.',
+    cash: 'contant', card: 'pin',
+  } : {
+    eyebrow: 'Receipt', title: 'Correct order', addItem: 'Add something', search: 'Search the menu', added: 'Added', was: 'Was', now: 'Becomes',
+    reason: 'What went wrong?', reasons: ['Wrong item', 'Wrong quantity', 'Wrong payment method'], save: 'Save correction', done: 'Corrected',
+    same: 'The total stays the same.', moved: (m: string) => `The total stays the same. The payment now counts as ${m}.`,
+    back: (a: string, card: boolean) => (card ? `Refund ${a} on the card machine.` : `Give ${a} back from the drawer.`),
+    more: (a: string, card: boolean) => (card ? `Charge ${a} more on the card machine.` : `Collect ${a} more.`),
+    keeps: 'The first receipt stays on record as void. The corrected sale gets a new receipt number.', empty: 'At least one item has to stay. Void the order if everything has to go.',
+    cash: 'cash', card: 'card',
+  };
+  const paidBy = order.payments.at(-1)?.method ?? 'cash';
+  const [qty, setQty] = useState<Record<string, number>>(() => Object.fromEntries(order.lines.map((l) => [l.id, l.qty])));
+  const [added, setAdded] = useState<CartLine[]>([]);
+  const [method, setMethod] = useState<'cash' | 'card'>(paidBy);
+  const [reason, setReason] = useState('');
+  const [pin, setPin] = useState('');
+  const [query, setQuery] = useState('');
+  const [picking, setPicking] = useState<MenuItem | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  // One key for this correction: a second tap or a retry after a lost reply cannot correct twice.
+  const request = useRef(newRequestId());
+  const owner = getSession()?.staff.role === 'owner';
+  const count = (id: string) => qty[id] ?? 0;
+  const kept = order.lines.filter((l) => count(l.id) > 0);
+  const total = order.lines.reduce((sum, l) => sum + l.unitPriceCents * count(l.id), 0) + added.reduce((sum, l) => sum + lineUnit(l) * l.qty, 0);
+  const diff = total - order.totalCents;
+  const changed = added.length > 0 || method !== paidBy || order.lines.some((l) => count(l.id) !== l.qty);
+  const nothingLeft = kept.length === 0 && added.length === 0;
+  const search = query.trim().toLocaleLowerCase();
+  const found = search ? menu.items.filter((i) => i.available && i.name.toLocaleLowerCase().includes(search)).slice(0, 6) : [];
+  const addItem = (item: MenuItem, optionIds: string[] = [], priceCents?: number, n = 1) => {
+    haptic();
+    setAdded((list) => [...list, { key: `${item.id}|${Date.now()}|${list.length}`, item, qty: n, optionIds, priceCents }]);
+    setQuery('');
+  };
+  const money$ = diff === 0
+    ? (method !== paidBy ? ui.moved(method === 'card' ? ui.card : ui.cash) : ui.same)
+    : diff < 0 ? ui.back(money(-diff), method === 'card') : ui.more(money(diff), method === 'card');
+  const save = async () => {
+    if (busy) return;
+    setBusy(true); setErr('');
+    try {
+      const result = await api<{ order: Order }>(`/orders/${order.id}/correct`, { requestId: request.current, body: {
+        keep: kept.map((l) => ({ lineId: l.id, qty: count(l.id) })),
+        add: added.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, priceCents: l.priceCents })),
+        method, reason: reason.trim(), managerPin: pin || undefined, expectedTotalCents: total,
+      } });
+      toast(`${ui.done} · ${ui.eyebrow.toLowerCase()} #${result.order.receiptNumber}`);
+      onDone();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : String(e)); setBusy(false); }
+  };
+  return <>
+    <Sheet onCancel={onCancel} busy={busy} titleId="pos-correct-title" kind="pos-correct">
+      <header className="pos-sheet-heading"><div><p className="pos-eyebrow">{ui.eyebrow} #{order.receiptNumber}</p><h2 id="pos-correct-title">{ui.title} #{order.ticketNumber}</h2></div><button className="ghost pos-close" aria-label={c.close} disabled={busy} onClick={onCancel}><Icon name="close" /></button></header>
+      <ul className="pos-correct-lines">
+        {order.lines.map((l) => (
+          <li key={l.id} className={count(l.id) === 0 ? 'pos-correct-removed' : ''}>
+            <div className="grow"><div className="pos-line-name">{l.name}</div>{l.modifiers.length > 0 && <small className="muted">{l.modifiers.map((m) => m.name).join(', ')}</small>}</div>
+            <Stepper value={count(l.id)} onChange={(n) => setQty({ ...qty, [l.id]: n })} min={0} />
+            <b className="amt">{money(l.unitPriceCents * count(l.id))}</b>
+          </li>
+        ))}
+        {added.map((l) => (
+          <li key={l.key} className="pos-correct-added">
+            <div className="grow"><div className="pos-line-name">{l.item.name}</div><small className="muted">{[ui.added, ...l.item.modifierGroups.flatMap((g) => g.options).filter((o) => l.optionIds.includes(o.id)).map((m) => m.name)].join(' · ')}</small></div>
+            <Stepper value={l.qty} onChange={(n) => setAdded((list) => (n === 0 ? list.filter((x) => x.key !== l.key) : list.map((x) => (x.key === l.key ? { ...x, qty: n } : x))))} min={0} />
+            <b className="amt">{money(lineUnit(l) * l.qty)}</b>
+          </li>
+        ))}
+      </ul>
+      <label>{ui.addItem}<input type="search" value={query} placeholder={ui.search} disabled={busy} onChange={(e) => setQuery(e.target.value)} /></label>
+      {found.length > 0 && <div className="chips pos-correct-found">{found.map((i) => <button key={i.id} disabled={busy} onClick={() => (i.modifierGroups.length || i.openPrice ? setPicking(i) : addItem(i))}><Icon name="plus" />{i.name} · {i.openPrice ? t('pos.market') : money(i.priceCents)}</button>)}</div>}
+      <div className="chips pos-payment-method">
+        <button disabled={busy} aria-pressed={method === 'cash'} className={method === 'cash' ? 'on' : ''} onClick={() => setMethod('cash')}><Icon name="cash" />{t('pay.cash')}</button>
+        <button disabled={busy} aria-pressed={method === 'card'} className={method === 'card' ? 'on' : ''} onClick={() => setMethod('card')}><Icon name="card" />{t('pay.card')}</button>
+      </div>
+      <div className="pos-correct-sum"><div><span>{ui.was}</span><b>{money(order.totalCents)}</b></div><div><span>{ui.now}</span><b>{money(total)}</b></div></div>
+      <p className="notice pos-correct-money" role="status">{nothingLeft ? ui.empty : money$}</p>
+      <label>{ui.reason}<input value={reason} maxLength={200} disabled={busy} onChange={(e) => setReason(e.target.value)} /></label>
+      <div className="chips">{ui.reasons.map((r) => <button key={r} disabled={busy} aria-pressed={reason === r} className={reason === r ? 'on' : ''} onClick={() => setReason(r)}>{r}</button>)}</div>
+      {!owner && <label>{t('orders.pin')}<input disabled={busy} inputMode="numeric" type="password" autoComplete="off" value={pin} onChange={(e) => setPin(e.target.value)} /></label>}
+      {err && <div className="error" role="alert">{err}</div>}
+      <p className="pos-sheet-hint">{ui.keeps}</p>
+      <div className="actions">
+        <button className="ghost" disabled={busy} onClick={onCancel}>{t('pay.cancel')}</button>
+        <button className="primary" disabled={busy || !changed || nothingLeft || reason.trim().length < 2} onClick={() => void save()}><Icon name={busy ? 'clock' : 'check'} />{busy ? c.paying : ui.save}</button>
+      </div>
+    </Sheet>
+    {picking && <ModifierSheet item={picking} onCancel={() => setPicking(null)} onAdd={(ids, price, n) => { addItem(picking, ids, price, n); setPicking(null); }} />}
+  </>;
+}
+
+function OrdersList({ orders, menu, onPay }: { orders: Order[]; menu: Menu; onPay: (o: Order) => void }) {
+  const [correcting, setCorrecting] = useState<Order | null>(null);
   const { t, lang } = useLang();
   const c = copy[lang];
   const [voiding, setVoiding] = useState<Order | null>(null);
@@ -483,17 +592,19 @@ function OrdersList({ orders, onPay }: { orders: Order[]; onPay: (o: Order) => v
             <div className="num">#{o.ticketNumber}<small>{clock(o.createdAt)}</small></div>
             <div className="grow">
               <div>{o.tabName && <b className="pos-order-tab">{o.tabName} · </b>}{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</div>
-              <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{o.serviceMode === 'counter' && o.status !== 'void' ? (lang === 'nl' ? 'Balieservice' : 'Counter service') : t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span></div>
+              <div className="pos-order-status"><span className={`pos-status ${o.status}`}><Icon name={o.status === 'ready' || o.status === 'collected' ? 'check' : o.status === 'void' ? 'close' : 'clock'} size={16} />{o.serviceMode === 'counter' && o.status !== 'void' ? (lang === 'nl' ? 'Balieservice' : 'Counter service') : t(`st.${o.status}` as 'st.sent')}</span><span className={`pos-status ${o.paid ? 'paid' : 'unpaid'}`}>{o.paid ? t('orders.paid') : o.status === 'void' ? t('orders.void') : t('orders.unpaid')}</span>{o.correctedBy && <span className="pos-status">{lang === 'nl' ? 'Gecorrigeerd: bon' : 'Corrected: receipt'} #{o.correctedBy.receiptNumber}</span>}{o.corrects && <span className="pos-status">{lang === 'nl' ? 'Vervangt bon' : 'Replaces receipt'} #{o.corrects.receiptNumber}</span>}</div>
             </div>
             <b>{money(o.totalCents)}</b>
             <div className="row-actions">
               {!o.paid && o.status !== 'void' && <button className="primary" onClick={() => onPay(o)}><Icon name="cash" />{t('orders.pay')}</button>}
               {o.paid && <button onClick={() => void printReceipt(o)}><Icon name="printer" />{t('orders.reprint')}</button>}
+              {o.paid && o.status !== 'void' && <button className="pos-correct-btn" onClick={() => setCorrecting(o)}><Icon name="edit" />{lang === 'nl' ? 'Corrigeren' : 'Correct'}</button>}
               {o.status !== 'void' && <button className="ghost" onClick={() => setVoiding(o)}><Icon name="close" />{t('orders.voidBtn')}</button>}
             </div>
           </li>
         ))}
       </ul>
+      {correcting && <CorrectSheet order={correcting} menu={menu} onCancel={() => setCorrecting(null)} onDone={() => setCorrecting(null)} />}
       {voiding && (
         <Sheet onCancel={() => setVoiding(null)} busy={busy} titleId="pos-void-title" kind="pos-void">
             <h2 id="pos-void-title">{t('orders.voidBtn')} #{voiding.ticketNumber}</h2>

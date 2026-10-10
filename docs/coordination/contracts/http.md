@@ -24,6 +24,7 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `POST /api/orders/:id/pay` | `PayBody` | `Order` (receipt number assigned, `paidDate` set). `PayBody.expectedTotalCents` is the total the cashier saw: when the order has changed since, `409` and nothing is recorded; the screen reloads the order and asks again. Accepts `Idempotency-Key` |
 | `POST /api/orders/:id/status` | `StatusBody` | `Order` |
 | `POST /api/orders/:id/void` | `VoidBody` | `Order` (`voidedAt`, `voidDate` set). Paid or started orders need an owner session or `managerPin`. Five wrong manager PINs by one signed-in person = `429` for 30 s; each refused PIN is written to the audit log (`void.manager_pin_refused`) |
+| `POST /api/orders/:id/correct` | `CorrectOrderBody` `{ keep: [{ lineId, qty }], add: OrderLineInput[], method, reference?, tipCents?, reason, managerPin?, expectedTotalCents? }` | `CorrectOrderResponse` `{ order, replaced }`. Fixes a **paid** order in one step. Nothing is rewritten: `replaced` is the original, now `void` with `correctedBy`; `order` is a new paid sale on the next receipt number with `corrects`, the same ticket number and kitchen state. Kept lines keep what they were sold for, added lines are priced now. Owner session or `managerPin` (wrong PINs share the limit of void). `400` nothing left or an unknown line, `409` not paid, already void or corrected, or `expectedTotalCents` differs. Accepts `Idempotency-Key` |
 | `GET /api/orders/:id/receipt[?copy=1]` | | Printable HTML receipt (browser fallback). `copy=1` marks a reprint. See `printer.md` |
 
 ## Owner only (`403` otherwise). Every change is written to the append-only `audit_log`.
@@ -58,6 +59,7 @@ A day's report is about the money that moved on that day (owner decision Q11, 20
 opened. A sale paid and refunded on the same day is in neither the sales nor the payments. A refund of an earlier day's sale
 is taken off that day's `sales`, `tax` and `tenders` (which can therefore be negative) and reported in `refundedEarlier`.
 `refunds` lists every refund given that day. `orders.unpaid` and `orders.voidedUnpaid` still count orders opened that day.
+A corrected order (see `POST /api/orders/:id/correct`) is not a refund: the original counts like a refunded sale and its replacement like a sale, so the figures move by the difference, and the day shows `corrections { count, removedCents, addedCents }` instead of an entry under `refunds`.
 Closing the day also makes a backup. Other definitions: the comments in `packages/shared/src/reports.ts`.
 
 ## WebSocket `/ws`
@@ -76,7 +78,7 @@ An unpaid order **is** an open tab; there is no separate tab record.
 - With "print kitchen ticket when sent" on, an added round prints a ticket with only its lines, marked as added.
 
 ## Retrying safely: `Idempotency-Key`
-`POST /api/orders`, `POST /api/orders/:id/lines` and `POST /api/orders/:id/pay` accept an `Idempotency-Key` header (`RequestId`: 8-80 characters of `A-Z a-z 0-9 _ -`).
+`POST /api/orders`, `POST /api/orders/:id/lines`, `POST /api/orders/:id/pay` and `POST /api/orders/:id/correct` accept an `Idempotency-Key` header (`RequestId`: 8-80 characters of `A-Z a-z 0-9 _ -`).
 - The first request with a key acts and records the key in the same transaction as the sale.
 - A repeat with the same key returns the same `Order` and does **not** broadcast or print again. A repeated pay returns the paid order rather than `409 already paid`.
 - Reusing a pay key for a different order is `409`. A malformed key is `400`.
