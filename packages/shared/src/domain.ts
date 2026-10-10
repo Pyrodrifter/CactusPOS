@@ -116,6 +116,12 @@ export const Order = z.object({
   voidedAt: IsoDateTime.optional(),
   voidDate: IsoDate.optional(),
   /**
+   * Corrections. A paid order is never rewritten: correcting it voids it and makes a replacement sale with
+   * its own receipt number. `correctedBy` on the original and `corrects` on the replacement point at each other.
+   */
+  corrects: z.object({ orderId: z.string(), receiptNumber: z.number().int().positive() }).optional(),
+  correctedBy: z.object({ orderId: z.string(), receiptNumber: z.number().int().positive() }).optional(),
+  /**
    * Tabs. An unpaid order is an open tab: it can be given a name, more rounds of items can be added
    * to it, and it is paid once at the end, on one receipt.
    */
@@ -199,6 +205,23 @@ export const PayBody = z.object({
 export type PayBodyT = z.infer<typeof PayBody>;
 export const StatusBody = z.object({ status: z.enum(['preparing', 'ready', 'collected']) });
 export const VoidBody = z.object({ reason: z.string().min(2).max(200), managerPin: z.string().optional() });
+/**
+ * Corrects a paid order: which of its lines stay (with their quantity as it should have been) and what is
+ * added. Lines that stay keep the name, price and tax they were sold at; added lines are priced from the menu
+ * as it is now. `method` is how the corrected sale counts as paid.
+ */
+export const CorrectOrderBody = z.object({
+  keep: z.array(z.object({ lineId: z.string().min(1), qty: z.number().int().min(1).max(99) })).max(100).default([]),
+  add: z.array(OrderLineInput).max(100).default([]),
+  method: PaymentMethod,
+  reference: z.string().max(60).optional(), tipCents: PriceZ.optional(),
+  reason: z.string().trim().min(2).max(200), managerPin: z.string().optional(),
+  /** The new total the cashier saw; `409` when the server works out another. */
+  expectedTotalCents: PriceZ.optional(),
+});
+export type CorrectOrderBodyT = z.infer<typeof CorrectOrderBody>;
+/** Reply of a correction: the replacement sale and the original, now void. */
+export const CorrectOrderResponse = z.object({ order: z.lazy(() => Order), replaced: z.lazy(() => Order) });
 export const LoginBody = z.object({ pin: z.string().min(3).max(12) });
 /** `open` = every unpaid, non-void order whatever day it was started (yesterday's forgotten tab stays payable). */
 export const OrdersQuery = z.object({ scope: z.enum(['active', 'today', 'open']).default('active') });

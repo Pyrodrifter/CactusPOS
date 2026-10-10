@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
-  type Ack, AddLinesBody, AvailabilityBody, BusinessSchema, CloseDayBody, CreateOrderBody, TabNameBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
+  type Ack, AddLinesBody, AvailabilityBody, CorrectOrderBody, BusinessSchema, CloseDayBody, CreateOrderBody, TabNameBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
   StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
@@ -248,6 +248,26 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     }
     broadcastOrder(order);
     return order;
+  });
+  // Fixes a paid order in one step; see PosService.correctOrder for why nothing is rewritten.
+  app.post('/api/orders/:id/correct', async (req) => {
+    const staff = authOf(req);
+    const b = CorrectOrderBody.parse(req.body);
+    const requestId = requestIdOf(req);
+    const known = requestId ? db.prepare('SELECT 1 FROM requests WHERE key = ?').get(`correct:${requestId}`) : undefined;
+    const guesses = `manager-pin:${staff.id}`; // shared with void: one allowance of wrong PINs, not two
+    if (b.managerPin && throttle.blocked(guesses)) throw new HttpError(429, 'Too many wrong manager PINs. Wait 30 seconds.');
+    let result: { order: Order; replaced: Order };
+    try { result = svc.correctOrder(idOf(req), b, staff, requestId); } catch (e) {
+      if (b.managerPin && e instanceof HttpError && e.status === 403) {
+        throttle.fail(guesses);
+        admin.log('correct.manager_pin_refused', { orderId: idOf(req) }, staff);
+      }
+      throw e;
+    }
+    // A repeat returns the first result without announcing or printing it a second time.
+    if (!known) { broadcastOrder(result.replaced); broadcastOrder(result.order); printing.onPaid(result.order); }
+    return result;
   });
   app.get('/api/orders/:id/receipt', async (req, reply) => {
     authOf(req);

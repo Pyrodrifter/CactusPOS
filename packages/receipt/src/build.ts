@@ -7,12 +7,12 @@ const T = {
   en: {
     receipt: 'Receipt', ticket: 'Ticket', total: 'TOTAL', inclAbb: 'Prices include ABB', abbOver: 'over', cash: 'Cash', card: 'Card',
     change: 'Change', tip: 'Tip', void: '*** VOID ***', unpaid: '*** NOT PAID ***', copy: 'COPY', exempt: 'Exempt', outside: 'Outside scope of ABB',
-    note: 'Note', order: 'ORDER', tab: 'Tab', password: 'Password', added: '+++ ADDED TO THIS ORDER +++', test: 'Printer test', testBody: 'If you can read this, the printer works.',
+    note: 'Note', order: 'ORDER', tab: 'Tab', password: 'Password', replaces: 'Replaces receipt', corrected: 'Corrected: see receipt', added: '+++ ADDED TO THIS ORDER +++', test: 'Printer test', testBody: 'If you can read this, the printer works.',
   },
   nl: {
     receipt: 'Bon', ticket: 'Volgnr', total: 'TOTAAL', inclAbb: 'Prijzen zijn inclusief ABB', abbOver: 'over', cash: 'Contant', card: 'Pin',
     change: 'Wisselgeld', tip: 'Fooi', void: '*** GEANNULEERD ***', unpaid: '*** NIET BETAALD ***', copy: 'KOPIE', exempt: 'Vrijgesteld', outside: 'Buiten toepassing ABB',
-    note: 'Opmerking', order: 'BESTELLING', tab: 'Rekening', password: 'Wachtwoord', added: '+++ TOEGEVOEGD AAN DEZE BESTELLING +++', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
+    note: 'Opmerking', order: 'BESTELLING', tab: 'Rekening', password: 'Wachtwoord', replaces: 'Vervangt bon', corrected: 'Gecorrigeerd: zie bon', added: '+++ TOEGEVOEGD AAN DEZE BESTELLING +++', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
   },
 } as const;
 
@@ -120,8 +120,12 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   out.push({ t: 'row', left: `${t.receipt} #${o.receiptNumber ?? '-'}`, right: `${t.ticket} ${o.ticketNumber}` });
   out.push({ t: 'text', text: when });
   if (o.tabName) out.push({ t: 'text', text: `${t.tab}: ${o.tabName}` });
+  if (o.corrects) out.push({ t: 'text', text: `${t.replaces} #${o.corrects.receiptNumber}` });
   if (opts.copy) out.push({ t: 'text', text: t.copy, align: 'center', bold: true });
-  if (o.status === 'void') out.push({ t: 'text', text: t.void, align: 'center', bold: true });
+  if (o.status === 'void') {
+    out.push({ t: 'text', text: t.void, align: 'center', bold: true });
+    if (o.correctedBy) out.push({ t: 'text', text: `${t.corrected} #${o.correctedBy.receiptNumber}`, align: 'center' });
+  }
   else if (!o.paid) out.push({ t: 'text', text: t.unpaid, align: 'center', bold: true });
   out.push({ t: 'rule' });
   for (const l of o.lines) {

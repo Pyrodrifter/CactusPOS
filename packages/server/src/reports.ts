@@ -56,8 +56,11 @@ export class Reports {
         tipCents: sumCents(taken.map((p) => p.tipCents ?? 0)) - sumCents(back.map((p) => p.tipCents ?? 0)),
       };
     });
+    // A corrected order is void too, but no refund: its replacement is a sale of today, so only the difference moved.
+    const corrected = refundedToday.filter((o) => o.correctedBy);
+    const trulyRefunded = refundedToday.filter((o) => !o.correctedBy);
     const refunds = METHODS.map((method) => {
-      const ps = of(refundedToday, method);
+      const ps = of(trulyRefunded, method);
       return { method, count: ps.length, amountCents: sumCents(ps.map((p) => p.amountCents)) };
     }).filter((r) => r.count > 0);
 
@@ -82,13 +85,14 @@ export class Reports {
     const taxCents = sumCents(sold.map((o) => o.taxCents)) - backTax;
     return {
       businessDate: date, generatedAt: new Date().toISOString(),
-      orders: { sold: sold.length, unpaid: unpaid.length, unpaidCents: sumCents(unpaid.map((o) => o.totalCents)), voidedUnpaid: opened.filter((o) => !o.paid && o.status === 'void').length, refunded: refundedToday.length },
+      orders: { sold: sold.length, unpaid: unpaid.length, unpaidCents: sumCents(unpaid.map((o) => o.totalCents)), voidedUnpaid: opened.filter((o) => !o.paid && o.status === 'void').length, refunded: trulyRefunded.length },
       sales: { grossCents, taxCents, netCents: grossCents - taxCents },
       tax: [...tax.values()].filter((row) => row.grossCents !== 0 || row.taxCents !== 0).sort((a, b) => b.bps - a.bps || a.taxCategoryId.localeCompare(b.taxCategoryId)),
       tenders,
       tipsCents: sumCents(tenders.map((t) => t.tipCents)),
       refunds,
-      ...(earlier.length ? { refundedEarlier: { count: earlier.length, grossCents: backGross, taxCents: backTax } } : {}),
+      ...(earlier.some((o) => !o.correctedBy) ? { refundedEarlier: { count: earlier.filter((o) => !o.correctedBy).length, grossCents: sumCents(earlier.filter((o) => !o.correctedBy).map((o) => o.totalCents)), taxCents: sumCents(earlier.filter((o) => !o.correctedBy).map((o) => o.taxCents)) } } : {}),
+      ...(corrected.length ? { corrections: { count: corrected.length, removedCents: sumCents(corrected.map((o) => o.totalCents)), addedCents: sumCents(paidToday.filter((o) => o.corrects).map((o) => o.totalCents)) } } : {}),
       // Cash in for sales, less cash handed back: both sides are already in the cash tender line.
       cashExpectedCents: tenders.find((t) => t.method === 'cash')!.amountCents,
       receipts: { first: numbers[0] ?? null, last: numbers[numbers.length - 1] ?? null, count: numbers.length },

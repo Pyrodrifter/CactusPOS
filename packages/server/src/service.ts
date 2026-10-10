@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   computeTotals, formatMoney, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
-  type AddLinesBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard, type ServiceMode,
+  type AddLinesBodyT, type CorrectOrderBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard, type ServiceMode,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
 import { getKv, setKv, nextCounter, tx, type DB } from './db.js';
@@ -109,12 +109,12 @@ export class PosService {
   }
 
   /** The order a repeated request already produced, if any. */
-  private replayed(kind: 'create' | 'pay' | 'add', requestId: string | undefined): Order | null {
+  private replayed(kind: 'create' | 'pay' | 'add' | 'correct', requestId: string | undefined): Order | null {
     if (!requestId) return null;
     const row = this.db.prepare('SELECT order_id FROM requests WHERE key = ?').get(`${kind}:${requestId}`) as { order_id: string } | undefined;
     return row ? this.getOrder(row.order_id) : null;
   }
-  private remember(kind: 'create' | 'pay' | 'add', requestId: string | undefined, orderId: string): void {
+  private remember(kind: 'create' | 'pay' | 'add' | 'correct', requestId: string | undefined, orderId: string): void {
     if (requestId) this.db.prepare('INSERT INTO requests(key, kind, order_id, at) VALUES (?,?,?,?)').run(`${kind}:${requestId}`, kind, orderId, new Date().toISOString());
   }
 
@@ -349,6 +349,83 @@ export class PosService {
       order.voidDate = this.businessDate();
       this.save(order, 'order.void', { reason }, staff, this.rowDate(id));
       return order;
+    });
+  }
+
+  /**
+   * Corrects a paid order in one step: a wrong item, a wrong quantity, a wrong payment method.
+   *
+   * Nothing is rewritten. The original order is voided, with the reason, and a replacement sale is made that
+   * is paid at once and gets the next receipt number; each points at the other. So the first receipt stays on
+   * record exactly as it was handed out, numbers stay gapless, and the day report counts the original like a
+   * refund and the replacement like a sale: the drawer moves by the difference only.
+   * The replacement keeps the ticket number and the kitchen state, so a corrected order that is still being
+   * made simply shows the right items.
+   */
+  correctOrder(id: string, body: CorrectOrderBodyT, staff: Staff, requestId?: string): { order: Order; replaced: Order } {
+    return tx(this.db, () => {
+      const before = this.replayed('correct', requestId);
+      if (before) {
+        if (before.corrects?.orderId !== id) throw new HttpError(409, 'This request was already used for another order');
+        return { order: before, replaced: this.getOrder(id) };
+      }
+      const old = this.getOrder(id);
+      if (old.status === 'void') throw new HttpError(409, old.correctedBy ? `This order was already corrected: see receipt #${old.correctedBy.receiptNumber}` : 'Order is void');
+      if (!old.paid || old.receiptNumber === null) throw new HttpError(409, 'This order is not paid yet: add items to it or void it instead');
+      if (staff.role !== 'owner' && !this.isManagerPin(body.managerPin)) throw new HttpError(403, 'Manager PIN required');
+
+      const menu = this.menu(), today = this.businessDate(), soldOn = this.rowDate(id);
+      // Lines that stay are copied as they were sold: the menu may have changed since, the sale has not.
+      const used = new Set<string>();
+      const kept: OrderLine[] = body.keep.map((k) => {
+        const line = old.lines.find((l) => l.id === k.lineId);
+        if (!line || used.has(k.lineId)) throw new HttpError(400, 'That line is not on this order');
+        used.add(k.lineId);
+        return { ...line, qty: k.qty, lineTotalCents: line.unitPriceCents * k.qty };
+      });
+      const added = this.buildLines(body.add, menu, old.round ?? 1);
+      if (kept.length + added.length === 0) throw new HttpError(400, 'A corrected order needs at least one item. To cancel the whole order, void it.');
+      const figures = { totalCents: 0, taxCents: 0, breakdown: [] as Order['breakdown'] };
+      this.addTotals(figures, kept, menu, soldOn);
+      this.addTotals(figures, added, menu, today);
+      if (body.expectedTotalCents !== undefined && body.expectedTotalCents !== figures.totalCents) {
+        throw new HttpError(409, `The corrected total is ${formatMoney(figures.totalCents, 'en-US', this.business().currency)}. Check it and try again.`);
+      }
+
+      const now = new Date().toISOString();
+      const order: Order = {
+        id: randomUUID(), ticketNumber: old.ticketNumber, receiptNumber: null,
+        serviceMode: old.serviceMode, templateVersion: new ReceiptTemplates(this.db).version(), printBusiness: this.business(),
+        status: old.status, paid: false, lines: [...kept, ...added], payments: [], note: old.note, source: old.source,
+        totalCents: figures.totalCents, taxCents: figures.taxCents, breakdown: figures.breakdown,
+        tabName: old.tabName, round: old.round, kitchenRound: old.kitchenRound, kitchenSince: old.kitchenSince,
+        createdAt: now, updatedAt: now, createdBy: staff.id,
+        corrects: { orderId: old.id, receiptNumber: old.receiptNumber },
+      };
+      this.save(order, 'order.created', { corrects: order.corrects, reason: body.reason, keep: body.keep, add: body.add }, staff, today, true);
+      const cash = body.method === 'cash';
+      const payment = {
+        id: randomUUID(), method: body.method, amountCents: order.totalCents, tenderedCents: cash ? order.totalCents : undefined,
+        changeCents: cash ? 0 : undefined, reference: body.reference,
+        // A tip given by card stays with the sale unless the correction says otherwise; cash tips are not on the till.
+        tipCents: body.tipCents ?? (cash ? 0 : old.payments.at(-1)?.tipCents ?? 0), at: now,
+      };
+      order.payments.push(payment);
+      order.paid = true;
+      order.paidDate = today;
+      order.receiptNumber = nextCounter(this.db, 'receipt');
+      this.db.prepare('INSERT INTO payments(id, order_id, receipt_number, method, amount_cents, tendered_cents, change_cents, tip_cents, reference, staff_id, at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+        .run(payment.id, order.id, order.receiptNumber, payment.method, payment.amountCents, payment.tenderedCents ?? null, payment.changeCents ?? null, payment.tipCents, payment.reference ?? null, staff.id, payment.at);
+      this.save(order, 'order.paid', { payment, receiptNumber: order.receiptNumber }, staff, today);
+
+      old.status = 'void';
+      old.voidReason = body.reason;
+      old.voidedAt = now;
+      old.voidDate = today;
+      old.correctedBy = { orderId: order.id, receiptNumber: order.receiptNumber };
+      this.save(old, 'order.void', { reason: body.reason, correctedBy: old.correctedBy }, staff, soldOn);
+      this.remember('correct', requestId, order.id);
+      return { order, replaced: old };
     });
   }
 

@@ -45,6 +45,12 @@ export const DayReport = z.object({
    * above; listed so the reader can see why. Absent when there were none (and on reports stored before 2026-10-10).
    */
   refundedEarlier: z.object({ count: z.number().int().positive(), grossCents: PriceZ, taxCents: PriceZ }).optional(),
+  /**
+   * Paid orders corrected on this day: `removedCents` is what the originals came to, `addedCents` what the
+   * corrected sales come to. Both are already in the figures above (an original counts like a refund, its
+   * replacement like a sale); corrections are not listed under `refunds`. Absent when there were none.
+   */
+  corrections: z.object({ count: z.number().int().positive(), removedCents: PriceZ, addedCents: PriceZ }).optional(),
   /** Cash this day's trading put in the drawer: cash taken for sales less cash handed back. Excludes any float. */
   cashExpectedCents: CentsZ,
   receipts: z.object({ first: z.number().int().positive().nullable(), last: z.number().int().positive().nullable(), count: z.number().int().nonnegative() }),
