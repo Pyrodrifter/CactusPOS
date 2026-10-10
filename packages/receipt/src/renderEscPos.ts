@@ -1,4 +1,4 @@
-import type { Block, Columns } from './blocks.js';
+import type { Block, Columns, TextSize } from './blocks.js';
 import { layout } from './renderText.js';
 
 /**
@@ -55,21 +55,30 @@ function qrCommands(data: string): number[] {
   ];
 }
 
+/** GS ! n: the high half is extra width, the low half extra height. The narrow font is a separate command. */
+const MAGNIFY: Record<TextSize, number> = { small: 0x00, normal: 0x00, tall: 0x01, wide: 0x10, large: 0x11, huge: 0x22 };
+
 export function renderEscPos(blocks: readonly Block[], opts: EscPosOptions = {}): Uint8Array {
   const columns = opts.columns ?? 48;
   const out: number[] = [ESC, 0x40, ESC, 0x74, 19]; // initialise, select code page 858
-  let bold = false, large = false, align = 'left';
+  // What the printer is set to now. A command is sent only when a line needs something else, so a plain
+  // receipt carries exactly the bytes it always did.
+  let bold = false, magnify = 0x00, align = 'left', narrow = false, underline = false, inverse = false;
   for (const x of layout(blocks, columns)) {
     if (x.kind === 'line') {
       const l = x.line;
       if (l.align !== align) { align = l.align; out.push(ESC, 0x61, align === 'center' ? 1 : align === 'right' ? 2 : 0); }
       if (l.bold !== bold) { bold = l.bold; out.push(ESC, 0x45, bold ? 1 : 0); }
-      if (l.large !== large) { large = l.large; out.push(GS, 0x21, large ? 0x11 : 0x00); }
+      if (MAGNIFY[l.size] !== magnify) { magnify = MAGNIFY[l.size]; out.push(GS, 0x21, magnify); }
+      if ((l.size === 'small') !== narrow) { narrow = l.size === 'small'; out.push(ESC, 0x4d, narrow ? 1 : 0); }
+      if (l.underline !== underline) { underline = l.underline; out.push(ESC, 0x2d, underline ? 1 : 0); }
+      if (l.inverse !== inverse) { inverse = l.inverse; out.push(GS, 0x42, inverse ? 1 : 0); }
       out.push(...encodeText(l.text), LF);
     } else if (x.kind === 'raster') {
       align = x.align;
       const bytes = x.image.hex.match(/../g)!.map((h) => parseInt(h, 16));
-      out.push(ESC, 0x61, align === 'center' ? 1 : align === 'right' ? 2 : 0, GS, 0x76, 0x30, 0, x.image.width / 8, 0, x.image.height, 0, ...bytes, LF);
+      // GS v 0: bytes per row and rows, each as low byte then high byte (a picture can be taller than 255 dots).
+      out.push(ESC, 0x61, align === 'center' ? 1 : align === 'right' ? 2 : 0, GS, 0x76, 0x30, 0, x.image.width / 8, 0, x.image.height & 0xff, x.image.height >> 8, ...bytes, LF);
     } else if (x.kind === 'qr') {
       out.push(ESC, 0x61, 1, ...qrCommands(x.data), LF);
       align = 'center';
