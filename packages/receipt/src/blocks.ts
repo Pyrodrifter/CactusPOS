@@ -23,7 +23,8 @@ export type Block =
   | { t: 'sub'; text: string }
   | { t: 'rule'; style?: RuleStyle }
   | { t: 'feed'; lines: number }
-  | { t: 'qr'; data: string; caption?: string }
+  /** A QR code, printed as a picture. `scale` is printer dots per square of the code (default 6: about 3 cm for a web address). */
+  | { t: 'qr'; data: string; caption?: string; scale?: number }
   | { t: 'cut' }
   /** Pulse the cash drawer connected to the printer. */
   | { t: 'drawer' };

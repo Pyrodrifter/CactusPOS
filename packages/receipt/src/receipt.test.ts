@@ -121,11 +121,16 @@ describe('ESC/POS bytes', () => {
     expect(encodeText('日本').every((b) => b === 0x3f)).toBe(true);
     expect(renderEscPos([{ t: 'text', text: 'Curaçao ☀' }]).every((b) => b <= 0xff)).toBe(true);
   });
-  it('QR block stores the data and prints it', () => {
+  it('a QR block is printed as a picture, centred, with its caption under it', () => {
     const data = wifiQr('Cactus Guest', 'lion;fish');
     expect(data).toBe('WIFI:T:WPA;S:Cactus Guest;P:lion\\;fish;;');
-    const b = renderEscPos([{ t: 'qr', data }]);
-    expect(Buffer.from(b).toString('latin1')).toContain(data);
-    expect(b.some((_, i) => [0x1d, 0x28, 0x6b, 3, 0, 49, 81, 48].every((x, j) => b[i + j] === x))).toBe(true);
+    const b = renderEscPos([{ t: 'qr', data, caption: 'Free WiFi' }]);
+    const has = (seq: number[]) => b.some((_, i) => seq.every((x, j) => b[i + j] === x));
+    expect(has([0x1b, 0x61, 1, 0x1d, 0x76, 0x30, 0])).toBe(true); // centre, then a raster picture
+    expect(has([0x1d, 0x28, 0x6b])).toBe(false); // not the printer's own QR command, which not every printer has
+    expect(Buffer.from(b).toString('latin1')).toContain('Free WiFi');
+    // The text log names what the code holds, as it did before. That the picture really reads back is in qr.test.ts.
+    expect(renderText([{ t: 'qr', data, caption: 'Free WiFi' }])).toContain(`[QR ${data}]`);
+    expect(renderText([{ t: 'qr', data: '' }]).trim()).toBe(''); // nothing to encode, nothing printed
   });
 });

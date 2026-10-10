@@ -52,6 +52,25 @@ export const DesignMessage = z.object({
 });
 export type DesignMessage = z.infer<typeof DesignMessage>;
 
+/**
+ * A QR code on the paper. `wifi` lets a guest join the network by pointing a phone camera at it; `link` holds
+ * a web address (the website, Instagram) or any short text. The till draws the code itself and prints it as
+ * a picture. Whatever is entered here ends up on receipts handed to guests: a WiFi password included.
+ */
+export const DesignCode = z.object({
+  kind: z.enum(['wifi', 'link']),
+  /** link: what the code holds. */
+  value: printable(300).default(''),
+  /** wifi: network name, password and how the network is secured (`nopass` = open network). */
+  ssid: printable(32).default(''), password: printable(63).default(''), security: z.enum(['WPA', 'WEP', 'nopass']).default('WPA'),
+  /** wifi: also print the network name and password as words under the code, for phones that will not scan. */
+  showPassword: z.boolean().default(true),
+  caption: printable(80).default(''),
+  size: z.enum(['s', 'm', 'l']).default('m'),
+  position: z.enum(['top', 'bottom']).default('bottom'),
+});
+export type DesignCode = z.infer<typeof DesignCode>;
+
 export const DocumentDesign = z.object({
   widthMm: z.union([z.literal(58), z.literal(80)]).default(80),
   align: z.enum(['left', 'center']).default('center'),
@@ -80,6 +99,8 @@ export const DocumentDesign = z.object({
   footerStyle: TextStyle.optional(),
   /** A picture at the very end, under the footer. */
   closing: ReceiptLogo.nullable().default(null),
+  /** QR codes (2026-10-10): WiFi and links. */
+  codes: z.array(DesignCode).max(3).default([]),
 });
 export type DocumentDesign = z.infer<typeof DocumentDesign>;
 export const ReceiptTemplate = z.object({ receipt: DocumentDesign, kitchen: DocumentDesign });

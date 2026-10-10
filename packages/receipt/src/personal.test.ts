@@ -158,3 +158,40 @@ describe('dividers', () => {
     expect(renderHtml(buildReceipt(order, biz, { design: design({ separator: 'double' }) }))).toContain('<hr class="double">');
   });
 });
+
+describe('QR codes on a design', () => {
+  const wifi = { kind: 'wifi', ssid: 'Cactus Blue Guest', password: 'burgers4ever', caption: 'Free WiFi', position: 'bottom' };
+  const link = { kind: 'link', value: ' https://www.cactusblue.us ', caption: 'Our menu', size: 'l', position: 'top' };
+
+  it('WiFi and link codes go where they were put, with caption and the WiFi details in words', () => {
+    const blocks = buildReceipt(order, biz, { design: design({ codes: [wifi, link], closing: { width: 8, height: 1, hex: '18' } }) });
+    const lines = renderText(blocks).split('\n');
+    const at = (needle: string) => lines.findIndex((l) => l.includes(needle));
+    expect(at('[QR https://www.cactusblue.us]')).toBeGreaterThan(at('ORDER #7'));
+    expect(at('Our menu')).toBe(at('[QR https://www.cactusblue.us]') + 1);
+    expect(at('Our menu')).toBeLessThan(at('Kiteburger'));
+    expect(at('[QR WIFI:T:WPA;S:Cactus Blue Guest;P:burgers4ever;;]')).toBeGreaterThan(at('TOTAL'));
+    expect(lines.slice(at('Free WiFi'), at('Free WiFi') + 3).map((l) => l.trim())).toEqual(['Free WiFi', 'WiFi: Cactus Blue Guest', 'Password: burgers4ever']);
+    expect(at('[LOGO]')).toBeGreaterThan(at('Password:')); // the closing picture stays last
+    // The sizes are printer dots per square: large is 8, medium 6.
+    const sizes = blocks.flatMap((b) => (b.t === 'qr' ? [b.scale] : []));
+    expect(sizes).toEqual([8, 6]);
+  });
+
+  it('an open network has no password, and the words can be left off', () => {
+    const text = renderText(buildReceipt(order, { ...biz, locale: 'nl' }, { design: design({ codes: [{ kind: 'wifi', ssid: 'Strand', security: 'nopass', password: 'ignored' }, { ...wifi, showPassword: false }] }) }));
+    expect(text).toContain('[QR WIFI:T:nopass;S:Strand;P:;;]');
+    expect(text).toContain('WiFi: Strand');
+    expect(text.match(/Wachtwoord:/g)).toBeNull();
+    expect(text.match(/WiFi: /g)).toHaveLength(1);
+  });
+
+  it('a code with nothing filled in is left out, and the preview draws the same squares', () => {
+    const empty = renderText(buildReceipt(order, biz, { design: design({ codes: [{ kind: 'wifi' }, { kind: 'link', value: '  ' }] }) }));
+    expect(empty).not.toContain('[QR');
+    const html = renderHtml(buildReceipt(order, biz, { design: design({ codes: [link] }) }));
+    expect(html).toMatch(/<svg role="img" aria-label="QR https:\/\/www\.cactusblue\.us" viewBox="0 0 33 33"/); // 25 squares and a margin of 4
+    expect(html).toContain('width:33mm'); // 33 squares at 8 dots, 8 dots to the millimetre
+    expect(html).toContain('<br>Our menu');
+  });
+});

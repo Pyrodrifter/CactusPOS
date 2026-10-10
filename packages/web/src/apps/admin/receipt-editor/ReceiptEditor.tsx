@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_RECEIPT_TEMPLATE, ReceiptTemplate, TemplateState, type Business, type DesignMessage, type DocumentDesign, type Lettering, type ReceiptLogo, type TextStyle } from '@cactus/shared';
+import { DEFAULT_RECEIPT_TEMPLATE, ReceiptTemplate, TemplateState, type Business, type DesignCode, type DesignMessage, type DocumentDesign, type Lettering, type ReceiptLogo, type TextStyle } from '@cactus/shared';
 import { api, getSession } from '../../../lib/api';
 import { useLang } from '../../../i18n';
 import { Icon } from '../../../ui/Icon';
@@ -23,6 +23,10 @@ const copy = {
     protected: 'Business details, order number, receipt number, date, amounts and tax always stay on receipts. Kitchen modifiers and notes always stay visible.',
     messages: 'Your own lines', add: 'Add a line', message: 'Line', words: 'Words', where: 'Where', above: 'Above the items', below: 'Below the total', up: 'Move up', down: 'Move down', remove: 'Remove',
     tokens: 'Use {{business}}, {{order}} or {{receipt}} for automatic text.',
+    codes: 'QR codes', codesHint: 'A guest points a phone camera at the code. A WiFi code joins your network; a link code opens your website or Instagram. Whatever you enter here is printed on receipts that guests take with them.',
+    wifiCode: 'WiFi code', linkCode: 'Link code', ssid: 'Network name', wifiPassword: 'WiFi password', security: 'Security', secured: 'With a password (WPA, WPA2, WPA3)', openNetwork: 'Open network, no password', oldWep: 'WEP (old routers)',
+    showWords: 'Also print the name and password as text', linkValue: 'Web address', linkHint: 'Start with https:// so phones open it. For Instagram: https://instagram.com/yourname', caption: 'Text under the code', codeSize: 'Code size',
+    addWifi: 'Add a WiFi code', addLink: 'Add a link code', freeWifi: 'Free WiFi', scanMe: 'Scan me',
     ending: 'End of the receipt', footer: 'Closing line (blank uses the business setting)', closing: 'Closing picture', closingHint: 'A drawing, a stamp, a QR code you made elsewhere: printed last, under the closing line.', addPicture: 'Upload picture', removePicture: 'Remove picture',
     divider: 'Dividing lines', dividers: { dashed: 'Dashes', solid: 'Line', double: 'Double', dotted: 'Dots', stars: 'Stars', wave: 'Waves', space: 'Space' },
     print: 'Print sample', thermal: 'Test receipt printer', printHint: 'Sample data — not a sale. Thermal printing follows the printer’s configured paper width.', sent: 'Sample sent to printer',
@@ -44,6 +48,10 @@ const copy = {
     protected: 'Bedrijf, bestelnummer, bonnummer, datum, bedragen en belasting blijven altijd op de kassabon staan. Keukenopties en opmerkingen blijven altijd zichtbaar.',
     messages: 'Je eigen regels', add: 'Regel toevoegen', message: 'Regel', words: 'Woorden', where: 'Waar', above: 'Boven de artikelen', below: 'Onder het totaal', up: 'Omhoog', down: 'Omlaag', remove: 'Verwijderen',
     tokens: 'Gebruik {{business}}, {{order}} of {{receipt}} voor automatisch ingevulde tekst.',
+    codes: 'QR-codes', codesHint: 'Een gast richt de camera van een telefoon op de code. Een wificode verbindt met je netwerk; een linkcode opent je website of Instagram. Wat je hier invult, staat op bonnen die gasten meenemen.',
+    wifiCode: 'Wificode', linkCode: 'Linkcode', ssid: 'Netwerknaam', wifiPassword: 'Wifi-wachtwoord', security: 'Beveiliging', secured: 'Met wachtwoord (WPA, WPA2, WPA3)', openNetwork: 'Open netwerk, geen wachtwoord', oldWep: 'WEP (oude routers)',
+    showWords: 'Naam en wachtwoord ook als tekst afdrukken', linkValue: 'Webadres', linkHint: 'Begin met https://, dan opent een telefoon het. Voor Instagram: https://instagram.com/jouwnaam', caption: 'Tekst onder de code', codeSize: 'Grootte van de code',
+    addWifi: 'Wificode toevoegen', addLink: 'Linkcode toevoegen', freeWifi: 'Gratis wifi', scanMe: 'Scan mij',
     ending: 'Einde van de bon', footer: 'Slotregel (leeg = bedrijfsinstelling)', closing: 'Slotplaatje', closingHint: 'Een tekening, een stempel, een QR-code die je elders maakte: wordt als laatste afgedrukt, onder de slotregel.', addPicture: 'Plaatje toevoegen', removePicture: 'Plaatje verwijderen',
     divider: 'Scheidingslijnen', dividers: { dashed: 'Streepjes', solid: 'Lijn', double: 'Dubbel', dotted: 'Puntjes', stars: 'Sterren', wave: 'Golfjes', space: 'Witruimte' },
     print: 'Voorbeeld afdrukken', thermal: 'Test op bonprinter', printHint: 'Voorbeeldgegevens — geen verkoop. Thermisch afdrukken volgt de papierinstelling van de printer.', sent: 'Testbon verzonden',
@@ -173,6 +181,8 @@ export function ReceiptEditor() {
     finally { setBusy(false); }
   };
   const message = (index: number, value: Partial<DesignMessage>) => patch({ messages: design.messages.map((entry, i) => i === index ? { ...entry, ...value } : entry) });
+  const setCode = (index: number, value: Partial<DesignCode>) => patch({ codes: design.codes.map((entry, i) => i === index ? { ...entry, ...value } : entry) });
+  const addCode = (kind: DesignCode['kind']) => patch({ codes: [...design.codes, { kind, value: '', ssid: '', password: '', security: 'WPA', showPassword: true, caption: kind === 'wifi' ? c.freeWifi : c.scanMe, size: 'm', position: 'bottom' }] });
   const move = (index: number, delta: number) => { const messages = [...design.messages]; const a = messages[index]!, b = messages[index + delta]!; messages[index] = b; messages[index + delta] = a; patch({ messages }); };
   /** Lettering drawn for the other paper width would be too wide or needlessly small: draw it again where this device has the font. */
   const setWidth = (widthMm: 58 | 80) => {
@@ -235,6 +245,24 @@ export function ReceiptEditor() {
             <button aria-label={c.up} disabled={!index} onClick={() => move(index, -1)}>↑</button><button aria-label={c.down} disabled={index === design.messages.length - 1} onClick={() => move(index, 1)}>↓</button><button aria-label={c.remove} onClick={() => patch({ messages: design.messages.filter((_, i) => i !== index) })}><Icon name="trash" /></button>
           </div>
         </div>)}<button disabled={design.messages.length >= 6} onClick={() => patch({ messages: [...design.messages, { text: '', bold: false, align: 'center', position: 'bottom' }] })}><Icon name="plus" />{c.add}</button></section>
+
+        <section className="re-card"><h2><Icon name="wifi" />{c.codes}</h2><p className="re-hint">{c.codesHint}</p>
+          {design.codes.map((code, index) => <div className="re-message re-code" key={index}>
+            <div className="re-message-head"><strong>{code.kind === 'wifi' ? c.wifiCode : c.linkCode}</strong><button aria-label={`${c.remove}: ${code.kind === 'wifi' ? c.wifiCode : c.linkCode}`} onClick={() => patch({ codes: design.codes.filter((_, i) => i !== index) })}><Icon name="trash" /></button></div>
+            {code.kind === 'wifi' ? <>
+              <label>{c.ssid}<input value={code.ssid} maxLength={32} autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => setCode(index, { ssid: e.target.value })} /></label>
+              <label>{c.security}<select value={code.security} onChange={(e) => setCode(index, { security: e.target.value as DesignCode['security'] })}><option value="WPA">{c.secured}</option><option value="nopass">{c.openNetwork}</option><option value="WEP">{c.oldWep}</option></select></label>
+              {code.security !== 'nopass' && <label>{c.wifiPassword}<input value={code.password} maxLength={63} autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => setCode(index, { password: e.target.value })} /></label>}
+              <div className="re-toggles"><button role="switch" aria-checked={code.showPassword} onClick={() => setCode(index, { showPassword: !code.showPassword })}><span>{c.showWords}</span><Icon name={code.showPassword ? 'check' : 'minus'} /></button></div>
+            </> : <label>{c.linkValue}<input value={code.value} maxLength={300} inputMode="url" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="https://" onChange={(e) => setCode(index, { value: e.target.value })} /><small>{c.linkHint}</small></label>}
+            <label>{c.caption}<input value={code.caption} maxLength={80} onChange={(e) => setCode(index, { caption: e.target.value })} /></label>
+            <div className="re-message-tools">
+              <Segmented label={c.codeSize} value={code.size} options={[['s', c.small], ['m', c.medium], ['l', c.big]]} onChange={(size) => setCode(index, { size })} />
+              <select aria-label={c.where} value={code.position} onChange={(e) => setCode(index, { position: e.target.value as 'top' | 'bottom' })}><option value="top">{c.above}</option><option value="bottom">{c.below}</option></select>
+            </div>
+          </div>)}
+          <div className="re-presets"><button disabled={design.codes.length >= 3} onClick={() => addCode('wifi')}><Icon name="wifi" />{c.addWifi}</button><button disabled={design.codes.length >= 3} onClick={() => addCode('link')}><Icon name="external" />{c.addLink}</button></div>
+        </section>
 
         <section className="re-card"><h2><Icon name="receipt" />{c.order}</h2><div className="two">
           <label>{c.number}<select value={design.numberSize} onChange={(e) => patch({ numberSize: e.target.value as DocumentDesign['numberSize'] })}><option value="normal">{c.normal}</option><option value="large">{c.large}</option><option value="huge">{c.huge}</option></select></label>

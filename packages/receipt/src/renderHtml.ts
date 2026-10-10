@@ -1,5 +1,6 @@
 import type { ReceiptLogo } from '@cactus/shared';
 import type { Block, Look } from './blocks.js';
+import { QR_QUIET, qrMatrix } from './qr.js';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -15,6 +16,23 @@ function picture(image: ReceiptLogo, alt = 'Logo'): string {
     }
   }
   return `<svg role="img" aria-label="${esc(alt)}" viewBox="0 0 ${image.width} ${image.height}" style="width:${image.width / 8}mm;max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><path d="${paths.join('')}" fill="black"/></svg>`;
+}
+
+/** The same QR code the printer gets, as squares. Sized as on paper: `scale` printer dots per square, 8 dots to the millimetre. */
+function qr(data: string, scale = 6): string {
+  const m = qrMatrix(data);
+  if (!m) return '';
+  const side = m.length + QR_QUIET * 2;
+  let d = '';
+  m.forEach((line, y) => {
+    for (let x = 0; x < line.length; x++) {
+      if (!line[x]) continue;
+      const from = x;
+      while (x + 1 < line.length && line[x + 1]) x++;
+      d += `M${from + QR_QUIET} ${y + QR_QUIET}h${x - from + 1}v1H${from + QR_QUIET}z`;
+    }
+  });
+  return `<svg role="img" aria-label="QR ${esc(data)}" viewBox="0 0 ${side} ${side}" shape-rendering="crispEdges" style="width:${side * scale / 8}mm;max-width:100%;height:auto;background:#fff" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="black"/></svg>`;
 }
 
 /** Class names for a printer text look. `large` keeps its old name so pages printed before still match. */
@@ -37,7 +55,7 @@ export function renderHtmlFragment(blocks: readonly Block[]): string {
         return `<hr${b.style && b.style !== 'dashed' ? ` class="${b.style}"` : ''}>`;
       case 'raster': return `<div class="t ${b.align ?? 'center'}">${picture(b.image, b.alt)}</div>`;
       case 'feed': return `<div style="height:${b.lines * 0.6}em"></div>`;
-      case 'qr': return `<div class="t center qr" data-qr="${esc(b.data)}">[QR]${b.caption ? `<br>${esc(b.caption)}` : ''}</div>`;
+      case 'qr': { const code = qr(b.data, b.scale); return code ? `<div class="t center qr">${code}${b.caption ? `<br>${esc(b.caption)}` : ''}</div>` : ''; }
       default: return '';
     }
   }).join('\n');

@@ -1,4 +1,4 @@
-import { formatMoney, type Business, type DesignMessage, type Order, type DocumentDesign, type TextStyle } from '@cactus/shared';
+import { formatMoney, type Business, type DesignCode, type DesignMessage, type Order, type DocumentDesign, type TextStyle } from '@cactus/shared';
 import type { Align, Block, Look } from './blocks.js';
 
 export type ReceiptLang = 'en' | 'nl';
@@ -7,12 +7,12 @@ const T = {
   en: {
     receipt: 'Receipt', ticket: 'Ticket', total: 'TOTAL', inclAbb: 'Prices include ABB', abbOver: 'over', cash: 'Cash', card: 'Card',
     change: 'Change', tip: 'Tip', void: '*** VOID ***', unpaid: '*** NOT PAID ***', copy: 'COPY', exempt: 'Exempt', outside: 'Outside scope of ABB',
-    note: 'Note', order: 'ORDER', tab: 'Tab', added: '+++ ADDED TO THIS ORDER +++', test: 'Printer test', testBody: 'If you can read this, the printer works.',
+    note: 'Note', order: 'ORDER', tab: 'Tab', password: 'Password', added: '+++ ADDED TO THIS ORDER +++', test: 'Printer test', testBody: 'If you can read this, the printer works.',
   },
   nl: {
     receipt: 'Bon', ticket: 'Volgnr', total: 'TOTAAL', inclAbb: 'Prijzen zijn inclusief ABB', abbOver: 'over', cash: 'Contant', card: 'Pin',
     change: 'Wisselgeld', tip: 'Fooi', void: '*** GEANNULEERD ***', unpaid: '*** NIET BETAALD ***', copy: 'KOPIE', exempt: 'Vrijgesteld', outside: 'Buiten toepassing ABB',
-    note: 'Opmerking', order: 'BESTELLING', tab: 'Rekening', added: '+++ TOEGEVOEGD AAN DEZE BESTELLING +++', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
+    note: 'Opmerking', order: 'BESTELLING', tab: 'Rekening', password: 'Wachtwoord', added: '+++ TOEGEVOEGD AAN DEZE BESTELLING +++', test: 'Printertest', testBody: 'Als u dit kunt lezen, werkt de printer.',
   },
 } as const;
 
@@ -40,6 +40,22 @@ function nameBlock(b: Business, design: DocumentDesign | undefined, usual: Look,
   const art = design?.nameArt;
   if (art && art.text.trim().toLowerCase() === b.name.trim().toLowerCase()) return { t: 'raster', image: art.image, align, alt: b.name };
   return { t: 'text', text: b.name, align, ...lookOf(design?.nameStyle, usual) };
+}
+
+/** Printer dots per square of a QR code, for the three sizes the editor offers. */
+const CODE_DOTS = { s: 4, m: 6, l: 8 } as const;
+
+/** The blocks of one QR code from the design: the code with its caption, and for WiFi the details in words. Empty when nothing was filled in. */
+function codeBlocks(code: DesignCode, lang: ReceiptLang): Block[] {
+  if (code.kind === 'link') return code.value.trim() ? [{ t: 'qr', data: code.value.trim(), caption: code.caption.trim() || undefined, scale: CODE_DOTS[code.size] }] : [];
+  if (!code.ssid.trim()) return [];
+  const open = code.security === 'nopass' || !code.password;
+  const out: Block[] = [{ t: 'qr', data: wifiQr(code.ssid, open ? '' : code.password, open ? 'nopass' : code.security), caption: code.caption.trim() || undefined, scale: CODE_DOTS[code.size] }];
+  if (code.showPassword) {
+    out.push({ t: 'text', text: `WiFi: ${code.ssid}`, align: 'center', bold: true });
+    if (!open) out.push({ t: 'text', text: `${T[lang].password}: ${code.password}`, align: 'center' });
+  }
+  return out;
 }
 
 const expand = (text: string, o: Order, b: Business) => text.replace(/\{\{(business|order|receipt)\}\}/g, (_, key: string) => key === 'business' ? b.name : String(key === 'order' ? o.ticketNumber : o.receiptNumber ?? '-'));
@@ -73,9 +89,12 @@ function decorate(blocks: Block[], o: Order, b: Business, design: DocumentDesign
   const filled = design.messages.filter((m) => m.text.trim());
   const above: Block[] = filled.filter((m) => m.position === 'top').map(message);
   if (design.subtitle) above.unshift({ t: 'text', text: expand(design.subtitle, o, b), align: design.align, ...lookOf(design.subtitleStyle, {}) });
+  const lang: ReceiptLang = b.locale ?? 'en';
+  above.push(...design.codes.filter((code) => code.position === 'top').flatMap((code) => codeBlocks(code, lang)));
   out.splice(firstRule, 0, ...above);
   const footer: Block[] = filled.filter((m) => m.position !== 'top').map(message);
   if (kitchen && design.footer) footer.push({ t: 'text', text: expand(design.footer, o, b), align: design.align, ...lookOf(design.footerStyle, {}) });
+  footer.push(...design.codes.filter((code) => code.position !== 'top').flatMap((code) => codeBlocks(code, lang)));
   if (design.closing) footer.push({ t: 'raster', image: design.closing, align: 'center' });
   out.splice(out.findIndex((block) => block.t === 'feed'), 0, ...footer);
   return out;

@@ -1,4 +1,4 @@
-// Browser check for personal receipts (BOARD UX12): lettering, printer looks, dividers, publishing.
+// Browser check for personal receipts (BOARD UX12, UX13): lettering, printer looks, dividers, QR codes, publishing.
 // MUTATES SAMPLE DATA (publishes a receipt design, places an order). Run through `npm run e2e`.
 import assert from 'node:assert/strict';
 
@@ -52,6 +52,18 @@ export default async function (page) {
   assert.match(html, /class="deco"/);
   assert.match(html, /<div class="t center b huge">ORDER #42<\/div>/);
   assert.ok(html.indexOf('Fresh from the grill') < html.indexOf('House burger') && html.indexOf('Hasta luego') > html.indexOf('TOTAL'), 'Lines sit where they were put');
+
+  /* QR codes: WiFi for guests and a link to the website. */
+  await page.click({ text: 'Add a WiFi code' });
+  await page.type('.re-code input', 'Cactus Guest');
+  await page.type('.re-code label:nth-of-type(3) input', 'burgers4ever');
+  await page.click({ text: 'Add a link code' });
+  await page.type('.re-code:nth-of-type(2) input', 'https://www.cactusblue.us');
+  await settle();
+  const coded = await preview();
+  assert.match(coded, /aria-label="QR WIFI:T:WPA;S:Cactus Guest;P:burgers4ever;;" viewBox="0 0 \d+ \d+"/, 'The WiFi code is drawn in the preview');
+  assert.match(coded, /<br>Free WiFi<\/div>\s*<div class="t center b">WiFi: Cactus Guest<\/div>\s*<div class="t center">Password: burgers4ever<\/div>/);
+  assert.match(coded, /aria-label="QR https:\/\/www\.cactusblue\.us"/);
   await page.shot('receipt-editor-1180');
 
   /* The editor fits a tablet and a phone, in both of its phone views. */
@@ -75,6 +87,7 @@ export default async function (page) {
   assert.equal(state.current.version, 1);
   assert.equal(state.current.template.receipt.nameArt.text, 'Cactus Blue');
   assert.equal(state.current.template.receipt.messages.length, 2);
+  assert.deepEqual(state.current.template.receipt.codes.map((code) => code.kind), ['wifi', 'link']);
   const order = await call('POST', '/orders', { lines: [{ itemId: 'cola', qty: 1 }] });
   assert.equal(order.templateVersion, 1);
   await call('POST', `/orders/${order.id}/pay`, { method: 'cash', expectedTotalCents: order.totalCents });
@@ -82,10 +95,12 @@ export default async function (page) {
   assert.match(receipt, /aria-label="Cactus Blue"/);
   assert.match(receipt, /Fresh from the grill/);
   assert.match(receipt, /aria-label="Hasta luego"/);
+  assert.match(receipt, /aria-label="QR WIFI:T:WPA;S:Cactus Guest;P:burgers4ever;;"/, 'A real receipt carries the WiFi code');
   await page.goto('/admin');
   await page.click({ text: 'Receipt design' });
   await settle();
   assert.match(await page.eval("document.querySelector('.re-eyebrow').textContent"), /Version 1\s+Published/);
-  assert.equal(await page.eval("document.querySelectorAll('.re-message').length"), 2);
-  console.log('Receipt editor: lettering for the name and a line, printer looks, divider, huge number, publish and a real receipt passed.');
+  assert.equal(await page.eval("document.querySelectorAll('.re-message:not(.re-code)').length"), 2);
+  assert.equal(await page.eval("document.querySelectorAll('.re-code').length"), 2);
+  console.log('Receipt editor: lettering for the name and a line, printer looks, divider, huge number, WiFi and link codes, publish and a real receipt passed.');
 }

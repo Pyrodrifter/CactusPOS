@@ -43,18 +43,6 @@ export function encodeText(s: string): number[] {
   return out;
 }
 
-function qrCommands(data: string): number[] {
-  const bytes = [...Buffer.from(data, 'utf8')];
-  const len = bytes.length + 3;
-  return [
-    GS, 0x28, 0x6b, 4, 0, 49, 65, 50, 0,          // model 2
-    GS, 0x28, 0x6b, 3, 0, 49, 67, 6,              // module size 6
-    GS, 0x28, 0x6b, 3, 0, 49, 69, 49,             // error correction M
-    GS, 0x28, 0x6b, len & 0xff, len >> 8, 49, 80, 48, ...bytes, // store
-    GS, 0x28, 0x6b, 3, 0, 49, 81, 48,             // print
-  ];
-}
-
 /** GS ! n: the high half is extra width, the low half extra height. The narrow font is a separate command. */
 const MAGNIFY: Record<TextSize, number> = { small: 0x00, normal: 0x00, tall: 0x01, wide: 0x10, large: 0x11, huge: 0x22 };
 
@@ -79,9 +67,6 @@ export function renderEscPos(blocks: readonly Block[], opts: EscPosOptions = {})
       const bytes = x.image.hex.match(/../g)!.map((h) => parseInt(h, 16));
       // GS v 0: bytes per row and rows, each as low byte then high byte (a picture can be taller than 255 dots).
       out.push(ESC, 0x61, align === 'center' ? 1 : align === 'right' ? 2 : 0, GS, 0x76, 0x30, 0, x.image.width / 8, 0, x.image.height & 0xff, x.image.height >> 8, ...bytes, LF);
-    } else if (x.kind === 'qr') {
-      out.push(ESC, 0x61, 1, ...qrCommands(x.data), LF);
-      align = 'center';
     } else if (x.kind === 'feed') {
       out.push(ESC, 0x64, Math.min(255, x.lines));
     } else if (x.kind === 'cut') {

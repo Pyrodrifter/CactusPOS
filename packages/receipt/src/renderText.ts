@@ -1,5 +1,6 @@
 import type { ReceiptLogo } from '@cactus/shared';
 import type { Block, Columns, RuleStyle, TextSize } from './blocks.js';
+import { qrRaster } from './qr.js';
 
 /** Break text into lines of at most `width` characters, on spaces where possible. */
 export function wrap(text: string, width: number): string[] {
@@ -90,7 +91,7 @@ export function fitRaster(image: ReceiptLogo, maxWidth: number): ReceiptLogo {
  * Shared by the plain-text and ESC/POS renderers so both wrap identically.
  */
 export interface Line { text: string; bold: boolean; size: TextSize; underline: boolean; inverse: boolean; align: 'left' | 'center' | 'right' }
-export type LaidOut = { kind: 'line'; line: Line } | { kind: 'raster'; image: ReceiptLogo; align: 'left' | 'center' | 'right'; alt?: string } | { kind: 'qr'; data: string } | { kind: 'cut' } | { kind: 'drawer' } | { kind: 'feed'; lines: number };
+export type LaidOut = { kind: 'line'; line: Line } | { kind: 'raster'; image: ReceiptLogo; align: 'left' | 'center' | 'right'; alt?: string } | { kind: 'cut' } | { kind: 'drawer' } | { kind: 'feed'; lines: number };
 
 export function layout(blocks: readonly Block[], columns: Columns): LaidOut[] {
   const out: LaidOut[] = [];
@@ -111,10 +112,13 @@ export function layout(blocks: readonly Block[], columns: Columns): LaidOut[] {
       case 'rule': if (b.style === 'space') out.push({ kind: 'feed', lines: 1 }); else push(ruleLine(b.style ?? 'dashed', columns)); break;
       case 'raster': out.push({ kind: 'raster', image: fitRaster(b.image, paperDots(columns)), align: b.align ?? 'center', alt: b.alt }); break;
       case 'feed': out.push({ kind: 'feed', lines: b.lines }); break;
-      case 'qr':
-        out.push({ kind: 'qr', data: b.data });
-        if (b.caption) push(b.caption, { align: 'center' });
+      case 'qr': {
+        // Drawn here and sent as a picture: every printer that prints the logo prints this, and it fits the paper in whole dots.
+        const image = qrRaster(b.data, b.scale ?? 6, paperDots(columns));
+        if (image) out.push({ kind: 'raster', image, align: 'center', alt: `QR ${b.data}` });
+        if (image && b.caption) for (const l of wrap(b.caption, columns)) push(l, { align: 'center' });
         break;
+      }
       case 'cut': out.push({ kind: 'cut' }); break;
       case 'drawer': out.push({ kind: 'drawer' }); break;
     }
@@ -127,7 +131,6 @@ export function renderText(blocks: readonly Block[], columns: Columns = 48): str
   const lines: string[] = [];
   for (const x of layout(blocks, columns)) {
     if (x.kind === 'line') lines.push(alignLine(x.line.text, columnsFor(x.line.size, columns), x.line.align).trimEnd());
-    else if (x.kind === 'qr') lines.push(alignLine(`[QR ${x.data}]`, columns, 'center'));
     // A picture cannot be shown as text; lettering says what it spells, so a log still reads as the receipt did.
     else if (x.kind === 'raster') lines.push(alignLine(x.alt ? `[${x.alt}]` : '[LOGO]', columns, x.align));
     else if (x.kind === 'feed') lines.push(...Array<string>(x.lines).fill(''));
