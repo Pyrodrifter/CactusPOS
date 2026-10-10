@@ -69,7 +69,8 @@ function decorate(blocks: Block[], o: Order, b: Business, design: DocumentDesign
   const message = (m: DesignMessage): Block => (m.art
     ? { t: 'raster', image: m.art.image, align: m.align, alt: m.art.text }
     : { t: 'text', text: expand(m.text, o, b), align: m.align, bold: m.bold, size: m.size, underline: m.underline, inverse: m.inverse });
-  const filled = design.messages.filter((m) => m.art || m.text.trim());
+  // The words decide whether a line is there at all; lettering is how they are drawn.
+  const filled = design.messages.filter((m) => m.text.trim());
   const above: Block[] = filled.filter((m) => m.position === 'top').map(message);
   if (design.subtitle) above.unshift({ t: 'text', text: expand(design.subtitle, o, b), align: design.align, ...lookOf(design.subtitleStyle, {}) });
   out.splice(firstRule, 0, ...above);

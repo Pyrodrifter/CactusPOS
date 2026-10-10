@@ -31,11 +31,13 @@
 .re-preview-heading span { color: #687c70; }
 .re-paper-stage { background: #e4e9df; background-image: radial-gradient(#b9c6b7 1px, transparent 1px); background-size: 12px 12px; padding: 28px 12px; border-radius: 22px; display: flex; justify-content: center; overflow: auto; max-height: 70dvh; transition: opacity .15s; }
 .re-paper-stage.updating { opacity: .55; }
-.re-paper-stage iframe { border: 0; max-width: 100%; flex-shrink: 0; background: #fff; box-shadow: 0 6px 22px #24392722; }
+/* The page inside is true to size (a receipt letter is 3 mm tall), so it is shown enlarged to read comfortably. */
+.re-paper-stage iframe { border: 0; flex-shrink: 0; background: #fff; box-shadow: 0 6px 22px #24392722; zoom: 1.5; }
 .re-print-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .re-print-actions button { flex: 1; min-width: 140px; }
 .re-mobile-tabs { display: none; }
-@media (max-width: 1000px) { .re-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; } .re-card { padding: 18px; } .re-card .two { grid-template-columns: 1fr; } }
+@media (max-width: 1240px) { .re-paper-stage iframe { zoom: 1.25; } }
+@media (max-width: 1000px) { .re-paper-stage iframe { zoom: 1; } .re-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; } .re-card { padding: 18px; } .re-card .two { grid-template-columns: 1fr; } }
 @media (max-width: 740px) {
   .re-heading { align-items: stretch; flex-direction: column; gap: 18px; }
   .re-heading h1 { font-size: 36px; }
@@ -48,4 +50,34 @@
   .mobile-edit .re-preview, .mobile-preview .re-controls { display: none; }
   .re-preview { position: static; }
   .re-paper-stage { max-height: none; padding-inline: 6px; }
+  .re-paper-stage iframe { zoom: 1.08; }
 }
+/* ---- personal receipts: looks, lettering, dividers (UX12). Colours come from the theme, so dark mode follows. ---- */
+.re-field { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.re-field-label { color: var(--admin-muted, var(--muted)); font-size: 16px; font-weight: 600; }
+.re-seg { display: flex; gap: 6px; padding: 5px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); width: fit-content; max-width: 100%; }
+.admin .re-seg button { flex: 1 1 auto; min-height: 48px; min-width: 52px; padding: 0 16px; border-color: transparent; background: transparent; }
+.admin .re-seg button.on { background: var(--brand); color: var(--brand-ink); }
+.re-style { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.re-style label { flex: 1 1 150px; }
+.re-style-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin .re-style-toggles button, .admin .re-lettering-row > button { min-width: 64px; }
+.re-look-bold { font-weight: 800 !important; }
+.re-look-underline { text-decoration: underline; text-underline-offset: 4px; }
+.admin .re-look-inverse:not(.on) { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.re-lettering { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.re-lettering-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.re-fonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 330px; overflow-y: auto; padding: 4px; border-radius: 16px; border: 1px solid var(--line); background: var(--soft); overscroll-behavior: contain; }
+.admin .re-font { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 76px; padding: 8px 12px; text-align: left; overflow: hidden; }
+.re-font span { font-size: 22px; font-weight: 400; line-height: 1.25; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* The caption takes the button's own colour: the card's muted small-print colour is unreadable on a chosen button. */
+.admin .re-card .re-font small { color: inherit; }
+.re-font small { font: 600 12px/1.2 system-ui, sans-serif; opacity: .8; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.admin .re-font.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.re-message-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.re-dividers { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.admin .re-dividers button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 68px; padding: 6px 8px; }
+.re-dividers code { font: 700 15px/1 ui-monospace, Consolas, monospace; min-height: 15px; white-space: pre; }
+.re-dividers span { font-size: 14px; }
+.admin .re-dividers button.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.re-upload .re-seg { background: transparent; }

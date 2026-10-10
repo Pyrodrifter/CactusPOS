@@ -44,24 +44,26 @@ export function renderHtmlFragment(blocks: readonly Block[]): string {
 }
 
 /**
- * A complete printable page (browser print fallback when no receipt printer is set up).
- * The sizes mirror the printer's: tall and wide are the normal letter stretched one way, which CSS does by
- * laying the line out at double or half width and scaling it back, so it wraps where the printer wraps.
+ * A complete printable page (browser print fallback when no receipt printer is set up, and the editor's preview).
+ *
+ * The page is a character grid like the printer's: exactly as many characters wide as the paper holds (48 on
+ * 80 mm, 32 on 58 mm), in a letter size at which that is the real paper width or just under, so a line wraps
+ * on screen where it wraps on paper. The sizes are the printer's own multiples. Tall and wide are the normal
+ * letter stretched one way, which CSS does by laying the line out at double or half width and scaling it back.
  */
 export function renderHtml(blocks: readonly Block[], opts: { title?: string; widthMm?: 58 | 80 } = {}): string {
-  const width = opts.widthMm === 58 ? 48 : 72;
+  const columns = opts.widthMm === 58 ? 32 : 48;
   return `<!doctype html><meta charset="utf-8"><title>${esc(opts.title ?? 'Receipt')}</title>
 <style>
 @page{margin:4mm}
-body{font:13px/1.35 ui-monospace,Menlo,Consolas,monospace;width:${width}mm;margin:8px auto;color:#000;overflow-x:hidden}
-.center{text-align:center}.right{text-align:right}.b{font-weight:700}.lg{font-size:18px}
-.t{white-space:pre-wrap;overflow-wrap:anywhere}.row{display:flex;justify-content:space-between;gap:8px}.row span:first-child{min-width:0;overflow-wrap:anywhere}.row span:last-child{white-space:nowrap}
-.sub{padding-left:1.5em;color:#444;font-size:12px}hr{border:0;border-top:1px dashed #000;margin:4px 0}
-hr.solid{border-top-style:solid}.lg{font-size:22px;line-height:1.2}.sub{overflow-wrap:anywhere}
-hr.double{border-top:3px double #000}hr.dotted{border-top:2px dotted #000}
-.deco{white-space:nowrap;overflow:hidden;line-height:1.2;margin:2px 0}
-.sm{font-size:10px}.huge{font-size:36px;line-height:1.1}
-.tall{font-size:26px;line-height:1.15;width:200%;transform:scaleX(.5);transform-origin:0 0}
+body{font:9.4px/1.4 ui-monospace,Menlo,Consolas,monospace;width:${columns}ch;margin:8px auto;color:#000;overflow-x:hidden}
+.center{text-align:center}.right{text-align:right}.b{font-weight:700}
+.t{white-space:pre-wrap;overflow-wrap:anywhere}.row{display:flex;justify-content:space-between;gap:1ch}.row span:first-child{min-width:0;overflow-wrap:anywhere}.row span:last-child{white-space:nowrap}
+.sub{padding-left:3ch;color:#444;overflow-wrap:anywhere}hr{border:0;border-top:1px dashed #000;margin:.5em 0}
+hr.solid{border-top-style:solid}hr.double{border-top:3px double #000}hr.dotted{border-top:2px dotted #000}
+.deco{white-space:nowrap;overflow:hidden}
+.sm{font-size:.75em}.lg{font-size:2em;line-height:1.2}.huge{font-size:3em;line-height:1.15}
+.tall{font-size:2em;line-height:1.2;width:200%;transform:scaleX(.5);transform-origin:0 0}
 .wide{width:50%;transform:scaleX(2);transform-origin:0 0}
 .u{text-decoration:underline}.inv{background:#000;color:#fff;padding:0 .35em;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 @media print{body{margin:0}}

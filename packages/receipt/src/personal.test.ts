@@ -107,7 +107,8 @@ describe('lettering', () => {
   it('a message can be lettering, and messages go above the items or below the totals', () => {
     const d = design({ messages: [
       { text: 'Fresh from the grill', bold: false, align: 'center', position: 'top', size: 'wide' },
-      { text: '', bold: false, align: 'right', art: art('Hasta luego') },
+      { text: 'Hasta luego', bold: false, align: 'right', art: art('Hasta luego') },
+      { text: '', bold: false, align: 'center', art: art('Left over from an emptied line') },
       { text: 'Tag us @cactusblue', bold: true, align: 'center' },
       { text: '   ', bold: false, align: 'left' },
     ] });
@@ -118,6 +119,7 @@ describe('lettering', () => {
     expect(at('[Hasta luego]')).toBeGreaterThan(at('TOTAL'));
     expect(at('Tag us @cactusblue')).toBeGreaterThan(at('[Hasta luego]'));
     expect(lines[at('[Hasta luego]')]!.endsWith('[Hasta luego]')).toBe(true); // right aligned
+    expect(at('Left over')).toBe(-1); // no words, no line, whatever picture is still stored
   });
 
   it('a closing picture is the last thing before the paper is cut', () => {
