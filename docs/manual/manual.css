@@ -1,0 +1,65 @@
+/* Print layout of the user manual. scripts/make-manual.mjs prints the HTML to PDF with Edge or Chrome. */
+@page { size: A4; margin: 17mm 16mm 18mm; }
+* { box-sizing: border-box; }
+html { font-size: 11pt; }
+body { margin: 0; color: #16233b; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+main { max-width: 178mm; margin: 0 auto; }
+
+h1, h2, h3 { color: #0f1d4a; line-height: 1.2; break-after: avoid; }
+h1 { font-size: 22pt; margin: 0 0 4mm; padding-bottom: 3mm; border-bottom: 1.2mm solid #b9e29b; }
+h2 { font-size: 14pt; margin: 8mm 0 2mm; }
+h3 { font-size: 11.5pt; margin: 5mm 0 1.5mm; }
+p { margin: 0 0 2.6mm; }
+section { break-before: page; }
+/* A short chapter may follow the one before it on the same page. */
+section.flow { break-before: auto; margin-top: 11mm; }
+a { color: #0f5a6b; }
+
+/* Names of buttons and screens, exactly as they are written on the screen. */
+b, strong { font-weight: 650; color: #0f1d4a; }
+kbd { display: inline-block; font: inherit; font-weight: 650; line-height: 1.25; padding: 0 1.6mm; border: 0.3mm solid #b8c3c9; border-radius: 1.4mm; background: #f3f5f2; white-space: nowrap; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 0.93em; background: #f3f5f2; padding: 0.2mm 1mm; border-radius: 1mm; overflow-wrap: anywhere; }
+
+ol, ul { margin: 0 0 3mm; padding-left: 6.5mm; }
+li { margin-bottom: 1.6mm; }
+ol.steps { list-style: none; counter-reset: step; padding-left: 0; }
+/* The number is floated, not positioned: with position:relative the browser printed stray boxes at page breaks. */
+ol.steps > li { counter-increment: step; padding-left: 10mm; margin-bottom: 2.6mm; break-inside: avoid; }
+ol.steps > li::before { content: counter(step); float: left; margin-left: -10mm; width: 6.6mm; height: 6.6mm; border-radius: 50%; background: #0f1d4a; color: #fff; font-weight: 700; font-size: 10pt; line-height: 6.6mm; text-align: center; }
+
+figure { margin: 3mm 0 5mm; break-inside: avoid; break-before: avoid; text-align: center; }
+figure img { max-width: 74%; border: 0.3mm solid #c9d2d2; border-radius: 2mm; }
+figure.small img { max-width: 40%; }
+figure.medium img { max-width: 56%; }
+figcaption { font-size: 9pt; color: #55636d; margin-top: 1.2mm; }
+
+.note, .warn, .tip { margin: 3mm 0 4mm; padding: 2.6mm 4mm; border-radius: 2mm; border-left: 1.4mm solid; break-inside: avoid; }
+.note { background: #eef4f6; border-color: #16606f; }
+.tip { background: #eef7e6; border-color: #6da544; }
+.warn { background: #fff5dd; border-color: #c98a12; }
+.note > :last-child, .warn > :last-child, .tip > :last-child { margin-bottom: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 2mm 0 5mm; font-size: 10pt; }
+th, td { text-align: left; vertical-align: top; padding: 1.8mm 2.4mm; border-bottom: 0.3mm solid #d5dcdc; }
+th { background: #0f1d4a; color: #fff; font-weight: 650; }
+tr { break-inside: avoid; }
+/* The long list of problems: tighter, so it stays on one page. */
+table.compact { font-size: 9.5pt; }
+table.compact th, table.compact td { padding: 1.25mm 2.2mm; line-height: 1.38; }
+
+/* Front page */
+.cover { break-before: auto; min-height: 240mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.cover img { width: 42mm; height: 42mm; border-radius: 9mm; }
+.cover h1 { font-size: 34pt; border: 0; margin: 9mm 0 1mm; padding: 0; }
+.cover .subtitle { font-size: 16pt; color: #16606f; margin-bottom: 14mm; }
+.cover .what { max-width: 120mm; color: #3c4a55; }
+.cover .version { margin-top: 26mm; font-size: 10pt; color: #6b7880; }
+
+.contents ol { columns: 2; column-gap: 12mm; padding-left: 6mm; }
+.contents li { break-inside: avoid; margin-bottom: 1.4mm; }
+.contents a { color: inherit; text-decoration: none; }
+
+/* One page to keep beside the till */
+.card { border: 0.6mm solid #0f1d4a; border-radius: 3mm; padding: 5mm 6mm; }
+.card h2 { margin-top: 0; }
+.card h3 { color: #16606f; }

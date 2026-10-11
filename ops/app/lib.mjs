@@ -58,7 +58,7 @@ export function normalizeConfig(raw = {}, overrides = {}) {
 /** Command line of the launcher. */
 export function parseArgs(argv) {
   const out = { command: 'open', overrides: {}, json: false, ifNew: false, gui: false, help: false, file: '', yes: false, errors: [] };
-  const commands = { '--server-only': 'server', '--stop': 'stop', '--status': 'status', '--configure': 'configure' };
+  const commands = { '--server-only': 'server', '--stop': 'stop', '--status': 'status', '--configure': 'configure', '--addresses': 'addresses' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = () => {
@@ -148,6 +148,30 @@ export function lanUrls(interfaces, port) {
   return Object.values(interfaces).flat()
     .filter((n) => n && (n.family === 'IPv4' || n.family === 4) && !n.internal && !n.address.startsWith('169.254.'))
     .map((n) => `http://${n.address}:${port}`);
+}
+
+/**
+ * What to type on a tablet or phone to reach the till, in words for the person at the till.
+ * Shown in a window by the Start menu entry "Connect a tablet or phone".
+ */
+export function addressesText({ urls, running }) {
+  if (!urls.length) {
+    return [
+      'This computer is not connected to a network, so a tablet or phone cannot reach the till yet.',
+      '',
+      'Connect this computer to the WiFi (or switch on its Mobile hotspot and connect the tablet to that), then open this again.',
+    ].join('\n');
+  }
+  const lines = ['To use a tablet or phone with the till:', '', '1. Connect it to the same WiFi as this computer.', '2. Open its web browser and type this address:', ''];
+  for (const [i, url] of urls.entries()) {
+    if (urls.length > 1) lines.push(i === 0 ? 'Try this one first:' : 'If that does not open, try:');
+    lines.push(`     Kitchen screen:   ${url}/kitchen`, `     Taking orders:    ${url}/pos`, `     Pickup board:     ${url}/pickup`, '');
+  }
+  lines.push('3. Sign in with your PIN.', '');
+  lines.push(running
+    ? 'CactusPOS is running. This computer has to stay on for the other screens to work.'
+    : 'CactusPOS is NOT running now. Start it with the CactusPOS icon first.');
+  return lines.join('\n');
 }
 
 /** Node versions the server supports (see "engines" in package.json): 22.13+ within 22, or 24 and newer. */

@@ -6,9 +6,12 @@ Self-hosted point of sale for Cactus Blue (Bonaire). Start with [AGENTS.md](AGEN
 The laptop in the truck runs the server and shows the till in its own window, like an installed program. Tablets
 and phones on the same WiFi open the kitchen and ordering screens in their browser.
 
-- **Windows, ready-made package:** unzip `CactusPOS-<version>-win-x64.zip` from the
-  [Releases page](https://github.com/Pyrodrifter/CactusPOS/releases) and double-click
-  **Install CactusPOS.bat**. It carries its own Node.js; the computer needs no internet and nothing else installed.
+- **Windows, setup program:** get `CactusPOS-Setup-<version>.exe` from the
+  [Releases page](https://github.com/Pyrodrifter/CactusPOS/releases) and double-click it: language, Next, Next,
+  Finish. It carries everything, its own Node.js included; the computer needs no internet and nothing else
+  installed. English and Dutch.
+- **Windows, as a folder:** unzip `CactusPOS-<version>-win-x64.zip` from the same page and double-click
+  **Install CactusPOS.bat**.
 - **Windows, from this repository:** clone it and double-click **Install CactusPOS.bat**. It installs Node.js LTS
   with winget when missing, downloads the libraries and builds the screens.
 - **Linux:** `sh ops/linux/install.sh` (needs Node.js 22.13+ or 24+ and Chromium, Chrome or Edge).
@@ -16,7 +19,12 @@ and phones on the same WiFi open the kitchen and ordering screens in their brows
 The installer adds a Desktop icon, starts CactusPOS at sign-in and (Windows) asks once to open the firewall for
 devices on the local network. Sales data lives outside the program folder (`%LOCALAPPDATA%\CactusPOS`,
 `~/.local/share/cactuspos`), so updating never touches it. Full guide, tablet setup, backups and troubleshooting:
-[ops/install.md](ops/install.md). Build the package yourself with `node scripts/make-redist.mjs`.
+[ops/install.md](ops/install.md). Build the setup program, the zip and the manual yourself with `npm run package`
+(needs Inno Setup 6, see [Building a release](ops/install.md#building-a-release)).
+
+**The user manual** (installing, setting up, daily use, with pictures) is written for the people at the till, in
+English and Dutch: `docs/manual/`, installed with the program under Start menu → CactusPOS, and attached to every
+release as `CactusPOS-Manual-English.pdf` and `CactusPOS-Handleiding-Nederlands.pdf`.
 
 ## Run locally
 

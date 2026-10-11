@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>CactusPOS handleiding</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<main>
+
+<div class="cover">
+  <img src="img/logo.png" alt="">
+  <h1>CactusPOS</h1>
+  <p class="subtitle">Handleiding</p>
+  <p class="what">Installeren op de kassacomputer, instellen, een keukentablet verbinden en er elke dag mee werken.</p>
+  <p class="version">Voor CactusPOS <span data-version></span> op Windows 10 en Windows 11</p>
+</div>
+
+<section class="contents">
+<h1>Wat staat er in deze handleiding</h1>
+<ol>
+  <li><a href="#what">Wat CactusPOS is</a></li>
+  <li><a href="#need">Wat u nodig hebt</a></li>
+  <li><a href="#install">Installeren</a></li>
+  <li><a href="#first">De eerste keer: maak het eigen</a></li>
+  <li><a href="#sell">Een bestelling opnemen en afrekenen</a></li>
+  <li><a href="#orders">Later betalen, rekeningen en fouten herstellen</a></li>
+  <li><a href="#kitchen">Het keukenscherm en het afhaalscherm</a></li>
+  <li><a href="#tablet">Een tablet of telefoon verbinden</a></li>
+  <li><a href="#close">De dag afsluiten</a></li>
+  <li><a href="#backup">Back-ups</a></li>
+  <li><a href="#update">Bijwerken, verhuizen en verwijderen</a></li>
+  <li><a href="#help">Als er iets misgaat</a></li>
+  <li><a href="#card">Eén pagina voor bij de kassa</a></li>
+</ol>
+
+<h2 id="what">1. Wat CactusPOS is</h2>
+<p>CactusPOS is een kassa voor een foodtruck, een snackbar of een klein restaurant. U tikt aan wat de gast bestelt, rekent af, en de bestelling verschijnt op een scherm in de keuken. Aan het eind van de dag ziet u wat u hebt verkocht, hoeveel ABB daarin zit en hoeveel contant geld er in de la hoort te zitten.</p>
+<p><b>Eén computer is de kassa.</b> Dat is de laptop waarop u CactusPOS installeert. Die bewaart alle verkopen. Elk ander scherm (een tablet bij de grill, een telefoon om bestellingen op te nemen, een scherm dat gasten kunnen zien) is gewoon een webbrowser op dezelfde wifi die naar die laptop kijkt.</p>
+<p><b>Het werkt zonder internet.</b> Alles blijft op uw eigen laptop en uw eigen wifi. Er wordt niets ergens naartoe gestuurd.</p>
+
+<h2 id="need">2. Wat u nodig hebt</h2>
+<table>
+  <tr><th style="width:36%">Wat</th><th>Toelichting</th></tr>
+  <tr><td><b>Een laptop of pc met Windows</b></td><td>Windows 10 of Windows 11, 64-bits. Bijna elke laptop die sinds 2018 is verkocht, is dat. Ongeveer 500 MB vrije ruimte.</td></tr>
+  <tr><td><b>Het installatiebestand</b></td><td>Eén bestand met de naam <code>CactusPOS-Setup-<span data-version></span>.exe</code>, op een USB-stick of via een downloadlink. U hoeft vooraf niets anders te installeren: in dit bestand zit alles wat CactusPOS nodig heeft.</td></tr>
+  <tr><td>Een tablet of telefoon <i>(als u wilt)</i></td><td>Voor het keukenscherm. Elke tablet of telefoon met een webbrowser werkt: iPad, Android, een oude telefoon. Die moet op dezelfde wifi zitten als de laptop.</td></tr>
+  <tr><td>Wifi <i>(alleen voor extra schermen)</i></td><td>Een router in de truck, of de mobiele hotspot van de laptop zelf. Internet is niet nodig.</td></tr>
+  <tr><td>Een bonprinter <i>(als u wilt)</i></td><td>Een netwerk-bonprinter (Epson, Star, Bixolon en de meeste thermische printers van 80 mm of 58 mm), of een printer die al in Windows werkt.</td></tr>
+</table>
+</section>
+
+<section>
+<h1 id="install">3. Installeren</h1>
+<p>Dit duurt ongeveer twee minuten. U doet het één keer op de kassacomputer.</p>
+
+<ol class="steps">
+  <li><b>Meld u aan bij Windows</b> als degene die de kassa gaat gebruiken. CactusPOS wordt voor dat Windows-account geïnstalleerd.</li>
+  <li><b>Dubbelklik op het bestand</b> <code>CactusPOS-Setup-<span data-version></span>.exe</code>.
+    <div class="warn">
+      <p><b>Windows kan eerst een waarschuwing tonen.</b> Dat gebeurt bij programma's die nieuw zijn voor Windows. U kunt veilig doorgaan als u het bestand hebt gekregen van degene die CactusPOS voor u heeft klaargezet.</p>
+      <ul>
+        <li>Een blauw venster <b>Uw pc wordt beschermd</b>: klik op <kbd>Meer informatie</kbd> en daarna op <kbd>Toch uitvoeren</kbd>.</li>
+        <li>Hebt u het bestand gedownload en zegt de browser dat het <i>niet vaak wordt gedownload</i>: wijs de download aan, klik op de drie puntjes, kies <kbd>Behouden</kbd>, daarna <kbd>Meer weergeven</kbd> en <kbd>Toch behouden</kbd>. De precieze woorden verschillen een beetje per browser.</li>
+      </ul>
+    </div>
+  </li>
+  <li><b>Kies uw taal</b> (Nederlands of English) en klik op <kbd>OK</kbd>.</li>
+  <li>Het welkomstvenster opent. Klik op <kbd>Volgende</kbd>.
+    <figure class="medium"><img src="img/nl-setup-welcome.png" alt="Het welkomstvenster van het installatieprogramma"></figure>
+  </li>
+  <li>Laat het vakje <b>CactusPOS vanzelf starten als deze computer wordt aangezet</b> aangevinkt en klik op <kbd>Volgende</kbd>. De installatie begint; dat duurt ongeveer een minuut.
+    <figure class="medium"><img src="img/nl-setup-task.png" alt="Het venster met de ene keuze: vanzelf starten"></figure>
+  </li>
+  <li>Na een korte tijd verschijnt de melding <b>Nog een stap</b>. Klik op <kbd>OK</kbd>. Windows vraagt dan <i>Wilt u toestaan dat deze app wijzigingen aan uw apparaat aanbrengt?</i> Klik op <kbd>Ja</kbd>.
+    <div class="note"><p>Hierdoor kunnen een keukentablet en telefoons op uw eigen wifi bij de kassa. Er wordt niets naar het internet opengezet. Klikt u op Nee, dan werkt de kassa op de laptop gewoon, maar kunnen tablets geen verbinding maken. Dat herstelt u later door het installatiebestand opnieuw te starten.</p></div>
+  </li>
+  <li>Klik op <kbd>Voltooien</kbd>. De kassa opent.
+    <figure class="medium"><img src="img/nl-setup-finish.png" alt="Het laatste venster van het installatieprogramma"></figure>
+  </li>
+</ol>
+
+<h2>Wat er nu op uw computer staat</h2>
+<table>
+  <tr><th style="width:36%">Waar</th><th>Wat</th></tr>
+  <tr><td><b>Bureaublad</b></td><td>Het pictogram <b>CactusPOS</b>. Hiermee start u de kassa.</td></tr>
+  <tr><td><b>Menu Start</b>, onder <b>CactusPOS</b></td><td>De kassa, het keukenscherm en het afhaalscherm op deze computer; <b>Connect a tablet or phone</b> (een tablet of telefoon verbinden); <b>Restore a backup</b> (een back-up terugzetten); en deze handleiding in het Nederlands en Engels.</td></tr>
+  <tr><td>Als Windows start</td><td>De kassa opent vanzelf nadat u zich bij Windows hebt aangemeld (tenzij u het vakje hebt uitgevinkt).</td></tr>
+  <tr><td>Uw verkopen</td><td>Los van het programma bewaard, in de map <code>AppData\Local\CactusPOS</code> van uw Windows-account. Bijwerken of verwijderen van CactusPOS raakt ze nooit.</td></tr>
+</table>
+</section>
+
+<section>
+<h1 id="first">4. De eerste keer: maak het eigen</h1>
+<p>Een nieuwe kassa heeft een voorbeeldmenu en twee voorbeeldpincodes. Loop deze stappen één keer door, vóór de eerste echte verkoop.</p>
+
+<h2>Inloggen</h2>
+<p>De kassa vraagt om een pincode. Bij een nieuwe kassa is de pincode van de eigenaar <b>1234</b>. Tik de cijfers in en tik op <kbd>Inloggen</kbd>.</p>
+<figure class="medium"><img src="img/nl-login.png" alt="Het inlogscherm"><figcaption>Het inlogscherm. Met de knop EN bovenaan zet u de schermen in het Engels.</figcaption></figure>
+
+<h2>Geef iedereen een eigen pincode</h2>
+<div class="warn"><p>De voorbeeldpincodes <b>1234</b> (eigenaar) en <b>1111</b> (medewerker) zijn op elke nieuwe CactusPOS hetzelfde. Wijzig beide voordat u echt gaat verkopen. De kassa herinnert u eraan op de pagina Beheer totdat u dat hebt gedaan.</p></div>
+<ol class="steps">
+  <li>Tik bovenaan op <kbd>Beheer</kbd> en dan op <kbd>Personeel</kbd>.</li>
+  <li>Tik op een persoon. Typ de echte naam en een <b>Nieuwe pincode</b> van 4 tot 8 cijfers. Tik op <kbd>Opslaan</kbd>.</li>
+  <li>Met <kbd>Persoon toevoegen</kbd> voegt u iemand toe. Kies de rol: een <b>Eigenaar</b> kan Beheer openen en het menu, de prijzen, het personeel en de belasting wijzigen. Een <b>Medewerker</b> kan bestellingen opnemen en het keukenscherm gebruiken.</li>
+</ol>
+<figure class="medium"><img src="img/nl-admin-staff-edit.png" alt="Naam en pincode van een persoon wijzigen"></figure>
+<div class="note"><p>Schrijf de pincode van de eigenaar op en bewaar die op een veilige plek. Weet niemand meer een eigenaarspincode, dan moet degene die u met CactusPOS helpt die opnieuw instellen.</p></div>
+
+<h2>Uw bedrijfsgegevens</h2>
+<p><kbd>Beheer</kbd> › <kbd>Bedrijf</kbd>. Vul de bedrijfsnaam in, het <b>CRIB-nummer</b> (dat staat op elke bon), adres en telefoon, en de tekst onderaan de bon. Kies de taal van de bon. Tik op <kbd>Opslaan</kbd>.</p>
+<figure><img src="img/nl-admin-business.png" alt="De pagina Bedrijf"></figure>
+
+<h2>Belasting (ABB)</h2>
+<p><kbd>Beheer</kbd> › <kbd>Belasting (ABB)</kbd>. De prijzen op uw menu zijn <b>inclusief</b> ABB; de kassa rekent uit hoeveel ABB er in elke verkoop zit. Vraag uw boekhouder welk tarief geldt voor wat u verkoopt. Klopt een tarief, tik dan op <kbd>Markeer gecontroleerd</kbd>. Tot die tijd staat er <i>Niet gecontroleerd</i> als geheugensteun.</p>
+
+<h2>Uw menu</h2>
+<p><kbd>Beheer</kbd> › <kbd>Menu</kbd>. In de rij bovenaan staan de categorieën (Burgers, Dranken). Daaronder staan de items van de categorie waarop u hebt getikt.</p>
+<figure><img src="img/nl-admin-menu.png" alt="De pagina Menu"></figure>
+<ul>
+  <li><b>Een item wijzigen:</b> tik erop. U kunt de naam, de omschrijving, de prijs, de belastingcategorie en de opties wijzigen (extra's zoals kaas, of een keuze zoals welk drankje).</li>
+  <li><b>Nieuw item:</b> <kbd>Item toevoegen</kbd>. <b>Nieuwe categorie:</b> <kbd>Categorie</kbd>.</li>
+  <li><b>Uitverkocht:</b> zet <b>Beschikbaar</b> uit. Op de kassa staat er dan <i>Uitverkocht</i> bij het item en kunt u het niet meer aantikken. Zet het weer aan als u het weer hebt.</li>
+  <li><b>Een prijs die elke dag anders is</b> (vangst van de dag): kies bij dat item <b>Dagprijs: invullen bij de kassa</b>. De kassa vraagt dan elke keer om de prijs.</li>
+</ul>
+
+<h2>De bon</h2>
+<p><kbd>Beheer</kbd> › <kbd>Bonontwerp</kbd>. Kies een stijl, voeg uw logo toe, een bedankje, of een QR-code voor uw wifi of website. Het voorbeeld rechts laat de bon zien terwijl u hem aanpast. Tik op <kbd>Ontwerp publiceren</kbd> om hem in gebruik te nemen.</p>
+<figure><img src="img/nl-admin-receipts.png" alt="De pagina Bonontwerp"></figure>
+
+<h2>De bonprinter</h2>
+<p><b>Zonder bonprinter</b> werkt de kassa ook. Tik na een betaling op <kbd>Bon</kbd> en Windows toont zijn afdrukvenster, met de printers die in Windows zijn geïnstalleerd.</p>
+<p><b>Met een netwerk-bonprinter:</b> <kbd>Beheer</kbd> › <kbd>Printer</kbd>. Zet <b>Bonprinter gebruiken</b> aan, typ het adres van de printer (een nummer zoals 192.168.1.50; de meeste printers drukken het af op hun zelftestpagina), kies de papierbreedte en tik op <kbd>Opslaan en testpagina afdrukken</kbd>. Vanaf dan komt er bij elke betaling vanzelf een bon uit, zolang <b>Bon afdrukken bij betaling</b> aanstaat.</p>
+<figure><img src="img/nl-admin-printer.png" alt="De pagina Printer"></figure>
+
+<h2>Taal en uiterlijk van de schermen</h2>
+<p>Tik rechtsboven op de knop met de schuifjes (<b>Schermopties</b>). Daar kiest u <b>Nederlands</b> of <b>English</b>, een licht of donker scherm, de <b>Zonlichtmodus</b> voor buiten, en daar logt u uit. Elk scherm (laptop, tablet, telefoon) onthoudt zijn eigen keuze.</p>
+<figure class="small"><img src="img/nl-screen-tools.png" alt="Schermopties"></figure>
+</section>
+
+<section>
+<h1 id="sell">5. Een bestelling opnemen en afrekenen</h1>
+<p>Start de kassa met het pictogram <b>CactusPOS</b> op het bureaublad en log in met uw pincode. U bent op het scherm <b>Bestellen</b>: links het menu, rechts de bestelling.</p>
+
+<ol class="steps">
+  <li><b>Tik aan wat de gast wil.</b> Tik op een categorie om minder tegelijk te zien, of typ in <b>Zoek in het hele menu</b>.</li>
+  <li><b>Kies de opties</b> als de kassa erom vraagt (extra's, zonder tomaat, welk drankje) en tik op <kbd>Toevoegen</kbd>.
+    <figure class="medium"><img src="img/nl-options.png" alt="Opties kiezen bij een item"></figure>
+  </li>
+  <li><b>Controleer de bestelling</b> rechts. Met <kbd>+</kbd> en <kbd>−</kbd> wijzigt u het aantal; bij 0 verdwijnt de regel. De prullenbak bovenaan maakt de hele bestelling leeg (<kbd>Herstellen</kbd> haalt hem terug). Onder <b>Opmerking</b> kunt u iets voor de keuken typen.
+    <figure><img src="img/nl-order.png" alt="Het scherm Bestellen met een bestelling"></figure>
+  </li>
+  <li>Tik op <kbd>Betalen</kbd>.</li>
+</ol>
+
+<h2>Contant betalen</h2>
+<ol class="steps">
+  <li><b>Contant</b> is al gekozen. Tik aan wat de gast u geeft: <kbd>Gepast</kbd>, een van de biljetten (<kbd>$20</kbd>, <kbd>$50</kbd>), of typ het bedrag op het cijferblok.</li>
+  <li>De kassa toont het <b>Wisselgeld</b>.</li>
+  <li>Tik op <kbd>Betaling bevestigen</kbd>.</li>
+</ol>
+<figure class="medium"><img src="img/nl-pay-cash.png" alt="Contant betalen"></figure>
+
+<h2>Met de pinpas betalen</h2>
+<ol class="steps">
+  <li>Tik op <kbd>Pinpas</kbd>.</li>
+  <li><b>Reken eerst af op uw pinautomaat.</b> De kassa praat niet met de pinautomaat; hij legt alleen vast dat deze verkoop met de pinpas is betaald.</li>
+  <li>Heeft de gast op de pinautomaat een fooi gegeven, tik die dan aan. U kunt de referentie van de pinbon intypen.</li>
+  <li>Tik op <kbd>Betaling bevestigen</kbd>.</li>
+</ol>
+<figure class="medium"><img src="img/nl-pay-card.png" alt="Met de pinpas betalen"></figure>
+
+<h2>Klaar</h2>
+<p>De kassa toont <b>Betaald</b> met het bestelnummer. Zeg het nummer tegen de gast. Tik op <kbd>Bon</kbd> als de gast een bon wil, en daarna op <kbd>Volgende bestelling</kbd>.</p>
+<figure class="medium"><img src="img/nl-paid.png" alt="Het scherm Betaald"></figure>
+
+<h2>Drukke service of rustige service</h2>
+<p>Op de knop boven het menu staat <b>Drukke service</b> of <b>Rustige service</b>. Tik erop om te wisselen.</p>
+<ul>
+  <li><b>Drukke service:</b> elke bestelling gaat naar het keukenscherm en het afhaalscherm. Gebruik dit als iemand anders kookt.</li>
+  <li><b>Rustige service:</b> bestellingen slaan beide schermen over. Gebruik dit als u de bestelling opneemt en zelf maakt.</li>
+</ul>
+</section>
+
+<section class="flow">
+<h1 id="orders">6. Later betalen, rekeningen en fouten herstellen</h1>
+
+<h2>Later betalen</h2>
+<p>Eet een gast eerst en betaalt hij daarna, tik dan op <kbd>Later betalen</kbd> in plaats van Betalen. De bestelling gaat naar de keuken en blijft open totdat er is betaald.</p>
+<p>Typ een <b>naam</b> en de knop wordt <kbd>Rekening openen voor Mike</kbd>. Met een naam kan de gast later bijbestellen op dezelfde rekening.</p>
+<figure class="medium"><img src="img/nl-pay-later.png" alt="Later betalen met een naam"></figure>
+
+<h2>Rekeningen</h2>
+<p>Tik linksboven op <kbd>Rekeningen</kbd> om elke open rekening te zien. Tik er een aan om hem te openen:</p>
+<ul>
+  <li><kbd>Items toevoegen</kbd>: de gast bestelt bij. Tik de items aan en daarna <kbd>Toevoegen aan Mike</kbd>.</li>
+  <li><kbd>Rekening afdrukken</kbd>: een rekening om aan de gast te laten zien vóór het betalen.</li>
+  <li><kbd>Betalen</kbd>: de gast betaalt de hele rekening.</li>
+</ul>
+<figure class="medium"><img src="img/nl-tab.png" alt="Een open rekening"></figure>
+
+<h2>De bestellingen van vandaag</h2>
+<p>Tik op <kbd>Bestellingen</kbd>. <b>Te betalen</b> laat zien wat nog openstaat; <b>Alles vandaag</b> laat alles zien.</p>
+<figure><img src="img/nl-orders.png" alt="De lijst met bestellingen van vandaag"></figure>
+<table>
+  <tr><th style="width:22%">Knop</th><th>Wat hij doet</th></tr>
+  <tr><td><kbd>Betalen</kbd></td><td>Een bestelling afrekenen die nog openstaat.</td></tr>
+  <tr><td><kbd>Bon</kbd></td><td>De bon nog een keer afdrukken.</td></tr>
+  <tr><td><kbd>Corrigeren</kbd></td><td>Een verkoop herstellen die al is betaald: een verkeerd item, een verkeerd aantal, of contant dat pin had moeten zijn. Pas het aan, kies wat er misging en tik op <kbd>Correctie opslaan</kbd>. De kassa zegt hoeveel u moet teruggeven of bijvragen.</td></tr>
+  <tr><td><kbd>Annuleren</kbd></td><td>Een bestelling helemaal laten vervallen. Typ de reden.</td></tr>
+</table>
+<p>Een eigenaar kan altijd corrigeren en annuleren. Wie als <b>Medewerker</b> is ingelogd, heeft de pincode van de eigenaar nodig om een verkoop te corrigeren, en om een bestelling te annuleren die al is betaald of al wordt bereid.</p>
+<div class="note"><p><b>Er wordt nooit iets gewist.</b> Een geannuleerde of gecorrigeerde verkoop blijft in de administratie staan, met die aanduiding, met de reden en met wie het deed. Dat verwacht de Belastingdienst van een kassa.</p></div>
+</section>
+
+<section class="flow">
+<h1 id="kitchen">7. Het keukenscherm en het afhaalscherm</h1>
+
+<h2>Keuken</h2>
+<p>Tik bovenaan op <kbd>Keuken</kbd>, of open het scherm op een tablet bij de grill (<a href="#tablet">hoofdstuk 8</a>). Nieuwe bestellingen verschijnen vanzelf, met een geluidje.</p>
+<figure><img src="img/nl-kitchen.png" alt="Het keukenscherm"></figure>
+<ol class="steps">
+  <li>Een nieuwe bestelling staat in de kolom <b>Nieuw</b>. Tik op <kbd>Start bereiding</kbd> als u begint.</li>
+  <li>Tik op <kbd>Markeer klaar</kbd> als het eten klaar is. Het nummer gaat naar <b>Klaar</b>, ook op het afhaalscherm.</li>
+  <li>Tik op <kbd>Opgehaald</kbd> als de gast het heeft. De bestelling verdwijnt van het scherm.</li>
+</ol>
+<p>Te vroeg getikt? Met <kbd>Terug</kbd> gaat een bestelling die klaar was terug naar In bereiding, en <b>Ongedaan maken</b> bovenaan draait uw laatste tik terug. Op elke bon staat hoeveel minuten hij wacht; na 5 en na 10 minuten verandert hij van kleur.</p>
+
+<h2>Afhaalscherm</h2>
+<p>Een scherm voor uw gasten: links de nummers die worden bereid, rechts de nummers die klaar zijn. Tik bovenaan op <kbd>Afhaalscherm</kbd>; het opent in een eigen venster. Er is geen pincode voor nodig, dus het kan de hele dag aanstaan op een tablet of tv die gasten kunnen zien.</p>
+<figure class="medium"><img src="img/nl-pickup.png" alt="Het afhaalscherm"></figure>
+
+<h2>Menubord</h2>
+<p>Onder <b>Schermopties</b> (de knop met de schuifjes) vindt u <b>Digitaal menubord</b>: uw menu met prijzen, voor een tv of tablet die naar de gasten is gericht. Het volgt het menu in Beheer, dus een nieuwe prijs staat er vanzelf op.</p>
+</section>
+
+<section>
+<h1 id="tablet">8. Een tablet of telefoon verbinden</h1>
+<p>De tablet bij de grill toont het keukenscherm. Met een telefoon kunt u bestellingen opnemen aan de tafels. Beide zijn gewoon een webbrowser die een adres op de laptop opent.</p>
+
+<ol class="steps">
+  <li><b>Verbind de tablet met dezelfde wifi als de laptop.</b> Geen gastnetwerk: gastnetwerken houden apparaten uit elkaar.</li>
+  <li><b>Op de laptop</b>: open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Connect a tablet or phone</kbd>. Een venster toont de adressen die u gebruikt, bijvoorbeeld:<br><code>http://192.168.1.20:3000/kitchen</code></li>
+  <li><b>Op de tablet</b>: open de webbrowser (Chrome of Safari) en typ dat adres precies over, met de punten en de dubbele punt.</li>
+  <li>Log in met uw pincode.</li>
+  <li><b>Houd het bij de hand:</b> kies in het menu van de browser <i>Toevoegen aan startscherm</i> (op een iPad: <i>Zet op beginscherm</i>). De tablet heeft dan een pictogram dat het keukenscherm direct opent.</li>
+</ol>
+
+<table>
+  <tr><th style="width:36%">Scherm</th><th>Het adres eindigt op</th></tr>
+  <tr><td>Keuken</td><td><code>/kitchen</code></td></tr>
+  <tr><td>Bestellingen opnemen</td><td><code>/pos</code></td></tr>
+  <tr><td>Afhaalscherm voor gasten (geen pincode)</td><td><code>/pickup</code></td></tr>
+</table>
+
+<h2>Goed om te weten</h2>
+<ul>
+  <li><b>De laptop moet aan blijven.</b> Gaat hij in de slaapstand, dan raken de andere schermen de kassa kwijt. Open in Windows <b>Instellingen</b> › <b>Systeem</b> › <b>Energie</b> (in Windows 10: <b>Energiebeheer en slaapstand</b>) en stel in dat de laptop <b>nooit</b> in slaapstand gaat zolang hij aan de stroom zit.</li>
+  <li><b>Geen router in de truck?</b> Zet de <b>Mobiele hotspot</b> van de laptop aan (Windows <b>Instellingen</b> › <b>Netwerk en internet</b> › <b>Mobiele hotspot</b>) en verbind de tablet daarmee. Zoek het adres daarna opnieuw op met <kbd>Connect a tablet or phone</kbd>.</li>
+  <li><b>Het adres werkt na een paar dagen niet meer.</b> De router heeft de laptop een ander nummer gegeven. Zoek het nieuwe adres op met <kbd>Connect a tablet or phone</kbd>. Om dit te voorkomen: vraag degene die de router beheert om de laptop een vast adres te geven.</li>
+  <li><b>Het scherm van de tablet gaat uit.</b> Zet de schermtime-out van de tablet zelf op de langste tijd, of op aan blijven tijdens het opladen.</li>
+  <li>Op het keukenscherm staat <b>Live updates</b> in het groen als het verbonden is, en <b>Verbinding herstellen</b> als het de laptop kwijt is. Het maakt vanzelf opnieuw verbinding.</li>
+</ul>
+</section>
+
+<section class="flow">
+<h1 id="close">9. De dag afsluiten</h1>
+<p><kbd>Beheer</kbd> › <kbd>Vandaag</kbd> toont de dag tot nu toe: omzet, aantal bestellingen, de ABB daarin, contant en pin, en wat het best verkocht.</p>
+<figure><img src="img/nl-admin-reports.png" alt="De pagina Vandaag"></figure>
+
+<ol class="steps">
+  <li><b>Rond eerst de open bestellingen af.</b> De pagina waarschuwt als er nog bestellingen niet zijn betaald. Reken ze af, of annuleer ze.</li>
+  <li>Tik op <kbd>Dag afsluiten</kbd>.</li>
+  <li><b>Tel het contante geld</b> in de la, zonder het wisselgeld waarmee u de dag begon, en typ het bedrag. De kassa toont wat hij verwachtte en het verschil. U mag het leeg laten als u niet hebt geteld.</li>
+  <li>Tik nog een keer op <kbd>Dag afsluiten</kbd>. De dag wordt bewaard als een genummerd <b>Z-rapport</b>.</li>
+  <li>Met <kbd>Afdrukken</kbd> drukt u het dagrapport af, als u het op papier wilt.</li>
+</ol>
+<figure class="medium"><img src="img/nl-close-day.png" alt="De dag afsluiten"></figure>
+<p>U kunt na het afsluiten gewoon blijven verkopen. Verandert er daarna iets, dan zegt de pagina dat; tik op <kbd>Opnieuw afsluiten</kbd> om de nieuwe cijfers te bewaren.</p>
+
+<h2>Voor de boekhouder</h2>
+<p><kbd>Beheer</kbd> › <kbd>Boekhouding</kbd>. Kies de datums en download <b>Dagomzet (CSV)</b>: één regel per afgesloten dag met omzet, ABB per tarief, contant, pin en fooien. Elke boekhouder en elk rekenbladprogramma kan dat bestand openen.</p>
+</section>
+
+<section class="flow">
+<h1 id="backup">10. Back-ups</h1>
+<p>CactusPOS maakt vanzelf een kopie van al uw verkopen: elke keer dat het start, als u de dag afsluit, en elk half uur zolang er iets nieuws is. U hoeft daar niets voor te doen.</p>
+<figure><img src="img/nl-admin-backups.png" alt="De pagina Back-ups"></figure>
+
+<h2>Stel een tweede kopie in: doe dit één keer</h2>
+<div class="warn"><p>Die kopieën staan op dezelfde laptop. Ze helpen niet als de laptop wordt gestolen, valt of kapotgaat. Geef CactusPOS een tweede plek om ze neer te zetten.</p></div>
+<ol class="steps">
+  <li>Steek een USB-stick in de laptop en laat die zitten. Of gebruik een map die OneDrive, Google Drive of Dropbox synchroniseert.</li>
+  <li><kbd>Beheer</kbd> › <kbd>Back-ups</kbd>. Typ onder <b>Een tweede kopie ergens anders</b> de map, bijvoorbeeld <code>E:\CactusPOS backups</code>. De map moet al bestaan. Tik op <kbd>Opslaan</kbd>.</li>
+  <li>Tik op <kbd>Nu back-up maken</kbd> en controleer of er een bestand in die map verschijnt.</li>
+</ol>
+
+<h2>Een back-up terugzetten</h2>
+<p>Dit hebt u nodig als de laptop is vervangen, of als de gegevens beschadigd zijn geraakt.</p>
+<ol class="steps">
+  <li>Op een nieuwe laptop: installeer eerst CactusPOS (<a href="#install">hoofdstuk 3</a>).</li>
+  <li>Open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Restore a backup</kbd>. Er opent een zwart venster met tekst in het Engels.</li>
+  <li>Typ <kbd>1</kbd> voor de nieuwste back-up op deze computer, of <kbd>2</kbd> om een bestand op een USB-stick te kiezen. Druk op Enter.</li>
+  <li>Het venster toont hoeveel bestellingen er in de back-up zitten en hoeveel er nu op de computer staan, en het waarschuwt als de back-up ouder is. Typ <kbd>yes</kbd> en druk op Enter om door te gaan.</li>
+</ol>
+<p>De gegevens die worden vervangen, worden niet weggegooid. Ze gaan naar een eigen map, zodat de stap kan worden teruggedraaid.</p>
+<div class="tip"><p><b>Probeer het één keer voordat u het nodig hebt.</b> Maak een back-up, zet hem terug en controleer of de bestellingen van vandaag er nog zijn.</p></div>
+</section>
+
+<section class="flow">
+<h1 id="update">11. Bijwerken, verhuizen en verwijderen</h1>
+
+<h2>Een nieuwe versie</h2>
+<ol class="steps">
+  <li>Sluit het venster van de kassa.</li>
+  <li>Dubbelklik op het nieuwe installatiebestand en doorloop dezelfde vensters als de eerste keer.</li>
+</ol>
+<p>Uw verkopen, menu, pincodes en instellingen blijven precies zoals ze waren. De andere schermen maken vanzelf opnieuw verbinding; zegt een scherm dat er een update klaarstaat, tik dan op <kbd>Herladen zodra u klaar bent</kbd>.</p>
+
+<h2>Een nieuwe laptop</h2>
+<p>Installeer CactusPOS op de nieuwe laptop en zet daarna uw nieuwste back-up terug (<a href="#backup">hoofdstuk 10</a>). Zoek het nieuwe adres voor de tablets op met <kbd>Connect a tablet or phone</kbd>.</p>
+
+<h2>CactusPOS verwijderen</h2>
+<p>Open in Windows <b>Instellingen</b> › <b>Apps</b> › <b>Geïnstalleerde apps</b> (in Windows 10: <b>Apps en onderdelen</b>), zoek <b>CactusPOS</b> en kies <b>Verwijderen</b>. Het programma en de pictogrammen worden verwijderd.</p>
+<p>Uw <b>verkoopgegevens blijven bewaard</b>, in de map <code>AppData\Local\CactusPOS</code> van uw Windows-account. Gooi die map alleen zelf weg als u zeker weet dat u ze niet meer nodig hebt. Een bedrijf moet zijn administratie jarenlang bewaren.</p>
+</section>
+
+<section>
+<h1 id="help">12. Als er iets misgaat</h1>
+<table class="compact">
+  <tr><th style="width:38%">Wat u ziet</th><th>Wat u doet</th></tr>
+  <tr><td>Windows waarschuwt voor het installatiebestand</td><td>Zie <a href="#install">hoofdstuk 3</a>, stap 2: <kbd>Meer informatie</kbd> en dan <kbd>Toch uitvoeren</kbd>.</td></tr>
+  <tr><td>Het installatieprogramma zegt dat deze versie van Windows niet wordt ondersteund</td><td>CactusPOS heeft Windows 10 (versie 1809 of nieuwer) of Windows 11 nodig, 64-bits. Voer Windows Update uit, of gebruik een nieuwere laptop.</td></tr>
+  <tr><td>Ik heb het venster van de kassa gesloten</td><td>Dubbelklik op het pictogram <b>CactusPOS</b> op het bureaublad. Er is niets kwijt: de kassa draait op de achtergrond door, dus de keuken blijft werken.</td></tr>
+  <tr><td>In het venster staat <i>CactusPOS did not start</i></td><td>Probeer het pictogram nog een keer. Start daarna de laptop opnieuw op. Start de kassa dan nog steeds niet, vraag het dan aan degene die u met CactusPOS helpt.</td></tr>
+  <tr><td>Een melding dat <i>port 3000</i> door een ander programma wordt gebruikt</td><td>Een ander programma op de laptop gebruikt dezelfde deur als de kassa. Start de laptop opnieuw op. Komt de melding terug, vraag het dan aan degene die u met CactusPOS helpt.</td></tr>
+  <tr><td><i>Foute pincode</i>, of <i>Te veel pogingen</i></td><td>Wacht 30 seconden en probeer het opnieuw. Een eigenaar kan iedereen een nieuwe pincode geven onder <kbd>Beheer</kbd> › <kbd>Personeel</kbd>.</td></tr>
+  <tr><td>De schermen staan in de verkeerde taal</td><td>De knop met de schuifjes rechtsboven (<b>Schermopties</b>) › <b>Taal</b>. Op het inlogscherm: de knop <b>NL</b> of <b>EN</b>.</td></tr>
+  <tr><td>De tablet kan het adres niet openen</td><td>Dezelfde wifi als de laptop, en geen gastnetwerk? Staat de laptop aan, is hij wakker en draait de kassa? Precies overgetypt, met <code>http://</code> ervoor? Start dan het installatiebestand opnieuw en antwoord <kbd>Ja</kbd> op de vraag van Windows.</td></tr>
+  <tr><td>Het adres werkte gisteren wel en vandaag niet</td><td>De laptop heeft een ander adres gekregen. Zoek het opnieuw op: menu Start › <b>CactusPOS</b> › <kbd>Connect a tablet or phone</kbd>.</td></tr>
+  <tr><td>Op het keukenscherm staat <i>Verbinding herstellen</i></td><td>Het was de laptop even kwijt en probeert het vanzelf opnieuw. Blijft het zo: staat de laptop in de slaapstand, of ligt de wifi eruit?</td></tr>
+  <tr><td>Windows toont een <i>Windows-beveiligingsmelding</i> over <i>Node.js</i></td><td>Node.js is de motor in CactusPOS. Vink beide vakjes aan en kies <kbd>Toegang toestaan</kbd>.</td></tr>
+  <tr><td>Er komt geen bon uit</td><td><kbd>Beheer</kbd> › <kbd>Printer</kbd>. Staat de printer aan, zit er papier in en klopt het adres? Tik op <kbd>Opslaan en testpagina afdrukken</kbd>. Tik onder <b>Recente afdruktaken</b> op <kbd>Mislukte taken opnieuw proberen</kbd>.</td></tr>
+  <tr><td>Het item dat ik nodig heb, kan ik niet aantikken</td><td>Het staat uit als uitverkocht. <kbd>Beheer</kbd> › <kbd>Menu</kbd>, zet <b>Beschikbaar</b> aan.</td></tr>
+  <tr><td>Er zijn twee kassavensters</td><td>Sluit er een. Ze tonen allebei dezelfde kassa.</td></tr>
+</table>
+<div class="note"><p><b>Als u om hulp vraagt</b>, vertel dan wat u aan het doen was en wat er op het scherm stond, woord voor woord, of stuur een foto van het scherm. Dat scheelt veel gissen.</p></div>
+</section>
+
+<section>
+<div class="card">
+<h1 id="card">Eén pagina voor bij de kassa</h1>
+
+<h3>'s Morgens</h3>
+<ol>
+  <li>Zet de laptop aan en meld u aan bij Windows. De kassa opent vanzelf. (Zo niet: het pictogram <b>CactusPOS</b> op het bureaublad.)</li>
+  <li>Log in met uw pincode.</li>
+  <li>Zet de keukentablet aan. Er hoort <b>Live updates</b> in het groen te staan.</li>
+  <li>Is er vandaag iets uitverkocht? <kbd>Beheer</kbd> › <kbd>Menu</kbd>, zet <b>Beschikbaar</b> uit.</li>
+</ol>
+
+<h3>Elke bestelling</h3>
+<ol>
+  <li>Tik de items aan. Kies de opties. <kbd>Toevoegen</kbd>.</li>
+  <li><kbd>Betalen</kbd>.</li>
+  <li><b>Contant:</b> tik aan wat u hebt gekregen en geef het getoonde wisselgeld. <b>Pin:</b> eerst de pinautomaat, dan tikt u op <kbd>Pinpas</kbd>.</li>
+  <li><kbd>Betaling bevestigen</kbd>. Zeg het bestelnummer tegen de gast.</li>
+  <li><kbd>Volgende bestelling</kbd>.</li>
+</ol>
+
+<h3>In de keuken</h3>
+<p><kbd>Start bereiding</kbd> › <kbd>Markeer klaar</kbd> › <kbd>Opgehaald</kbd></p>
+
+<h3>Een fout</h3>
+<p><kbd>Bestellingen</kbd> › <b>Alles vandaag</b> › <kbd>Corrigeren</kbd> (verkeerd item of verkeerde betaalwijze) of <kbd>Annuleren</kbd> (alles laten vervallen).</p>
+
+<h3>Aan het eind van de dag</h3>
+<ol>
+  <li><kbd>Beheer</kbd> › <kbd>Vandaag</kbd>. Staat er niets meer open?</li>
+  <li><kbd>Dag afsluiten</kbd>. Tel het contante geld, typ het in, en nog een keer <kbd>Dag afsluiten</kbd>.</li>
+  <li>Sluit de laptop op de gewone manier af.</li>
+</ol>
+
+<h3>Voor de tablet</h3>
+<p>Menu Start › <b>CactusPOS</b> › <kbd>Connect a tablet or phone</kbd> toont het adres dat u moet typen.</p>
+</div>
+</section>
+
+</main>
+<script>
+// The version comes from scripts/make-manual.mjs, so the manual always names the release it ships with.
+const version = new URLSearchParams(location.search).get('version') || 'x.y.z';
+for (const el of document.querySelectorAll('[data-version]')) el.textContent = version;
+</script>
+</body>
+</html>

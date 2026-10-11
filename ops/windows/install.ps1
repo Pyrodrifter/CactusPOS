@@ -4,7 +4,8 @@
 
 .DESCRIPTION
   Run it by double-clicking "Install CactusPOS.bat" in the program folder. It is safe to run again: use it after
-  an update, or to change the port.
+  an update, or to change the port. The setup program (CactusPOS-Setup-<version>.exe, see setup.iss) copies the
+  program folder into place and then runs this script for the settings and shortcuts.
 
   What it does:
     1. Finds Node.js: the copy shipped in runtime\node (ready-made package), or an installed Node.js 22.13+ / 24+.
@@ -29,6 +30,7 @@ param(
   [switch]$SkipFirewall,         # do not ask Windows Firewall to allow phones and tablets
   [switch]$NoStart,              # do not start CactusPOS when the installer is done
   [switch]$NoNodeInstall,        # never run winget; stop when Node.js is missing
+  [string]$ResultFile = '',      # for the setup program: write the port and the firewall state to this file
   [string]$ShortcutRoot = ''     # for testing: create the shortcuts under this folder instead of the real places
 )
 
@@ -152,6 +154,26 @@ New-CactusShortcut (Join-Path $desktop 'CactusPOS.lnk') '' 'CactusPOS till'
 New-CactusShortcut (Join-Path $programs 'CactusPOS\CactusPOS.lnk') '' 'CactusPOS till'
 New-CactusShortcut (Join-Path $programs 'CactusPOS\CactusPOS kitchen screen.lnk') '--screen kitchen' 'CactusPOS kitchen screen'
 New-CactusShortcut (Join-Path $programs 'CactusPOS\CactusPOS pickup board.lnk') '--screen pickup' 'CactusPOS pickup board for guests'
+New-CactusShortcut (Join-Path $programs 'CactusPOS\Connect a tablet or phone.lnk') '--addresses' 'Shows the addresses a tablet or phone uses to reach the till'
+# Plain shortcuts to a file: putting a backup back, and the manual when this copy has it.
+function New-FileShortcut([string]$Path, [string]$Target, [string]$Arguments, [string]$Description, [string]$IconFile) {
+  $shell = New-Object -ComObject WScript.Shell
+  $link = $shell.CreateShortcut($Path)
+  $link.TargetPath = $Target
+  $link.Arguments = $Arguments
+  $link.WorkingDirectory = $Root
+  if ($IconFile) { $link.IconLocation = "$IconFile,0" }
+  $link.Description = $Description
+  $link.Save()
+  Write-Host "  $Path"
+}
+New-FileShortcut (Join-Path $programs 'CactusPOS\Restore a backup.lnk') (Join-Path $Root 'Restore CactusPOS backup.bat') '-Choose' 'Puts a backup of the sales data back; asks first' $Icon
+foreach ($manual in @(@('CactusPOS-Manual-English.pdf', 'Manual (English)'), @('CactusPOS-Handleiding-Nederlands.pdf', 'Handleiding (Nederlands)'))) {
+  $file = Join-Path $Root "Manual\$($manual[0])"
+  $link = Join-Path $programs "CactusPOS\$($manual[1]).lnk"
+  if (Test-Path $file) { New-FileShortcut $link $file '' 'CactusPOS user manual' '' }
+  elseif (Test-Path $link) { Remove-Item $link -Force -Confirm:$false }
+}
 $startupLink = Join-Path $startup 'CactusPOS.lnk'
 if ($NoAutostart) {
   if (Test-Path $startupLink) { Remove-Item $startupLink -Force -Confirm:$false; Write-Host '  Removed the start-at-sign-in shortcut.' }
@@ -162,12 +184,15 @@ if ($NoAutostart) {
 }
 
 # ---------------------------------------------------------------- 5. Firewall
+# Looking needs no administrator rights; changing does. 'needed' = no active rule lets this port in.
+$firewall = 'needed'
+try {
+  $rule = Get-NetFirewallRule -DisplayName 'CactusPOS' -ErrorAction SilentlyContinue
+  if ($rule -and (($rule | Get-NetFirewallPortFilter).LocalPort -contains "$($config.port)") -and ($rule.Enabled -eq 'True')) { $firewall = 'ok' }
+} catch { }
 if (-not $SkipFirewall) {
   Step 'Windows Firewall (so phones and tablets can reach the till)'
-  $rule = Get-NetFirewallRule -DisplayName 'CactusPOS' -ErrorAction SilentlyContinue
-  $portOk = $false
-  if ($rule) { $portOk = (($rule | Get-NetFirewallPortFilter).LocalPort -contains "$($config.port)") -and ($rule.Enabled -eq 'True') }
-  if ($portOk) {
+  if ($firewall -eq 'ok') {
     Write-Host "  Already allowed for port $($config.port)."
   } else {
     Write-Host '  Windows will ask "Do you want to allow this app to make changes?". Choose Yes.'
@@ -176,6 +201,7 @@ if (-not $SkipFirewall) {
       $p = Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
         -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$fw`"", '-Port', "$($config.port)")
       if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+      $firewall = 'ok'
       Write-Host "  Allowed: devices on the same network may connect to port $($config.port)."
     } catch {
       Write-Host '  Not allowed. The till works on this computer, but phones and tablets may not be able to connect.' -ForegroundColor Yellow
@@ -202,4 +228,8 @@ Write-Host "  Sales data:             $($status.home)"
 Write-Host ''
 Write-Host '  A new database starts with the example PINs 1234 (owner) and 1111 (staff).' -ForegroundColor Yellow
 Write-Host '  Change them before real use: sign in as owner, Admin, Staff.' -ForegroundColor Yellow
+if ($ResultFile) {
+  # Read by the setup program with the Windows INI functions, so plain ASCII.
+  Set-Content -Path $ResultFile -Encoding ASCII -Value @('[result]', "port=$($config.port)", "firewall=$firewall", "home=$($status.home)")
+}
 exit 0

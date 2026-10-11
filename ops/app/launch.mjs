@@ -9,6 +9,7 @@
 //   node ops/app/launch.mjs --server-only      server only, no window
 //   node ops/app/launch.mjs --status           is it running, which addresses do tablets use, where is the data
 //   node ops/app/launch.mjs --stop             stop the server this launcher started
+//   node ops/app/launch.mjs --addresses        what to type on a tablet or phone to reach the till
 //   node ops/app/launch.mjs --restore [file]   put a backup back (the newest one, or the file named); asks first
 //   node ops/app/launch.mjs --configure --port 3000 --seed cactus-blue   write settings (add --if-new to keep existing ones)
 //   --gui   show problems in a message window as well; the shortcuts pass it, because nobody sees their console
@@ -21,7 +22,7 @@ import { homedir, networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-  DEFAULTS, appUrl, browserArgs, dataHome, findBrowser, isCactusHealth, lanUrls, nodeIsSupported,
+  DEFAULTS, addressesText, appUrl, browserArgs, dataHome, findBrowser, isCactusHealth, lanUrls, nodeIsSupported,
   normalizeConfig, parseArgs, parseConfigText, splashUrl,
 } from './lib.mjs';
 
@@ -51,14 +52,12 @@ function note(message) {
 }
 
 /**
- * Shortcuts run this without a visible console, so with --gui a failure is also shown in a window.
- * Resolves when the person has closed the message. The launcher has to stay alive that long: a helper started
+ * Shortcuts run this without a visible console, so with --gui a message is also shown in a window.
+ * Resolves when the person has closed it. The launcher has to stay alive that long: a helper started
  * "detached" gets no console at all on Windows and PowerShell then dies before it can show anything, while a
  * normal child is closed together with this process.
  */
-function showError(message) {
-  console.error(message);
-  note(`ERROR ${message.replaceAll('\n', ' | ')}`);
+function showMessage(message, problem) {
   if (!GUI) return Promise.resolve();
   const waitFor = (command, args, options = {}) => new Promise((done) => {
     try {
@@ -70,14 +69,20 @@ function showError(message) {
   if (process.platform === 'win32') {
     // The text travels in an environment variable, so nothing in it is ever read as PowerShell code.
     return waitFor('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-      "Add-Type -AssemblyName PresentationFramework; [void][System.Windows.MessageBox]::Show($env:CACTUS_MESSAGE, 'CactusPOS', 'OK', 'Warning')"],
+      `Add-Type -AssemblyName PresentationFramework; [void][System.Windows.MessageBox]::Show($env:CACTUS_MESSAGE, 'CactusPOS', 'OK', '${problem ? 'Warning' : 'Information'}')`],
     { env: { ...process.env, CACTUS_MESSAGE: message } });
   }
   if (process.platform === 'darwin') {
     return waitFor('osascript', ['-e', 'on run argv', '-e', 'display alert "CactusPOS" message (item 1 of argv)', '-e', 'end run', message]);
   }
-  return waitFor('zenity', ['--error', '--title=CactusPOS', '--no-markup', `--text=${message}`])
+  return waitFor('zenity', [problem ? '--error' : '--info', '--title=CactusPOS', '--no-markup', `--text=${message}`])
     .then((shown) => (shown ? true : waitFor('notify-send', ['CactusPOS', message])));
+}
+
+function showError(message) {
+  console.error(message);
+  note(`ERROR ${message.replaceAll('\n', ' | ')}`);
+  return showMessage(message, true);
 }
 
 function loadConfig(overrides) {
@@ -269,6 +274,15 @@ async function status(config, json) {
   return 0;
 }
 
+/** For the Start menu entry "Connect a tablet or phone": the addresses, in a window. */
+async function addresses(config) {
+  const h = await health(config.port);
+  const text = addressesText({ urls: lanUrls(networkInterfaces(), config.port), running: h.reached && isCactusHealth(h.body) });
+  console.log(text);
+  await showMessage(text, false);
+  return 0;
+}
+
 function configure(args) {
   const existed = existsSync(paths.config);
   if (existed && args.ifNew) {
@@ -344,6 +358,7 @@ const HELP = `CactusPOS launcher
   --server-only      start the server, no window
   --status [--json]  running or not, addresses for tablets, where the data is
   --stop             stop the server this launcher started
+  --addresses        what to type on a tablet or phone to reach the till
   --restore [FILE]   put a backup back: the newest one, or FILE; asks first (--yes skips the question)
   --configure        write settings: --port N, --seed NAME, --screen NAME, --kiosk; --if-new keeps an existing file
   --gui              also show problems in a message window (the shortcuts use this)
@@ -358,6 +373,7 @@ async function main() {
   const { config } = loadConfig(args.overrides);
   if (args.command === 'status') return status(config, args.json);
   if (args.command === 'stop') return stop(config);
+  if (args.command === 'addresses') return addresses(config);
   if (args.command === 'restore') return restore(config, args);
   return open(config, args.command === 'open');
 }

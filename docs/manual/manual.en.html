@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CactusPOS user manual</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<main>
+
+<div class="cover">
+  <img src="img/logo.png" alt="">
+  <h1>CactusPOS</h1>
+  <p class="subtitle">User manual</p>
+  <p class="what">Installing it on the till computer, setting it up, connecting a kitchen tablet, and using it every day.</p>
+  <p class="version">For CactusPOS <span data-version></span> on Windows 10 and Windows 11</p>
+</div>
+
+<section class="contents">
+<h1>What is in this manual</h1>
+<ol>
+  <li><a href="#what">What CactusPOS is</a></li>
+  <li><a href="#need">What you need</a></li>
+  <li><a href="#install">Installing</a></li>
+  <li><a href="#first">The first time: making it yours</a></li>
+  <li><a href="#sell">Taking an order and getting paid</a></li>
+  <li><a href="#orders">Pay later, tabs, and fixing mistakes</a></li>
+  <li><a href="#kitchen">The kitchen screen and the pickup board</a></li>
+  <li><a href="#tablet">Connecting a tablet or a phone</a></li>
+  <li><a href="#close">Closing the day</a></li>
+  <li><a href="#backup">Backups</a></li>
+  <li><a href="#update">Updating, moving and removing</a></li>
+  <li><a href="#help">When something is wrong</a></li>
+  <li><a href="#card">One page to keep by the till</a></li>
+</ol>
+
+<h2 id="what">1. What CactusPOS is</h2>
+<p>CactusPOS is a till for a food truck, a snack bar or a small restaurant. You tap what the guest orders, take the money, and the order appears on a screen in the kitchen. At the end of the day it tells you what you sold, how much ABB is in it, and how much cash should be in the drawer.</p>
+<p><b>One computer is the till.</b> That is the laptop you install CactusPOS on. It keeps all the sales. Every other screen (a tablet by the grill, a phone for taking orders, a screen that guests can see) is just a web browser on the same WiFi that looks at that laptop.</p>
+<p><b>It works without internet.</b> Everything stays on your own laptop and your own WiFi. Nothing is sent anywhere.</p>
+
+<h2 id="need">2. What you need</h2>
+<table>
+  <tr><th style="width:36%">What</th><th>Details</th></tr>
+  <tr><td><b>A laptop or PC with Windows</b></td><td>Windows 10 or Windows 11, 64-bit. Nearly every laptop sold since 2018 is. About 500 MB of free space.</td></tr>
+  <tr><td><b>The setup file</b></td><td>One file named <code>CactusPOS-Setup-<span data-version></span>.exe</code>, on a USB stick or from a download link. Nothing else has to be installed first: the file carries everything CactusPOS needs.</td></tr>
+  <tr><td>A tablet or phone <i>(optional)</i></td><td>For the kitchen screen. Any tablet or phone with a web browser works: iPad, Android, an old phone. It needs the same WiFi as the laptop.</td></tr>
+  <tr><td>WiFi <i>(only for extra screens)</i></td><td>A router in the truck, or the laptop's own Mobile hotspot. It does not need internet.</td></tr>
+  <tr><td>A receipt printer <i>(optional)</i></td><td>A network receipt printer (Epson, Star, Bixolon and most 80 mm or 58 mm thermal printers), or any printer that already works in Windows.</td></tr>
+</table>
+</section>
+
+<section>
+<h1 id="install">3. Installing</h1>
+<p>This takes about two minutes. You only do it once on the till computer.</p>
+
+<ol class="steps">
+  <li><b>Sign in to Windows</b> as the person who will use the till. CactusPOS is installed for that Windows account.</li>
+  <li><b>Double-click the file</b> <code>CactusPOS-Setup-<span data-version></span>.exe</code>.
+    <div class="warn">
+      <p><b>Windows may show a warning first.</b> This happens with programs that are new to Windows. It is safe to go on when you got the file from the person who set up CactusPOS for you.</p>
+      <ul>
+        <li>A blue window <b>Windows protected your PC</b>: click <kbd>More info</kbd>, then <kbd>Run anyway</kbd>.</li>
+        <li>If you downloaded the file and the browser says it <i>isn't commonly downloaded</i>: point at the download, click the three dots, choose <kbd>Keep</kbd>, then <kbd>Show more</kbd> and <kbd>Keep anyway</kbd>. The exact words differ a little between browsers.</li>
+      </ul>
+    </div>
+  </li>
+  <li><b>Choose your language</b> (English or Nederlands) and click <kbd>OK</kbd>.</li>
+  <li>The welcome window opens. Click <kbd>Next</kbd>.
+    <figure class="medium"><img src="img/en-setup-welcome.png" alt="The welcome window of the setup"></figure>
+  </li>
+  <li>Leave the box <b>Start CactusPOS by itself when this computer is switched on</b> ticked, and click <kbd>Next</kbd>. The installation starts; it takes about a minute.
+    <figure class="medium"><img src="img/en-setup-task.png" alt="The window with the one choice: start by itself"></figure>
+  </li>
+  <li>After a short while a message says <b>One more step</b>. Click <kbd>OK</kbd>. Windows then asks <i>Do you want to allow this app to make changes to your device?</i> Click <kbd>Yes</kbd>.
+    <div class="note"><p>This is what lets a kitchen tablet and phones on your own WiFi reach the till. Nothing is opened to the internet. If you click No, the till still works on the laptop, but tablets cannot connect. You can fix that later by running the setup file again.</p></div>
+  </li>
+  <li>Click <kbd>Finish</kbd>. The till opens.
+    <figure class="medium"><img src="img/en-setup-finish.png" alt="The last window of the setup"></figure>
+  </li>
+</ol>
+
+<h2>What the setup put on your computer</h2>
+<table>
+  <tr><th style="width:36%">Where</th><th>What</th></tr>
+  <tr><td><b>Desktop</b></td><td>The <b>CactusPOS</b> icon. This is how you start the till.</td></tr>
+  <tr><td><b>Start menu</b>, under <b>CactusPOS</b></td><td>The till, the kitchen screen and the pickup board on this computer; <b>Connect a tablet or phone</b>; <b>Restore a backup</b>; and this manual in English and Dutch.</td></tr>
+  <tr><td>When Windows starts</td><td>The till opens by itself after you sign in to Windows (unless you unticked the box).</td></tr>
+  <tr><td>Your sales</td><td>Kept apart from the program, in the folder <code>AppData\Local\CactusPOS</code> of your Windows account. Updating or removing CactusPOS never touches them.</td></tr>
+</table>
+</section>
+
+<section>
+<h1 id="first">4. The first time: making it yours</h1>
+<p>A new till comes with an example menu and two example PIN codes. Go through these steps once, before the first real sale.</p>
+
+<h2>Sign in</h2>
+<p>The till asks for a PIN. On a new till the owner's PIN is <b>1234</b>. Tap the digits and then <kbd>Sign in</kbd>.</p>
+<figure class="medium"><img src="img/en-login.png" alt="The sign-in screen"><figcaption>The sign-in screen. The button NL at the top switches the screens to Dutch.</figcaption></figure>
+
+<h2>Give everyone a PIN of their own</h2>
+<div class="warn"><p>The example PINs <b>1234</b> (owner) and <b>1111</b> (staff) are the same on every new CactusPOS. Change both before real use. The till keeps reminding you on the Admin page until you have.</p></div>
+<ol class="steps">
+  <li>Tap <kbd>Admin</kbd> at the top, then <kbd>Staff</kbd>.</li>
+  <li>Tap a person. Type their real name and a <b>New PIN</b> of 4 to 8 digits. Tap <kbd>Save</kbd>.</li>
+  <li>With <kbd>Add person</kbd> you add someone. Choose the role: an <b>Owner</b> can open Admin and change the menu, prices, staff and tax. <b>Staff</b> can take orders and use the kitchen screen.</li>
+</ol>
+<figure class="medium"><img src="img/en-admin-staff-edit.png" alt="Changing a person's name and PIN"></figure>
+<div class="note"><p>Write the owner's PIN down and keep it somewhere safe. If nobody knows an owner PIN any more, the person who helps you with CactusPOS has to reset it.</p></div>
+
+<h2>Your business details</h2>
+<p><kbd>Admin</kbd> › <kbd>Business</kbd>. Fill in the business name, the <b>CRIB number</b> (it is printed on every receipt), address and phone, and the line at the bottom of the receipt. Choose the language of the receipt. Tap <kbd>Save</kbd>.</p>
+<figure><img src="img/en-admin-business.png" alt="The Business page"></figure>
+
+<h2>Tax (ABB)</h2>
+<p><kbd>Admin</kbd> › <kbd>Tax (ABB)</kbd>. The prices on your menu <b>include</b> ABB; the till works out how much ABB is in each sale. Ask your accountant which rate applies to what you sell. When a rate is right, tap <kbd>Mark verified</kbd>. Until then the page shows <i>Not verified</i> as a reminder.</p>
+
+<h2>Your menu</h2>
+<p><kbd>Admin</kbd> › <kbd>Menu</kbd>. The row at the top holds the categories (Burgers, Drinks). Below it are the items of the category you tapped.</p>
+<figure><img src="img/en-admin-menu.png" alt="The Menu page"></figure>
+<ul>
+  <li><b>Change an item:</b> tap it. You can change the name, the description, the price, the tax category and the options (extras such as cheese, or a choice such as which drink).</li>
+  <li><b>New item:</b> <kbd>Add item</kbd>. <b>New category:</b> <kbd>Category</kbd>.</li>
+  <li><b>Sold out:</b> switch <b>Available</b> off. On the till the item then says <i>Sold out</i> and cannot be tapped. Switch it on again when you have it back.</li>
+  <li><b>A price that changes every day</b> (catch of the day): choose <b>Market price: ask at the counter</b> for that item. The till then asks for the price each time.</li>
+</ul>
+
+<h2>The receipt</h2>
+<p><kbd>Admin</kbd> › <kbd>Receipt design</kbd>. Pick a style, add your logo, a thank-you line, or a QR code for your WiFi or website. The preview on the right shows the receipt as you change it. Tap <kbd>Publish design</kbd> to start using it.</p>
+<figure><img src="img/en-admin-receipts.png" alt="The Receipt design page"></figure>
+
+<h2>The receipt printer</h2>
+<p><b>Without a receipt printer</b> the till works too. Tap <kbd>Receipt</kbd> after a payment and Windows shows its print window, with the printers that are installed in Windows.</p>
+<p><b>With a network receipt printer:</b> <kbd>Admin</kbd> › <kbd>Printer</kbd>. Switch <b>Use receipt printer</b> on, type the printer's address (a number such as 192.168.1.50; most printers print it on their self-test page), choose the paper width, and tap <kbd>Save and print test page</kbd>. From then on a receipt prints by itself with every payment, as long as <b>Print receipt when paid</b> is on.</p>
+<figure><img src="img/en-admin-printer.png" alt="The Printer page"></figure>
+
+<h2>Language and look of the screens</h2>
+<p>Tap the button with the sliders at the top right (<b>Screen tools</b>). There you choose <b>English</b> or <b>Nederlands</b>, a light or dark screen, <b>Sunlight mode</b> for outdoors, and you sign out. Every screen (laptop, tablet, phone) remembers its own choice.</p>
+<figure class="small"><img src="img/en-screen-tools.png" alt="Screen tools"></figure>
+</section>
+
+<section>
+<h1 id="sell">5. Taking an order and getting paid</h1>
+<p>Start the till with the <b>CactusPOS</b> icon on the Desktop and sign in with your PIN. You are on the <b>Order</b> screen: the menu on the left, the order on the right.</p>
+
+<ol class="steps">
+  <li><b>Tap what the guest wants.</b> Tap a category to see less at once, or type in <b>Find anything on the menu</b>.</li>
+  <li><b>Choose the options</b> when the till asks (extras, without tomato, which drink) and tap <kbd>Add to order</kbd>.
+    <figure class="medium"><img src="img/en-options.png" alt="Choosing options for an item"></figure>
+  </li>
+  <li><b>Check the order</b> on the right. With <kbd>+</kbd> and <kbd>−</kbd> you change how many; at 0 the line disappears. The bin at the top empties the whole order (<kbd>Undo</kbd> brings it back). You can type a note for the kitchen under <b>Order note</b>.
+    <figure><img src="img/en-order.png" alt="The Order screen with an order"></figure>
+  </li>
+  <li>Tap <kbd>Pay</kbd>.</li>
+</ol>
+
+<h2>Paying with cash</h2>
+<ol class="steps">
+  <li><b>Cash</b> is already chosen. Tap what the guest gives you: <kbd>Exact</kbd>, one of the notes (<kbd>$20</kbd>, <kbd>$50</kbd>), or type the amount on the number pad.</li>
+  <li>The till shows the <b>Change</b>.</li>
+  <li>Tap <kbd>Confirm payment</kbd>.</li>
+</ol>
+<figure class="medium"><img src="img/en-pay-cash.png" alt="Paying with cash"></figure>
+
+<h2>Paying by card</h2>
+<ol class="steps">
+  <li>Tap <kbd>Card</kbd>.</li>
+  <li><b>Take the payment on your card machine first.</b> The till does not talk to the card machine; it only records that this sale was paid by card.</li>
+  <li>If the guest tipped on the card machine, tap the tip. You may type the reference from the card slip.</li>
+  <li>Tap <kbd>Confirm payment</kbd>.</li>
+</ol>
+<figure class="medium"><img src="img/en-pay-card.png" alt="Paying by card"></figure>
+
+<h2>Done</h2>
+<p>The till shows <b>Paid</b> with the order number. Tell the guest the number. Tap <kbd>Receipt</kbd> if the guest wants one, then <kbd>Next order</kbd>.</p>
+<figure class="medium"><img src="img/en-paid.png" alt="The Paid screen"></figure>
+
+<h2>Busy service or calm service</h2>
+<p>The button above the menu says <b>Busy service</b> or <b>Calm service</b>. Tap it to change.</p>
+<ul>
+  <li><b>Busy service:</b> every order goes to the kitchen screen and the pickup board. Use it when someone else is cooking.</li>
+  <li><b>Calm service:</b> orders skip both screens. Use it when you take the order and make it yourself.</li>
+</ul>
+</section>
+
+<section class="flow">
+<h1 id="orders">6. Pay later, tabs, and fixing mistakes</h1>
+
+<h2>Pay later</h2>
+<p>When a guest eats first and pays afterwards, tap <kbd>Pay later</kbd> instead of Pay. The order is sent to the kitchen and stays open until it is paid.</p>
+<p>Type a <b>name</b> and the button becomes <kbd>Open tab for Mike</kbd>. With a name the guest can order more on the same bill later.</p>
+<figure class="medium"><img src="img/en-pay-later.png" alt="Pay later with a name"></figure>
+
+<h2>Tabs</h2>
+<p>Tap <kbd>Tabs</kbd> at the top left to see every open bill. Tap one to open it:</p>
+<ul>
+  <li><kbd>Add items</kbd>: the guest orders more. Tap the items and then <kbd>Add to Mike</kbd>.</li>
+  <li><kbd>Print bill</kbd>: a bill to show the guest before paying.</li>
+  <li><kbd>Pay</kbd>: the guest pays the whole tab.</li>
+</ul>
+<figure class="medium"><img src="img/en-tab.png" alt="An open tab"></figure>
+
+<h2>Today's orders</h2>
+<p>Tap <kbd>Orders</kbd>. <b>To pay</b> shows what is still open; <b>All today</b> shows everything.</p>
+<figure><img src="img/en-orders.png" alt="The list of today's orders"></figure>
+<table>
+  <tr><th style="width:22%">Button</th><th>What it does</th></tr>
+  <tr><td><kbd>Pay</kbd></td><td>Take the payment for an order that is still open.</td></tr>
+  <tr><td><kbd>Receipt</kbd></td><td>Print the receipt again.</td></tr>
+  <tr><td><kbd>Correct</kbd></td><td>Fix a sale that is already paid: a wrong item, a wrong number, or cash that should have been card. Change it, choose what went wrong, and tap <kbd>Save correction</kbd>. The till tells you how much to give back or collect.</td></tr>
+  <tr><td><kbd>Void</kbd></td><td>Cancel an order completely. Type the reason.</td></tr>
+</table>
+<p>An owner can always correct and void. Someone signed in as <b>Staff</b> needs the owner's PIN to correct a sale, and to void an order that is already paid or being prepared.</p>
+<div class="note"><p><b>Nothing is ever deleted.</b> A voided or corrected sale stays in the records, marked as such, with the reason and who did it. That is what the tax office expects from a till.</p></div>
+</section>
+
+<section class="flow">
+<h1 id="kitchen">7. The kitchen screen and the pickup board</h1>
+
+<h2>Kitchen</h2>
+<p>Tap <kbd>Kitchen</kbd> at the top, or open it on a tablet by the grill (<a href="#tablet">chapter 8</a>). New orders appear by themselves, with a sound.</p>
+<figure><img src="img/en-kitchen.png" alt="The kitchen screen"></figure>
+<ol class="steps">
+  <li>A new order is in the column <b>New</b>. Tap <kbd>Start preparing</kbd> when you begin.</li>
+  <li>Tap <kbd>Mark ready</kbd> when the food is done. The number moves to <b>Ready</b>, also on the pickup board.</li>
+  <li>Tap <kbd>Collected</kbd> when the guest has it. The order leaves the screen.</li>
+</ol>
+<p>Tapped too soon? <kbd>Recall</kbd> puts a ready order back to Preparing, and <b>Undo</b> at the top takes back your last tap. Each ticket shows how many minutes it has been waiting, and changes colour after 5 and after 10 minutes.</p>
+
+<h2>Pickup board</h2>
+<p>A screen for your guests: the numbers that are being prepared on the left, the numbers that are ready on the right. Tap <kbd>Pickup board</kbd> at the top; it opens in a window of its own. It needs no PIN, so it can run all day on a tablet or TV that guests can see.</p>
+<figure class="medium"><img src="img/en-pickup.png" alt="The pickup board"></figure>
+
+<h2>Menu board</h2>
+<p>Under <b>Screen tools</b> (the sliders button) you find <b>Digital menu board</b>: your menu with prices, for a TV or tablet facing the guests. It follows the menu in Admin, so a new price shows there by itself.</p>
+</section>
+
+<section>
+<h1 id="tablet">8. Connecting a tablet or a phone</h1>
+<p>The tablet by the grill shows the kitchen screen. A phone can take orders at the tables. Both are simply a web browser that opens an address on the laptop.</p>
+
+<ol class="steps">
+  <li><b>Connect the tablet to the same WiFi as the laptop.</b> Not a guest network: guest networks keep devices apart.</li>
+  <li><b>On the laptop</b>, open the Start menu, then <b>CactusPOS</b>, then <kbd>Connect a tablet or phone</kbd>. A window shows the addresses to use, for example:<br><code>http://192.168.1.20:3000/kitchen</code></li>
+  <li><b>On the tablet</b>, open the web browser (Chrome or Safari) and type that address exactly, with the dots and the colon.</li>
+  <li>Sign in with your PIN.</li>
+  <li><b>Keep it handy:</b> in the browser's menu choose <i>Add to Home screen</i>. The tablet then has an icon that opens the kitchen screen directly.</li>
+</ol>
+
+<table>
+  <tr><th style="width:36%">Screen</th><th>The address ends with</th></tr>
+  <tr><td>Kitchen</td><td><code>/kitchen</code></td></tr>
+  <tr><td>Taking orders</td><td><code>/pos</code></td></tr>
+  <tr><td>Pickup board for guests (no PIN)</td><td><code>/pickup</code></td></tr>
+</table>
+
+<h2>Good to know</h2>
+<ul>
+  <li><b>The laptop has to stay on.</b> When it sleeps, the other screens lose the till. In Windows, open <b>Settings</b> › <b>System</b> › <b>Power</b> (on Windows 10: <b>Power &amp; sleep</b>) and set the laptop to <b>never</b> sleep while it is plugged in.</li>
+  <li><b>No router in the truck?</b> Switch on the laptop's <b>Mobile hotspot</b> (Windows <b>Settings</b> › <b>Network &amp; internet</b> › <b>Mobile hotspot</b>) and connect the tablet to it. Then look up the address again with <kbd>Connect a tablet or phone</kbd>.</li>
+  <li><b>The address stopped working after a few days.</b> The router gave the laptop another number. Look up the new address with <kbd>Connect a tablet or phone</kbd>. To stop it from happening, ask whoever manages the router to give the laptop a fixed address.</li>
+  <li><b>The tablet's screen goes dark.</b> Set the tablet's own screen timeout to its longest value, or to stay on while charging.</li>
+  <li>The kitchen screen says <b>Live updates</b> in green when it is connected, and <b>Reconnecting</b> when it has lost the laptop. It reconnects by itself.</li>
+</ul>
+</section>
+
+<section class="flow">
+<h1 id="close">9. Closing the day</h1>
+<p><kbd>Admin</kbd> › <kbd>Today</kbd> shows the day so far: sales, number of orders, the ABB in them, cash and card, and what sold best.</p>
+<figure><img src="img/en-admin-reports.png" alt="The Today page"></figure>
+
+<ol class="steps">
+  <li><b>Finish the open orders first.</b> The page warns when orders are still unpaid. Take the payment, or void them.</li>
+  <li>Tap <kbd>Close the day</kbd>.</li>
+  <li><b>Count the cash</b> in the drawer, without the change you started the day with, and type the amount. The till shows what it expected and the difference. You may leave it empty if you did not count.</li>
+  <li>Tap <kbd>Close day</kbd>. The day is stored as a numbered <b>Z report</b>.</li>
+  <li><kbd>Print</kbd> prints the day report, if you want it on paper.</li>
+</ol>
+<figure class="medium"><img src="img/en-close-day.png" alt="Closing the day"></figure>
+<p>You can keep selling after closing. If something changes afterwards, the page says so; tap <kbd>Close again</kbd> to store the new figures.</p>
+
+<h2>For the accountant</h2>
+<p><kbd>Admin</kbd> › <kbd>Bookkeeping</kbd>. Choose the dates and download <b>Daily sales (CSV)</b>: one line per closed day with sales, ABB per rate, cash, card and tips. Any accountant and any spreadsheet program can open that file.</p>
+</section>
+
+<section class="flow">
+<h1 id="backup">10. Backups</h1>
+<p>CactusPOS makes a copy of all your sales by itself: every time it starts, when you close the day, and every half hour while there is something new. You do not have to do anything for that.</p>
+<figure><img src="img/en-admin-backups.png" alt="The Backups page"></figure>
+
+<h2>Set up a second copy: do this once</h2>
+<div class="warn"><p>Those copies are on the same laptop. They do not help when the laptop is stolen, falls, or breaks. Give CactusPOS a second place to put them.</p></div>
+<ol class="steps">
+  <li>Put a USB stick in the laptop and leave it there. Or use a folder that OneDrive, Google Drive or Dropbox keeps in sync.</li>
+  <li><kbd>Admin</kbd> › <kbd>Backups</kbd>. Under <b>A second copy somewhere else</b>, type the folder, for example <code>E:\CactusPOS backups</code>. The folder has to exist. Tap <kbd>Save</kbd>.</li>
+  <li>Tap <kbd>Back up now</kbd> and check that a file appears in that folder.</li>
+</ol>
+
+<h2>Putting a backup back</h2>
+<p>You need this when the laptop was replaced, or when the data got damaged.</p>
+<ol class="steps">
+  <li>On a new laptop: install CactusPOS first (<a href="#install">chapter 3</a>).</li>
+  <li>Open the Start menu, then <b>CactusPOS</b>, then <kbd>Restore a backup</kbd>. A black window with text opens.</li>
+  <li>Type <kbd>1</kbd> for the newest backup on this computer, or <kbd>2</kbd> to choose a file on a USB stick. Press Enter.</li>
+  <li>It shows how many orders the backup holds and how many are on the computer now, and it warns when the backup is older. Type <kbd>yes</kbd> and press Enter to go ahead.</li>
+</ol>
+<p>The data that is replaced is not thrown away. It is moved to a folder of its own, so the step can be undone.</p>
+<div class="tip"><p><b>Try it once before you need it.</b> Make a backup, put it back, and check that today's orders are still there.</p></div>
+</section>
+
+<section class="flow">
+<h1 id="update">11. Updating, moving and removing</h1>
+
+<h2>A new version</h2>
+<ol class="steps">
+  <li>Close the till window.</li>
+  <li>Double-click the new setup file and go through the same windows as the first time.</li>
+</ol>
+<p>Your sales, menu, PINs and settings stay exactly as they were. The other screens reconnect by themselves; when a screen says an update is ready, tap <kbd>Reload when ready</kbd>.</p>
+
+<h2>A new laptop</h2>
+<p>Install CactusPOS on the new laptop, then put your newest backup back (<a href="#backup">chapter 10</a>). Look up the new address for the tablets with <kbd>Connect a tablet or phone</kbd>.</p>
+
+<h2>Removing CactusPOS</h2>
+<p>In Windows, open <b>Settings</b> › <b>Apps</b> › <b>Installed apps</b> (on Windows 10: <b>Apps &amp; features</b>), find <b>CactusPOS</b> and choose <b>Uninstall</b>. The program and its icons are removed.</p>
+<p>Your <b>sales records are kept</b>, in the folder <code>AppData\Local\CactusPOS</code> of your Windows account. Delete that folder yourself only when you are sure you no longer need them. A business has to keep its records for years.</p>
+</section>
+
+<section>
+<h1 id="help">12. When something is wrong</h1>
+<table class="compact">
+  <tr><th style="width:38%">What you see</th><th>What to do</th></tr>
+  <tr><td>Windows warns about the setup file</td><td>See <a href="#install">chapter 3</a>, step 2: <kbd>More info</kbd>, then <kbd>Run anyway</kbd>.</td></tr>
+  <tr><td>The setup says this version of Windows is not supported</td><td>CactusPOS needs Windows 10 (version 1809 or newer) or Windows 11, 64-bit. Run Windows Update, or use a newer laptop.</td></tr>
+  <tr><td>I closed the till window</td><td>Double-click the <b>CactusPOS</b> icon on the Desktop. Nothing is lost: the till keeps running behind the scenes, so the kitchen keeps working.</td></tr>
+  <tr><td>The window says <i>CactusPOS did not start</i></td><td>Try the icon again. Then restart the laptop. If it still does not start, ask the person who helps you with CactusPOS.</td></tr>
+  <tr><td>A message about <i>port 3000</i> being used by another program</td><td>Another program on the laptop uses the same door as the till. Restart the laptop. If it comes back, ask the person who helps you with CactusPOS.</td></tr>
+  <tr><td><i>Wrong PIN</i>, or <i>Too many attempts</i></td><td>Wait 30 seconds and try again. An owner can give anyone a new PIN under <kbd>Admin</kbd> › <kbd>Staff</kbd>.</td></tr>
+  <tr><td>The screens are in the wrong language</td><td>The sliders button at the top right (<b>Screen tools</b>) › <b>Language</b>. On the sign-in screen: the button <b>NL</b> or <b>EN</b>.</td></tr>
+  <tr><td>The tablet cannot open the address</td><td>Same WiFi as the laptop, and not a guest network? Is the laptop on and awake, and is the till running? Typed exactly, with <code>http://</code> in front? Then run the setup file again and answer <kbd>Yes</kbd> to the question from Windows.</td></tr>
+  <tr><td>The address worked yesterday and not today</td><td>The laptop got another address. Look it up again: Start menu › <b>CactusPOS</b> › <kbd>Connect a tablet or phone</kbd>.</td></tr>
+  <tr><td>The kitchen screen says <i>Reconnecting</i></td><td>It lost the laptop for a moment and tries again by itself. If it stays that way: is the laptop asleep, or is the WiFi down?</td></tr>
+  <tr><td>Windows shows a <i>Windows Security Alert</i> about <i>Node.js</i></td><td>Node.js is the engine inside CactusPOS. Tick both boxes and choose <kbd>Allow access</kbd>.</td></tr>
+  <tr><td>No receipt comes out</td><td><kbd>Admin</kbd> › <kbd>Printer</kbd>. Is the printer on, with paper, and is the address right? Tap <kbd>Save and print test page</kbd>. Under <b>Recent print jobs</b>, tap <kbd>Try failed jobs again</kbd>.</td></tr>
+  <tr><td>I cannot tap the item I need</td><td>It is switched off as sold out. <kbd>Admin</kbd> › <kbd>Menu</kbd>, switch <b>Available</b> on.</td></tr>
+  <tr><td>There are two till windows</td><td>Close one. Both show the same till.</td></tr>
+</table>
+<div class="note"><p><b>When you ask for help</b>, say what you were doing and what the screen said, word for word, or send a photo of the screen. That saves a lot of guessing.</p></div>
+</section>
+
+<section>
+<div class="card">
+<h1 id="card">One page to keep by the till</h1>
+
+<h3>In the morning</h3>
+<ol>
+  <li>Switch the laptop on and sign in to Windows. The till opens by itself. (If not: the <b>CactusPOS</b> icon on the Desktop.)</li>
+  <li>Sign in with your PIN.</li>
+  <li>Switch the kitchen tablet on. It should say <b>Live updates</b> in green.</li>
+  <li>Something sold out today? <kbd>Admin</kbd> › <kbd>Menu</kbd>, switch <b>Available</b> off.</li>
+</ol>
+
+<h3>Every order</h3>
+<ol>
+  <li>Tap the items. Choose the options. <kbd>Add to order</kbd>.</li>
+  <li><kbd>Pay</kbd>.</li>
+  <li><b>Cash:</b> tap what you received, give the change shown. <b>Card:</b> card machine first, then tap <kbd>Card</kbd>.</li>
+  <li><kbd>Confirm payment</kbd>. Tell the guest the order number.</li>
+  <li><kbd>Next order</kbd>.</li>
+</ol>
+
+<h3>In the kitchen</h3>
+<p><kbd>Start preparing</kbd> › <kbd>Mark ready</kbd> › <kbd>Collected</kbd></p>
+
+<h3>A mistake</h3>
+<p><kbd>Orders</kbd> › <b>All today</b> › <kbd>Correct</kbd> (wrong item or payment) or <kbd>Void</kbd> (cancel it all).</p>
+
+<h3>At the end of the day</h3>
+<ol>
+  <li><kbd>Admin</kbd> › <kbd>Today</kbd>. Nothing unpaid left?</li>
+  <li><kbd>Close the day</kbd>. Count the cash, type it, <kbd>Close day</kbd>.</li>
+  <li>Shut the laptop down the normal way.</li>
+</ol>
+
+<h3>For the tablet</h3>
+<p>Start menu › <b>CactusPOS</b> › <kbd>Connect a tablet or phone</kbd> shows the address to type.</p>
+</div>
+</section>
+
+</main>
+<script>
+// The version comes from scripts/make-manual.mjs, so the manual always names the release it ships with.
+const version = new URLSearchParams(location.search).get('version') || 'x.y.z';
+for (const el of document.querySelectorAll('[data-version]')) el.textContent = version;
+</script>
+</body>
+</html>

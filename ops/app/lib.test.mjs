@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULTS, appUrl, browserArgs, browserCandidates, dataHome, findBrowser, isCactusHealth, lanUrls,
+  DEFAULTS, addressesText, appUrl, browserArgs, browserCandidates, dataHome, findBrowser, isCactusHealth, lanUrls,
   nodeIsSupported, normalizeConfig, parseArgs, parseConfigText, splashUrl,
 } from './lib.mjs';
 
@@ -51,6 +51,7 @@ describe('parseArgs', () => {
   it('reads commands and overrides', () => {
     expect(parseArgs(['--server-only']).command).toBe('server');
     expect(parseArgs(['--stop']).command).toBe('stop');
+    expect(parseArgs(['--addresses', '--gui'])).toMatchObject({ command: 'addresses', gui: true, errors: [] });
     expect(parseArgs(['--status', '--json'])).toMatchObject({ command: 'status', json: true });
     expect(parseArgs(['--screen', 'kitchen', '--kiosk', '--port', '3100']).overrides).toEqual({ screen: 'kitchen', kiosk: true, port: 3100 });
     expect(parseArgs(['--configure', '--if-new', '--seed', 'cactus-blue'])).toMatchObject({ command: 'configure', ifNew: true, overrides: { seed: 'cactus-blue' } });
@@ -150,5 +151,27 @@ describe('nodeIsSupported', () => {
     expect(nodeIsSupported('23.5.0')).toBe(false);
     expect(nodeIsSupported('20.18.0')).toBe(false);
     expect(nodeIsSupported('')).toBe(false);
+  });
+});
+
+describe('addressesText', () => {
+  it('gives the address to type for each screen', () => {
+    const text = addressesText({ urls: ['http://192.168.1.20:3000'], running: true });
+    expect(text).toContain('http://192.168.1.20:3000/kitchen');
+    expect(text).toContain('http://192.168.1.20:3000/pos');
+    expect(text).toContain('http://192.168.1.20:3000/pickup');
+    expect(text).toContain('CactusPOS is running.');
+    expect(text).not.toContain('Try this one first');
+  });
+  it('says which to try first when the computer has several addresses', () => {
+    const text = addressesText({ urls: ['http://192.168.1.20:3000', 'http://172.20.0.1:3000'], running: true });
+    expect(text.indexOf('Try this one first')).toBeLessThan(text.indexOf('192.168.1.20'));
+    expect(text.indexOf('If that does not open')).toBeLessThan(text.indexOf('172.20.0.1'));
+  });
+  it('says so when the till is not running, or the computer has no network', () => {
+    expect(addressesText({ urls: ['http://10.0.0.5:3000'], running: false })).toContain('NOT running');
+    const none = addressesText({ urls: [], running: true });
+    expect(none).toContain('not connected to a network');
+    expect(none).not.toContain('http://');
   });
 });

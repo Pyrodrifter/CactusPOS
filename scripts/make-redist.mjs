@@ -1,6 +1,8 @@
 // Builds the ready-made Windows package: a folder (and zip) that installs on a computer with nothing else on it.
-// It contains the program, its libraries, the built screens and its own copy of Node.js, so the till computer
-// needs no internet, no Node.js and no npm. The person installing unzips it and double-clicks "Install CactusPOS.bat".
+// It contains the program, its libraries, the built screens, its own copy of Node.js and the user manual, so the
+// till computer needs no internet, no Node.js and no npm. The person installing unzips it and double-clicks
+// "Install CactusPOS.bat". scripts/make-setup.mjs wraps the same folder in a setup program (one .exe), which is
+// the easier way for most people.
 //
 //   node scripts/make-redist.mjs            -> dist/redist/CactusPOS/ and dist/redist/CactusPOS-<version>-win-x64.zip
 //   node scripts/make-redist.mjs --no-zip   -> the folder only (faster, for testing)
@@ -43,7 +45,7 @@ run(npm, ['run', 'build'], { cwd: root });
 step(`Staging in ${relative(root, stage)}`);
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
-const skip = (source) => /\.test\.(ts|mjs)$/.test(source) || /[\\/](testing|node_modules|private)$/.test(source);
+const skip = (source) => /\.test\.(ts|mjs)$/.test(source) || /\.iss$/.test(source) || /[\\/](testing|node_modules|private)$/.test(source);
 const copy = (from, to = from) => cpSync(join(root, from), join(stage, to), { recursive: true, filter: (source) => !skip(source) });
 for (const file of ['package.json', 'package-lock.json', 'Install CactusPOS.bat', 'Restore CactusPOS backup.bat']) copy(file);
 copy('seed');
@@ -74,6 +76,9 @@ for (const name of readdirSync(scope)) {
 for (const required of ['node_modules/tsx/package.json', 'node_modules/fastify/package.json', 'node_modules/@cactus/shared/src/index.ts', 'packages/server/src/main.ts', 'packages/web/dist/index.html']) {
   if (!existsSync(join(stage, required))) fail(`The package is incomplete: ${required} is missing.`);
 }
+
+step('Adding the user manual (English and Dutch, printed to PDF)');
+run(process.execPath, [join(root, 'scripts', 'make-manual.mjs'), '--out', join(stage, 'Manual')], { cwd: root });
 
 step(`Adding Node.js ${process.versions.node}`);
 const runtime = join(stage, 'runtime', 'node');
@@ -114,7 +119,8 @@ writeFileSync(join(stage, 'READ ME FIRST.txt'), [
   '',
   'Nothing else is needed: no internet and no other programs.',
   'Sales data is kept outside this folder, so replacing the folder with a newer version loses nothing.',
-  'Kitchen tablet, updates, backups and problems: see ops\\install.md.',
+  'How to set everything up and use it: the manual, in the folder Manual (English and Nederlands).',
+  'After installing it is also in the Start menu, under CactusPOS.',
   '',
 ].join('\r\n'));
 
