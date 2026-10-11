@@ -88,6 +88,9 @@ export function initializePwa(production: boolean): void {
   if (!production || !window.isSecureContext || !('serviceWorker' in navigator)) return;
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
+    // Already running as an app (the installed till's own window, or an installed PWA): the browser still fires
+    // this, and installing from there would only add a second icon. Edge 155 reports "standalone" for --app= windows.
+    if (['standalone', 'minimal-ui', 'fullscreen'].some((mode) => window.matchMedia(`(display-mode: ${mode})`).matches)) return;
     installPrompt = event as InstallPrompt;
     publish({ installAvailable: true });
   });

@@ -20,7 +20,7 @@ const copy = {
     folder: 'Folder for the second copy', folderHint: 'Leave empty for none. The folder has to exist on the till computer.',
     save: 'Save', saved: 'Saved', copied: 'The last backup is also in the second folder.', notCopied: 'The last backup is not in the second folder yet. Tap "Back up now".',
     listTitle: 'Recent backups', none: 'None yet.',
-    restoreTitle: 'Putting a backup back', restoreText: 'Double-click "Restore CactusPOS backup" in the program folder. It shows the newest backup, asks before it does anything, and keeps the data it replaces in a folder of its own. On a new computer: install CactusPOS, copy a backup file onto it, and drag that file onto "Restore CactusPOS backup".',
+    restoreTitle: 'Putting a backup back', restoreText: 'Open the Start menu, then CactusPOS, then "Restore a backup". You take the newest backup or choose a file (a USB stick), it shows what the backup holds, asks before it does anything, and keeps the data it replaces in a folder of its own. On a new computer: install CactusPOS first, then restore from your backup file. Without the Start menu entry: double-click "Restore CactusPOS backup" in the program folder, or drag a backup file onto it.',
   },
   nl: {
     loading: 'Laden…', off: 'Back-ups zijn voor deze database niet beschikbaar.',
@@ -32,7 +32,7 @@ const copy = {
     folder: 'Map voor de tweede kopie', folderHint: 'Leeg laten voor geen. De map moet bestaan op de kassacomputer.',
     save: 'Opslaan', saved: 'Opgeslagen', copied: 'De laatste back-up staat ook in de tweede map.', notCopied: 'De laatste back-up staat nog niet in de tweede map. Tik op "Nu back-up maken".',
     listTitle: 'Recente back-ups', none: 'Nog geen.',
-    restoreTitle: 'Een back-up terugzetten', restoreText: 'Dubbelklik op "Restore CactusPOS backup" in de programmamap. Het toont de nieuwste back-up, vraagt eerst om bevestiging en bewaart de gegevens die het vervangt in een eigen map. Op een nieuwe computer: installeer CactusPOS, kopieer een back-upbestand erop en sleep dat bestand op "Restore CactusPOS backup".',
+    restoreTitle: 'Een back-up terugzetten', restoreText: 'Open het menu Start, dan CactusPOS, dan "Restore a backup". U neemt de nieuwste back-up of kiest een bestand (een USB-stick), ziet wat erin zit, moet eerst bevestigen, en de gegevens die worden vervangen blijven bewaard in een eigen map. Op een nieuwe computer: installeer eerst CactusPOS en zet daarna uw back-upbestand terug. Zonder het menu Start: dubbelklik op "Restore CactusPOS backup" in de programmamap, of sleep een back-upbestand erop.',
   },
 };
 
