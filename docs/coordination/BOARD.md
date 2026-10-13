@@ -70,6 +70,7 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | T43 | firmware | Hardware notes: BOM, enclosure, charging, range test | T41 | todo | | |
 
 ## M5 — Polish
+| UX15 | web-core / web-pos / web-admin | Owner-requested final UI polish and another semantic icon pass | UX01,UX02,UX04 | doing | codex · 2026-10-13 | Clear consistent icons; phone/tablet layout and existing flows preserved; typecheck/tests and browser checks pass |
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
 | UX14 | shared / server / web-pos / receipt | Owner-requested: correct a paid order in one step instead of voiding it and ringing it up again (wrong item, wrong quantity, wrong payment method). The record stays append-only: the original is kept as void and linked to a replacement sale with its own receipt number; the till shows what to give back or collect | A01 | review | claude · 2026-10-10 | Cashier fixes a paid order from the Orders list in one sheet; day report, drawer and receipts add up; nothing is deleted and receipt numbers stay gapless; checks and browser verification pass |
