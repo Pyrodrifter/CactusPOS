@@ -17,7 +17,7 @@ import { ReceiptEditor } from './receipt-editor/ReceiptEditor';
 
 const TABS = ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books', 'backups'] as const;
 type Tab = (typeof TABS)[number];
-const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', receipts: 'edit', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download', backups: 'refresh' };
+const tabIcons: Record<Tab, IconName> = { reports: 'chart', menu: 'grid', receipts: 'edit', business: 'store', staff: 'staff', tax: 'tax', printer: 'printer', books: 'book', backups: 'backup' };
 
 export function Admin() {
   const { t, lang } = useLang();

@@ -16,6 +16,7 @@ button { font: inherit; font-weight: 600; min-height: var(--tap); min-width: 48p
 button:active { transform: scale(.98); }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button svg, a svg { flex-shrink: 0; vertical-align: middle; }
+.ui-icon { display: inline-block; flex-shrink: 0; vertical-align: middle; pointer-events: none; }
 :where(button, a, input, select, textarea):focus-visible { outline: 3px solid #4295a7; outline-offset: 3px; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); font-weight: 600; }

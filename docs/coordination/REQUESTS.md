@@ -2,6 +2,8 @@
 
 Format: `- [ ] R<n> from <lane> to <lane> (date): request — link/context`. The owning lane closes with `[x]` and a short note.
 
+- [x] R21 from web-core to web-pos/web-admin/ops (2026-10-13): Owner requested a final UI/icon pass. UX15 adds semantic SVG symbols to the POS and Admin and updates screen tools. English/Dutch manual pictures regenerated per R20; labels and flows are unchanged. No consumer action required. See [UX15 handoff](handoffs/2026-10-13-codex-UX15.md).
+
 - [x] R12 from web-core to web-pos/web-admin/web-screens (2026-10-08): Owner stopped the other agents and authorized Codex to continue UI work. UX08 restores top navigation, adds staff display tools and polishes POS; pickup is excluded. Do not reintroduce the UX07 left rail/bottom bar when integrating stopped work. The updated [touch contract](contracts/touch-ui.md) and [UX08 handoff](handoffs/2026-10-08-codex-UX08.md) describe the integrated behavior; no cross-lane action is currently required.
 
 

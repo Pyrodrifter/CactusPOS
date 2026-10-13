@@ -72,7 +72,7 @@ export function BackupAdmin() {
   return (
     <div className="form books">
       <section className="admin-form-card">
-        <h3><Icon name="refresh" />{c.statusTitle}</h3>
+        <h3><Icon name="backup" />{c.statusTitle}</h3>
         <p className={`reports-status${trouble ? ' changed' : ''}`} role="status">
           <Icon name={trouble ? 'warning' : 'check'} />
           <span>{last ? c.last(when(last.at), last.orders, last.lastReceipt) : c.never}{state.problem && ` ${state.problem}`}</span>
@@ -81,7 +81,7 @@ export function BackupAdmin() {
         <p className="muted">{c.where} <b>{state.folder}</b></p>
         {err && <div className="error" role="alert">{err}</div>}
         <div className="actions">
-          <button type="button" className="primary" disabled={busy} onClick={() => void run()}><Icon name={busy ? 'clock' : 'download'} />{busy ? c.working : c.now}</button>
+          <button type="button" className="primary" disabled={busy} onClick={() => void run()}><Icon name={busy ? 'clock' : 'backup'} />{busy ? c.working : c.now}</button>
         </div>
       </section>
 

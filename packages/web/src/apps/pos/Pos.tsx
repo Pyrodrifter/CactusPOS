@@ -192,7 +192,7 @@ export function Pos() {
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
       <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
-        <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="staff" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
+        <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="tabs" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || (o.serviceMode !== 'counter' && o.status !== 'collected'))).length}</span></button>
       </div>
       {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
@@ -203,7 +203,7 @@ export function Pos() {
         <div className="pos-grid">
           <section className="menu">
             <div className="cats">
-              <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="menu" />{ui.all}</button>
+              <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="grid" />{ui.all}</button>
               {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
             <div className="pos-menu-caption"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
