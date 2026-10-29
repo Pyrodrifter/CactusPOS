@@ -7,7 +7,8 @@ Lane names are defined in [AGENTS.md](../../AGENTS.md). "Deps" must be `done` be
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
 | REL03 | shared / server / ops | Patch runtime dependency advisories, preserve schema behavior and align release version | - | review | codex · 2026-10-29 | Runtime audit clear; schema compatibility and full checks pass; contract/handoff explains migration |
-| REL02 | ops / qa | Deployment gate, isolated install/restart/backup smoke checks, current release package and tryout/go-live runbook | - | doing | codex · 2026-10-29 | Typecheck/lint/unit/build/browser checks pass; packaged runtime completes sale/restart/backup/restore drill using disposable data; installer and checksums built; physical/customer acceptance gaps recorded; handoff for independent review |
+| REL02 | ops / qa | Deployment gate, isolated install/restart/backup smoke checks, current release package and tryout/go-live runbook | - | review | codex · 2026-10-29 | Typecheck/lint/unit/build/browser checks pass; packaged runtime completes sale/restart/backup/restore drill using disposable data; installer and checksums built; physical/customer acceptance gaps recorded; handoff for independent review |
+
 ## M0 — Foundations
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
