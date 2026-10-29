@@ -218,12 +218,19 @@ and [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install --id JRSo
 
 ```bat
 npm ci
+npm run release:check
 npm run package
 ```
 
 That runs `scripts/make-setup.mjs` and leaves in `dist\redist`: `CactusPOS-Setup-<version>.exe`
 (from `ops/windows/setup.iss`), `CactusPOS-<version>-win-x64.zip`, the manual in both languages as PDF, and
 `SHA256SUMS.txt`. Build from a clean checkout of the release commit: `VERSION.txt` in the package records it.
+The package build also runs a relocated copy with its bundled Node.js through the sales/restart/restore
+drill before compiling the setup. Its result and the truck [deployment checklist](deployment.md) travel
+beside the installer as `RELEASE-VERIFICATION.json` and `DEPLOYMENT-CHECKLIST.md`. After compiling, a silent
+English install, Dutch update over a running copy and uninstall run in isolated folders; their result is
+`INSTALLER-VERIFICATION.json`. They skip the real firewall/Apps registration and keep all fixture sales outside
+the operator's data folder.
 
 The manual is `docs/manual/manual.en.html` and `manual.nl.html`, printed to PDF by `scripts/make-manual.mjs` with
 the Edge or Chrome on the build computer. Its pictures are in `docs/manual/img` and are retaken on purpose, not

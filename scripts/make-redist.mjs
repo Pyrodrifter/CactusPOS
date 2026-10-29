@@ -10,7 +10,7 @@
 // Run it on Windows x64 with the Node.js version you want to ship: the package gets a copy of the node.exe
 // that runs this script. It needs internet once, for the program libraries and the Node.js licence text.
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -43,6 +43,13 @@ step('Building the screens');
 run(npm, ['run', 'build'], { cwd: root });
 
 step(`Staging in ${relative(root, stage)}`);
+if (existsSync(outDir)) {
+  const resolvedOutput = realpathSync(outDir);
+  const withinRoot = relative(realpathSync(root), resolvedOutput);
+  if (lstatSync(outDir).isSymbolicLink() || withinRoot.startsWith('..') || resolve(resolvedOutput) !== resolve(outDir)) {
+    fail(`Refusing to replace a release folder redirected outside its expected workspace path: ${resolvedOutput}`);
+  }
+}
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 const skip = (source) => /\.test\.(ts|mjs)$/.test(source) || /\.iss$/.test(source) || /[\\/](testing|node_modules|private)$/.test(source);
@@ -52,6 +59,7 @@ copy('seed');
 copy('ops/app');
 copy('ops/windows');
 copy('ops/install.md');
+copy('ops/deployment.md');
 // The lock file names every workspace, so each needs its package.json even when only the server is installed.
 for (const name of readdirSync(join(root, 'packages'))) copy(`packages/${name}/package.json`);
 for (const name of ['shared', 'receipt', 'printer', 'books-bridge', 'server']) copy(`packages/${name}/src`);

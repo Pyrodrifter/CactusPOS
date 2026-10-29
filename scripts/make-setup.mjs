@@ -36,6 +36,14 @@ if (!process.argv.includes('--reuse')) {
   if (made.status !== 0) fail('Building the package folder failed.');
 }
 if (!existsSync(join(stage, 'runtime', 'node', 'node.exe'))) fail(`There is no package folder in ${stage}. Run this without --reuse.`);
+if (JSON.parse(readFileSync(join(stage, 'package.json'), 'utf8')).version !== pkg.version) fail('The staged package is a different version. Run this without --reuse.');
+
+// Test the bits we ship, with their bundled runtime, after relocating them away from the checkout.
+step('Checking the packaged till, concurrent sales, restart and backup recovery');
+const verified = spawnSync(process.execPath, [join(root, 'scripts', 'release-smoke.mjs'), '--program', stage], { cwd: root, stdio: 'inherit' });
+if (verified.status !== 0) fail('The packaged till failed its release drill. No new setup was compiled.');
+copyFileSync(join(root, '.local', 'release-smoke-package.json'), join(outDir, 'RELEASE-VERIFICATION.json'));
+copyFileSync(join(root, 'ops', 'deployment.md'), join(outDir, 'DEPLOYMENT-CHECKLIST.md'));
 
 // Windows refuses paths over 260 characters in many programs. The setup installs under
 // C:\Users\<name>\AppData\Local\Programs\CactusPOS; leave room for a long user name.
@@ -54,11 +62,16 @@ rmSync(setup, { force: true });
 const compiled = spawnSync(iscc, ['/Qp', `/DAppVersion=${pkg.version}`, `/DStage=${stage}`, `/DOutDir=${outDir}`, join(root, 'ops', 'windows', 'setup.iss')], { cwd: root, stdio: 'inherit' });
 if (compiled.status !== 0 || !existsSync(setup)) fail('Inno Setup could not compile ops/windows/setup.iss. The messages above say why.');
 
+step('Checking a fresh install, update over a running till and uninstall');
+const installed = spawnSync(process.execPath, [join(root, 'scripts', 'installer-smoke.mjs'), setup], { cwd: root, stdio: 'inherit' });
+if (installed.status !== 0) fail('The setup failed its install/update/uninstall drill. Do not distribute it.');
+copyFileSync(join(root, '.local', 'installer-smoke.json'), join(outDir, 'INSTALLER-VERIFICATION.json'));
+
 // The manual also goes beside the setup, so it can be attached to the release on its own.
 for (const file of readdirSync(join(stage, 'Manual'))) copyFileSync(join(stage, 'Manual', file), join(outDir, file));
 
 step('Files for the release');
-const files = readdirSync(outDir).filter((name) => /\.(exe|zip|pdf)$/.test(name)).sort();
+const files = readdirSync(outDir).filter((name) => /\.(exe|zip|pdf)$/.test(name) || ['RELEASE-VERIFICATION.json', 'INSTALLER-VERIFICATION.json', 'DEPLOYMENT-CHECKLIST.md'].includes(name)).sort();
 const sums = files.map((name) => `${createHash('sha256').update(readFileSync(join(outDir, name))).digest('hex')}  ${name}`);
 writeFileSync(join(outDir, 'SHA256SUMS.txt'), `${sums.join('\n')}\n`);
 for (const name of files) console.log(`  ${name}  (${(statSync(join(outDir, name)).size / 1e6).toFixed(1)} MB)`);

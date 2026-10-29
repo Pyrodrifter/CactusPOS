@@ -3,6 +3,9 @@ Self-hosted point of sale for Cactus Blue (Bonaire). Start with [AGENTS.md](AGEN
 
 ## Install on the till computer
 
+For the November 1 tryout and November 2 deployment, follow [the deployment checklist](ops/deployment.md).
+It covers practice versus live data, the truck acceptance drill, backups and the fallback plan.
+
 The laptop in the truck runs the server and shows the till in its own window, like an installed program. Tablets
 and phones on the same WiFi open the kitchen and ordering screens in their browser.
 
@@ -59,7 +62,9 @@ the API. `start.bat` is the Windows convenience launcher. Development and local
 service operation require no cloud account; the initial dependency installation
 requires access to npm.
 
-`npm run check` runs typecheck, lint, the unit tests and the build. `npm run e2e` builds the
+`npm run release:check` runs the complete software gate, including browser checks, an isolated
+sale/restart/backup/restore drill and the production dependency audit. `npm run check` runs typecheck,
+lint, the unit tests and the build. `npm run e2e` builds the
 screens and runs the browser checks in `e2e/` against a throwaway till (temporary database,
 port 3082) in headless Edge or Chrome.
 
@@ -105,13 +110,12 @@ All six packages must provide and pass their own strict TypeScript check.
 | `@cactus/shared` | Contracts, money and tax rules |
 | `@cactus/server` | Local API, database, order lifecycle and live events |
 | `@cactus/web` | Browser screens |
-| `@cactus/receipt` | Receipt template/rendering package, scaffolded for T13 |
-| `@cactus/printer` | Local print agent package, scaffolded for T14 |
-| `@cactus/books-bridge` | Bookkeeping bridge package, scaffolded for T32/T33 |
+| `@cactus/receipt` | Versioned receipt designs, HTML and ESC/POS rendering |
+| `@cactus/printer` | Network ESC/POS transport and retry queue |
+| `@cactus/books-bridge` | Day reports and PyroBookKeeper export |
 
-The final three workspaces intentionally export nothing until their owning tasks
-define the contracts and implementation. The current server's HTML receipt is
-the earlier walking-skeleton implementation.
+The board distinguishes implemented work awaiting independent review from deferred features.
+Physical printer, truck-network and operator acceptance checks are in the deployment checklist.
 
 Claim work on the [board](docs/coordination/BOARD.md), respect file lanes, and use
 [requests](docs/coordination/REQUESTS.md) to coordinate across packages.

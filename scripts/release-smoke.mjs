@@ -19,7 +19,7 @@ const sockets = [];
 const homes = [join(work, 'tryout home'), join(work, 'restored home')];
 const activeHomes = new Set();
 let program = root, node = process.execPath, port, token, printer;
-let printerBytes = 0;
+let printerBytes = 0, printerJobs = 0;
 const exec = promisify(execFile);
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 const check = (name) => { report.checks.push(name); console.log(`PASS ${name}`); };
@@ -72,6 +72,7 @@ try {
   await launch(homes[0], '--server-only');
   const health = await call('GET', '/health');
   report.version = health.version;
+  assert.equal(health.version, JSON.parse(readFileSync(join(program, 'package.json'), 'utf8')).version);
   assert.equal(health.app, 'cactuspos');
   assert.equal(health.business, 'Cactus Blue');
   const screen = await fetch(`http://127.0.0.1:${port}/pos`);
@@ -84,7 +85,11 @@ try {
   await call('PUT', '/service-mode', { mode: 'board' });
 
   // A TCP printer double verifies the packaged transport. Paper/cutter/drawer still need a truck test.
-  printer = createServer((socket) => { socket.on('data', (bytes) => { printerBytes += bytes.length; }); socket.on('error', () => {}); });
+  printer = createServer((socket) => {
+    socket.on('data', (bytes) => { printerBytes += bytes.length; });
+    socket.on('end', () => { printerJobs++; });
+    socket.on('error', () => {});
+  });
   await new Promise((done, reject) => { printer.once('error', reject); printer.listen(0, '127.0.0.1', done); });
   await call('PUT', '/admin/printer', { enabled: true, host: '127.0.0.1', port: printer.address().port, autoReceipt: true });
   const seen = Array.from({ length: 8 }, () => new Set());
@@ -115,7 +120,7 @@ try {
   }));
   assert.deepEqual(sales.map((s) => s.paid.receiptNumber).sort((a, b) => a - b), Array.from({ length: 32 }, (_, i) => i + 1));
   await until(() => seen.every((ids) => ids.size === 32), 'All eight live screens must receive every order');
-  await until(() => printerBytes > 0, 'Automatic receipts must reach the TCP printer');
+  await until(() => printerJobs === 32 && printerBytes > 0, 'All 32 automatic receipts must reach the TCP printer exactly once');
   check('32 concurrent cash/card sales, eight live screens, retry deduplication, gapless receipts and TCP printing');
 
   const first = sales[0].paid;
