@@ -3,6 +3,12 @@
 Schemas are authoritative in `packages/shared/src/domain.ts` (`LoginResponse`, `MenuResponse`, `Order`, `OrderList`, `PickupBoard`, `HealthResponse`, `ErrorResponse`, `OrdersQuery`, `IdParams` and the request bodies named below); a test parses real server responses against them. All bodies are JSON. Money is integer cents.
 Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` with a 4xx status.
 
+Release 0.2.1 uses patched Zod 4 for validation. Invalid bodies still return HTTP 400 with
+`error: "Invalid request"`; the optional `issues` array is diagnostic information whose
+issue codes and wording may change between validator versions. Clients use the status and
+`error`, not specific issue codes. Request/response fields, integer-cent limits, defaults,
+receipt-template compatibility and persisted database format stay the same.
+
 ## Public
 | Route | Notes |
 |---|---|
