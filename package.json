@@ -1,7 +1,7 @@
 {
   "name": "cactuspos",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "engines": { "node": "^22.13.0 || >=24.0.0", "npm": ">=10" },
   "workspaces": ["packages/*"],
@@ -19,11 +19,13 @@
     "e2e": "npm run build && node e2e/run.mjs",
     "manual": "node scripts/make-manual.mjs",
     "package": "node scripts/make-setup.mjs",
+    "release:smoke": "node scripts/release-smoke.mjs",
+    "release:check": "npm run check && npm run e2e && npm run release:smoke && npm audit --omit=dev",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^4.1.11",
+    "vitest": "^4.1.12",
     "tsx": "^4.19.0",
     "@types/node": "^22.10.2",
     "@eslint/js": "^10.0.1",
