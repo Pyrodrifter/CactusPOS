@@ -4,18 +4,39 @@ Target: Sunday **November 1, 2026** for the tryout; Monday **November 2, 2026** 
 The software release drill is automated. The truck laptop, printer, WiFi and operator acceptance must be
 checked at the truck before live sales. Keep the old till available during the transition.
 
+Confirmed by the owner on October 29: **Surface Pro 7** is the till laptop; the printer has not been chosen.
+Business details, CRIB and tax configuration will be entered in the POS during setup. Each company uses its
+own installation/data and configures its own details; Cactus Blue is the first customer and a seed profile.
+
+## Surface Pro 7 preparation
+
+- Use the existing Windows x64 installer. Microsoft lists Windows 11 support for
+  [Surface Pro 7](https://learn.microsoft.com/en-us/surface/surface-supported-operating-systems).
+  Check the actual Windows version under Settings → System → About and install pending updates before the tryout.
+- Connect its charger and use the stand in landscape orientation. Test the till with touch and the on-screen
+  keyboard, including PIN entry, item search, cash tender and the Admin forms, at its normal display scaling.
+- Set plugged-in sleep to **Never** during service; set display timeout to suit the till. Windows 11 puts these
+  options under Settings → System → Power & battery → screen/sleep timeouts; see
+  [Microsoft's power settings guide](https://support.microsoft.com/en-gb/windows/experience/power-battery/power-settings-in-windows-11).
+  Keep the screen/keyboard cover open during service and test that other screens remain connected after idle time.
+- Leave the printer off in Admin until the hardware is chosen. Test paper output and any required cable/dock
+  with that model before relying on it. Orders, payments and the kitchen screen can be rehearsed meanwhile.
+
 ## Before Sunday
 
-- [ ] Name the laptop (Windows 10/11 x64), the Windows account that will operate it, the kitchen device and
-  receipt printer model/connection. Automatic printing currently supports network ESC/POS (TCP); a Windows
+- [ ] Confirm the Surface's Windows version, the Windows account that will operate it, the kitchen device and
+  receipt printer model/connection once chosen. Automatic printing currently supports network ESC/POS (TCP); a Windows
   printer uses the explicit Receipt button and browser printing. Direct USB/Bluetooth transports are pending
   T14b. Verify the actual connection before promising automatic receipts.
 - [ ] Decide whether Sunday is practice or real sales. For practice, use a **separate Windows account** on the
   laptop, install the same setup there, and leave all practice records in that account. CactusPOS has no training
   switch. On Monday install/open it under the designated live Windows account. Do not delete test orders or
   restore an empty database over any real sales. If Sunday records real sales, retain that database on Monday.
-- [ ] Have the owner confirm menu, prices, tax categories/rates and CRIB details (QUESTIONS Q1/Q1b/Q5c).
-  The shipped tax configuration is explicitly unverified. Enter the confirmed details under Admin.
+- [ ] During setup, enter the company's name, CRIB, contact details, timezone and branding in **Admin → Business**.
+  Set the applicable rates/effective dates and verification flags in **Admin → Tax**, then assign each menu item's
+  category in **Admin → Menu**. Check prices and a receipt before real sales. The owner will fill these in later
+  in the app; they are not build-time constants and do not need to be sent to the developer. Leave the shipped
+  tax categories unverified until that company's owner has confirmed them (QUESTIONS Q1/Q1b/Q5c).
 - [ ] Have the owner confirm manual card recording is acceptable: the separate terminal processes the charge;
   CactusPOS records it after approval. Split tender and partial payments remain pending T22/T23.
 - [ ] Bring the setup file, the English/Dutch PDFs and a USB stick for backup copies. The private GitHub
