@@ -2,6 +2,8 @@
 
 Format: `- [ ] Qn (lane, date) question — default if unanswered`
 
+- [ ] Q33 (ops / release, 2026-10-29) Owner targets Sunday November 1 for the tryout and Monday November 2 for deployment. Will Sunday use practice orders or genuine sales, and which laptop/Windows account will be the live till? — **Default:** unresolved; keep sample orders in a separate Windows account, preserve all genuine sales, and complete [truck acceptance](../../ops/deployment.md) before live rollout. Printer details remain Q2; tax/CRIB remain Q1/Q1b.
+
 - [ ] Q1 (shared, 2026-10-07) How should Cactus Blue's prepared food/drinks be taxed under ABB — service 6%, producent goods 8%, or mixed with exempt items? Is she registered for ABB and what is her CRIB number? — **Default:** two configurable categories, "Prepared food" and "Drinks" both 6%, flagged "UNVERIFIED" in admin until the accountant/BCN confirms.
 - [ ] Q2 (print) Which receipt printer model (and connection: USB/Ethernet/Bluetooth) and cash drawer will be used? — Default: 80mm Epson-compatible ESC/POS over Ethernet.
 - [ ] Q3 (payments) Which card terminal/provider does she use today? Does it need integration, or is manual entry enough for v1? — Default: manual entry.
