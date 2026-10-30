@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 import { kitchenLines, type Order } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { beep, useNow, useOrders } from '../../lib/live';
-import { CLEAN_SCREEN_EVENT } from '../../lib/display';
+import { CLEAN_SCREEN_EVENT, SCREEN_TOOLS_EVENT, useDevicePrefs } from '../../lib/display';
 import { useLang } from '../../i18n';
 import { Icon, type IconName } from '../../ui/Icon';
 import { haptic } from '../../ui/touch';
@@ -20,6 +20,8 @@ const copy = {
     undo: 'Undo', undoFailed: 'Not undone, try again', show: 'Show tickets',
     added: 'Added', round: 'Round',
     wipe: 'Wipe screen', wipeHint: 'Pauses touch for 20 seconds so you can wipe the screen',
+    quickReady: 'Ready', toMake: 'to make', nothingToMake: 'Nothing to make right now', readyLabel: 'Ready', readyHint: 'tap when picked up',
+    tools: 'Screen tools',
   },
   nl: {
     subtitle: 'Elke bon in één oogopslag', live: 'Live updates', reconnect: 'Verbinding herstellen',
@@ -32,6 +34,8 @@ const copy = {
     undo: 'Ongedaan maken', undoFailed: 'Niet gelukt, probeer opnieuw', show: 'Bonnen tonen',
     added: 'Toegevoegd', round: 'Ronde',
     wipe: 'Scherm afnemen', wipeHint: 'Pauzeert aanrakingen 20 seconden zodat je het scherm kunt afnemen',
+    quickReady: 'Klaar', toMake: 'te maken', nothingToMake: 'Nu niets te maken', readyLabel: 'Klaar', readyHint: 'tik als opgehaald',
+    tools: 'Schermopties',
   },
 };
 
@@ -80,27 +84,14 @@ function UndoIcon() {
   );
 }
 
-function Ticket({ o, now, online, settled, onMoved }: {
-  o: Order; now: number; online: boolean; settled: () => boolean; onMoved: (o: Order, to: Step) => void;
-}) {
-  const { t, lang } = useLang();
-  const c = copy[lang];
+/** Moves one order to its next status, once at a time, and only while connected and the board stands still. */
+function useStep(o: Order, online: boolean, settled: () => boolean, onMoved: (o: Order, to: Step) => void) {
   const [pending, setPending] = useState<Order['status'] | null>(null);
   const [failed, setFailed] = useState(false);
   const inFlight = useRef(false);
-  const tap = useDeliberateTap();
-  // A tab that orders again is a new ticket for the kitchen: its clock starts when that round arrived.
-  const since = Date.parse(o.kitchenSince ?? o.createdAt);
-  const mins = Math.max(0, Math.floor((now - since) / 60000));
-  const late = mins >= 10 && o.status !== 'ready';
-  const warm = mins >= 5 && !late && o.status !== 'ready';
-  const fresh = o.status === 'sent' && now - since < 20_000;
-  // Only what still has to be made. Earlier rounds of a tab were already handed over.
-  const firstRound = o.kitchenRound ?? 1;
-  const lines = kitchenLines(o);
   // Keep actions locked until the live projection confirms a successful update.
   useEffect(() => { if (pending === o.status) setPending(null); }, [o.status, pending]);
-  async function setStatus(status: Step) {
+  async function go(status: Step) {
     if (inFlight.current || pending || !online || !settled()) return;
     haptic(15);
     inFlight.current = true;
@@ -110,10 +101,69 @@ function Ticket({ o, now, online, settled, onMoved }: {
     catch { setFailed(true); setPending(null); }
     finally { inFlight.current = false; }
   }
-  const disabled = pending !== null || !online;
-  // New and preparing tickets have one obvious next step, so the whole ticket is the button.
+  return { pending, failed, go, disabled: pending !== null || !online };
+}
+
+/** Ticket columns on the one-tap board: as many as fit at this width, so the board never shows an empty column. */
+const QUICK_COL_MIN = 300;
+const QUICK_GAP = 14;
+function useColumnCount(grid: RefObject<HTMLDivElement | null>, active: boolean): number {
+  const [count, setCount] = useState(1);
+  useLayoutEffect(() => {
+    const el = grid.current;
+    if (!active || !el) return;
+    const measure = () => setCount(Math.max(1, Math.floor((el.clientWidth + QUICK_GAP) / (QUICK_COL_MIN + QUICK_GAP))));
+    measure();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [grid, active]);
+  return count;
+}
+
+/** When the kitchen started on this order; a tab that orders again starts a new clock for that round. */
+const kitchenSince = (o: Order) => Date.parse(o.kitchenSince ?? o.createdAt);
+
+/** One-tap kitchen: an order that is ready, shown only by its number (and the tab's name). A tap: picked up. */
+function ReadyChip({ o, online, settled, onMoved }: {
+  o: Order; online: boolean; settled: () => boolean; onMoved: (o: Order, to: Step) => void;
+}) {
+  const { t, lang } = useLang();
+  const c = copy[lang];
+  const step = useStep(o, online, settled, onMoved);
+  const tap = useDeliberateTap();
+  return (
+    <button type="button" className="kitchen-ready-chip" disabled={step.disabled} aria-busy={step.pending !== null}
+      aria-label={`${c.collected}: ${t('ticket')} ${o.ticketNumber}${o.tabName ? `, ${o.tabName}` : ''}`}
+      {...tap.handlers} onClick={(e) => { if (tap.deliberate(e)) void step.go('collected'); }}>
+      <b>#{o.ticketNumber}</b>
+      {o.tabName && <span className="kitchen-ready-name">{o.tabName}</span>}
+      {step.failed && <Icon name="warning" size={20} />}
+    </button>
+  );
+}
+
+function Ticket({ o, now, online, settled, onMoved, quick }: {
+  o: Order; now: number; online: boolean; settled: () => boolean; onMoved: (o: Order, to: Step) => void; quick: boolean;
+}) {
+  const { t, lang } = useLang();
+  const c = copy[lang];
+  const { pending, failed, go: setStatus, disabled } = useStep(o, online, settled, onMoved);
+  const tap = useDeliberateTap();
+  // A tab that orders again is a new ticket for the kitchen: its clock starts when that round arrived.
+  const since = kitchenSince(o);
+  const mins = Math.max(0, Math.floor((now - since) / 60000));
+  const late = mins >= 10 && o.status !== 'ready';
+  const warm = mins >= 5 && !late && o.status !== 'ready';
+  const fresh = o.status === 'sent' && now - since < 20_000;
+  // Only what still has to be made. Earlier rounds of a tab were already handed over.
+  const firstRound = o.kitchenRound ?? 1;
+  const lines = kitchenLines(o);
+  // New and preparing tickets have one obvious next step, so the whole ticket is the button: in the one-tap
+  // kitchen that step is Ready, in three steps it is Start, then Ready.
   // Ready tickets are not: Collected takes the ticket off the board, so it keeps explicit buttons only.
-  const forward: Step | null = o.status === 'sent' ? 'preparing' : o.status === 'preparing' ? 'ready' : null;
+  const forward: Step | null = o.status === 'sent' ? (quick ? 'ready' : 'preparing') : o.status === 'preparing' ? 'ready' : null;
   const press = (status: Step) => (e: MouseEvent) => { e.stopPropagation(); if (tap.deliberate(e)) void setStatus(status); };
   return (
     <article
@@ -154,8 +204,9 @@ function Ticket({ o, now, online, settled, onMoved }: {
       </ul>
       {failed && <p className="ticket-error" role="alert"><Icon name="warning" size={20} /><span>{c.failed}</span></p>}
       <footer className="ticket-actions">
-        {o.status === 'sent' && <button type="button" className="ticket-primary" disabled={disabled} onClick={press('preparing')}><Icon name="kitchen" size={24} />{pending ? c.saving : c.start}</button>}
-        {o.status === 'preparing' && <button type="button" className="ticket-primary" disabled={disabled} onClick={press('ready')}><Icon name="check" size={24} />{pending ? c.saving : c.ready}</button>}
+        {quick && forward && <button type="button" className="ticket-primary ticket-quick" disabled={disabled} onClick={press('ready')}><Icon name="check" size={24} />{pending ? c.saving : c.quickReady}</button>}
+        {!quick && o.status === 'sent' && <button type="button" className="ticket-primary" disabled={disabled} onClick={press('preparing')}><Icon name="kitchen" size={24} />{pending ? c.saving : c.start}</button>}
+        {!quick && o.status === 'preparing' && <button type="button" className="ticket-primary" disabled={disabled} onClick={press('ready')}><Icon name="check" size={24} />{pending ? c.saving : c.ready}</button>}
         {o.status === 'ready' && <>
           <button type="button" className="ticket-recall" disabled={disabled} onClick={press('preparing')}><Icon name="refresh" size={24} /><span>{pending === 'preparing' ? c.saving : c.recall}</span></button>
           <button type="button" className="ticket-primary" disabled={disabled} onClick={press('collected')}><Icon name="pickup" size={24} />{pending === 'collected' ? c.saving : c.collected}</button>
@@ -182,7 +233,17 @@ export function Kitchen() {
     }
     if (added) beep();
   }, [orders]);
+  const { kitchenFlow, kitchenLock } = useDevicePrefs();
+  const quick = kitchenFlow === 'quick';
   const live = orders.filter((o) => o.status === 'sent' || o.status === 'preparing' || o.status === 'ready');
+  // One-tap kitchen: everything still to cook in one grid, oldest first; what is ready shrinks to its number.
+  const toMake = live.filter((o) => o.status !== 'ready').sort((a, b) => kitchenSince(a) - kitchenSince(b));
+  const ready = live.filter((o) => o.status === 'ready').sort((a, b) => kitchenSince(a) - kitchenSince(b));
+  // Tickets are dealt into the columns in turn (1 2 3 / 4 5 6), so the oldest still read first from the left and
+  // each one sits right under the one above it, without the gap a row of uneven tickets would leave.
+  const grid = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(grid, quick);
+  const columns = Array.from({ length: columnCount }, (_, i) => toMake.filter((_, j) => j % columnCount === i));
   const cols: { status: Column; title: string; icon: IconName; empty: string }[] = [
     { status: 'sent', title: t('st.sent'), icon: 'receipt', empty: c.sentEmpty },
     { status: 'preparing', title: t('st.preparing'), icon: 'kitchen', empty: c.preparingEmpty },
@@ -244,9 +305,12 @@ export function Kitchen() {
   const undoneStatus = undo ? t(undo.to === 'ready' ? 'st.ready' : 'st.collected') : '';
 
   return (
-    <div ref={root} className={`kitchen dark${live.length === 0 ? ' kitchen-idle' : ''}`}>
+    <div ref={root} className={`kitchen dark${live.length === 0 ? ' kitchen-idle' : ''}${quick ? ' kitchen-quick' : ''}`}>
       <div className={`kitchen-top${undo ? ' kitchen-top-undo' : ''}`}>
         <header className="kitchen-heading">
+          {/* Locked to the kitchen there is no top bar, so Screen tools (and the way out of the lock) is here. */}
+          {kitchenLock && <button type="button" className="kitchen-tools" aria-label={c.tools} aria-haspopup="dialog"
+            onClick={() => window.dispatchEvent(new Event(SCREEN_TOOLS_EVENT))}><Icon name="sliders" size={26} /></button>}
           <h1 className="kitchen-title"><Icon name="kitchen" size={26} />{t('nav.kitchen')}</h1>
           <div className="kitchen-undo-slot" role="status">
             {undo && (
@@ -260,7 +324,7 @@ export function Kitchen() {
             )}
           </div>
           <div className="kitchen-overview">
-            <span className="kitchen-active"><b>{live.length}</b> {c.active}</span>
+            <span className="kitchen-active">{quick ? <><b>{toMake.length}</b> {c.toMake}</> : <><b>{live.length}</b> {c.active}</>}</span>
             <span className={`kitchen-connection${online ? '' : ' reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} /><span className="kitchen-connection-label">{online ? c.live : c.reconnect}</span></span>
             <button type="button" className="kitchen-wipe" title={c.wipeHint} aria-label={`${c.wipe}. ${c.wipeHint}`}
               onClick={() => { haptic(10); window.dispatchEvent(new Event(CLEAN_SCREEN_EVENT)); }}>
@@ -268,7 +332,15 @@ export function Kitchen() {
             </button>
           </div>
         </header>
-        <div className="kitchen-switch" role="group" aria-label={c.show}>
+        {quick && ready.length > 0 && (
+          <div className="kitchen-ready-strip" role="group" aria-label={`${c.readyLabel}, ${c.readyHint}`}>
+            <span className="kitchen-ready-label"><Icon name="pickup" size={22} /><span><b>{c.readyLabel}</b><small>{c.readyHint}</small></span></span>
+            <div className="kitchen-ready-chips">
+              {ready.map((o) => <ReadyChip key={o.id} o={o} online={online} settled={settled} onMoved={moved} />)}
+            </div>
+          </div>
+        )}
+        {!quick && <div className="kitchen-switch" role="group" aria-label={c.show}>
           {cols.map(({ status, title, icon }) => {
             const count = live.filter((o) => o.status === status).length;
             return (
@@ -278,22 +350,32 @@ export function Kitchen() {
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
       {!online && <div className="kitchen-offline" role="status"><Icon name="wifi-off" /><span>{c.offline}</span></div>}
       {live.length === 0 && <div className="kitchen-empty"><Icon name="check" size={32} /><div><h2>{t('k.none')}</h2><p>{c.emptyHint}</p></div></div>}
-      <div className="kcols">
+      {quick && (
+        <div ref={grid} className="kitchen-grid" style={{ '--kitchen-cols': columnCount } as CSSProperties}>
+          {live.length > 0 && toMake.length === 0 && <p className="kitchen-column-empty">{c.nothingToMake}</p>}
+          {toMake.length > 0 && columns.map((list, i) => (
+            <div key={i} className="kitchen-grid-col">
+              {list.map((o) => <Ticket key={o.id} o={o} now={now} online={online} settled={settled} onMoved={moved} quick />)}
+            </div>
+          ))}
+        </div>
+      )}
+      {!quick && <div className="kcols">
         {cols.map(({ status, title, icon, empty }) => {
           const list = live.filter((o) => o.status === status);
           return <section className={`kitchen-column kitchen-column-${status}${shown === status ? ' kitchen-column-current' : ''}`} key={status} aria-label={title}>
             <header className="kitchen-column-heading"><h2><Icon name={icon} size={22} />{title}</h2><span className="kitchen-count">{list.length}</span></header>
             <div className="kitchen-tickets">
-              {list.map((o) => <Ticket key={o.id} o={o} now={now} online={online} settled={settled} onMoved={moved} />)}
+              {list.map((o) => <Ticket key={o.id} o={o} now={now} online={online} settled={settled} onMoved={moved} quick={false} />)}
             </div>
             {list.length === 0 && <p className="kitchen-column-empty">{empty}</p>}
           </section>;
         })}
-      </div>
+      </div>}
     </div>
   );
 }

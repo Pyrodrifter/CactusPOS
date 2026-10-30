@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { api, setSession, type Session } from '../lib/api';
-import { CLEAN_SCREEN_EVENT, keepScreenAwake } from '../lib/display';
+import { CLEAN_SCREEN_EVENT, SCREEN_TOOLS_EVENT, keepScreenAwake, setDevicePref, useDevicePrefs } from '../lib/display';
 import { useTheme } from '../lib/theme';
 import { usePwa } from '../lib/pwa';
 import { setLang, useLang } from '../i18n';
@@ -25,6 +25,8 @@ const copy = {
     seconds: 'seconds remaining', language: 'Language', signedIn: 'Signed in as', signout: 'Sign out',
     done: 'Back to work', pickup: 'Pickup board (opens in a new tab)', skip: 'Skip to content',
     appearance: 'Appearance', light: 'Light', dark: 'Dark', system: 'Automatic', themeHint: 'Automatic follows this device’s appearance.',
+    kitchen: 'Kitchen screen', lock: 'Lock this screen to the kitchen', lockHint: 'It opens on the kitchen by itself and hides Order, Admin and the bar at the top, so a greasy hand cannot switch away. Switch off here to leave.',
+    quick: 'One tap', quickHint: 'Tap a ticket when the food is ready', steps: 'Three steps', stepsHint: 'New, Preparing, Ready', flowHint: 'Applies to this device only.',
   },
   nl: {
     subtitle: 'Lekker eten. Fijne service.', navigation: 'Hoofdnavigatie', tools: 'Schermopties',
@@ -39,6 +41,8 @@ const copy = {
     seconds: 'seconden resterend', language: 'Taal', signedIn: 'Ingelogd als', signout: 'Uitloggen',
     done: 'Aan het werk', pickup: 'Afhaalscherm (opent in een nieuw tabblad)', skip: 'Naar inhoud',
     appearance: 'Weergave', light: 'Licht', dark: 'Donker', system: 'Automatisch', themeHint: 'Automatisch volgt de weergave van dit apparaat.',
+    kitchen: 'Keukenscherm', lock: 'Dit scherm vastzetten op de keuken', lockHint: 'Het opent vanzelf op de keuken en verbergt Bestellen, Beheer en de balk bovenaan, zodat een vette hand niet kan wegtikken. Zet het hier uit om te wisselen.',
+    quick: 'Eén tik', quickHint: 'Tik op een bon als het eten klaar is', steps: 'Drie stappen', stepsHint: 'Nieuw, In bereiding, Klaar', flowHint: 'Geldt alleen voor dit apparaat.',
   },
 };
 
@@ -58,6 +62,9 @@ export function AppShell({ session, children }: { session: Session; children: Re
   const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
   const [cleaning, setCleaning] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const { kitchenLock, kitchenFlow } = useDevicePrefs();
+  // On the kitchen screen its own settings come first in Screen tools; elsewhere they wait further down.
+  const onKitchen = useLocation().pathname === '/kitchen';
   const content = useRef<HTMLDivElement>(null);
   useEffect(() => {
     try {
@@ -79,8 +86,10 @@ export function AppShell({ session, children }: { session: Session; children: Re
   }, [tools, cleaning]);
   useEffect(() => {
     const open = () => { setTools(false); setCleaning(true); };
+    const openTools = () => setTools(true);
     window.addEventListener(CLEAN_SCREEN_EVENT, open);
-    return () => window.removeEventListener(CLEAN_SCREEN_EVENT, open);
+    window.addEventListener(SCREEN_TOOLS_EVENT, openTools);
+    return () => { window.removeEventListener(CLEAN_SCREEN_EVENT, open); window.removeEventListener(SCREEN_TOOLS_EVENT, openTools); };
   }, []);
   const toggleFullscreen = async () => {
     try {
@@ -91,12 +100,20 @@ export function AppShell({ session, children }: { session: Session; children: Re
   const closeTools = () => { content.current?.removeAttribute('inert'); setTools(false); };
   const closeCleaning = () => {
     content.current?.removeAttribute('inert'); setCleaning(false);
-    requestAnimationFrame(() => content.current?.querySelector<HTMLButtonElement>('.screen-tools-button')?.focus());
+    requestAnimationFrame(() => content.current?.querySelector<HTMLButtonElement>('.screen-tools-button, .kitchen-tools')?.focus());
   };
-  return <div className={`shell${sunlight && !dark ? ' sunlight' : ''}`} style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as CSSProperties) : undefined}>
+  const kitchenSettings = (
+    <fieldset className="theme-picker kitchen-settings"><legend>{c.kitchen}</legend>
+      <button className="screen-option" role="switch" aria-checked={kitchenLock} onClick={() => setDevicePref('kitchenLock', !kitchenLock)}><Icon name="lock" /><span><strong>{c.lock}</strong><small>{c.lockHint}</small></span><i className="touch-switch" /></button>
+      <div className="kitchen-flow-picker">{(['quick', 'steps'] as const).map((value) => <button key={value} aria-pressed={kitchenFlow === value} onClick={() => setDevicePref('kitchenFlow', value)}><Icon name={value === 'quick' ? 'check' : 'kitchen'} /><span><strong>{c[value]}</strong><small>{c[`${value}Hint`]}</small></span></button>)}</div>
+      <p>{c.flowHint}</p>
+    </fieldset>
+  );
+  return <div className={`shell${sunlight && !dark ? ' sunlight' : ''}${kitchenLock ? ' kitchen-locked' : ''}`} style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as CSSProperties) : undefined}>
     <div className="shell-content" ref={content}>
       <a href="#workspace" className="skip-link">{c.skip}</a>
-      <header className="topbar">
+      {/* Locked to the kitchen: no way to the other screens, and the room goes to the tickets. */}
+      {!kitchenLock && <header className="topbar">
         <div className="brand"><Logo size={48} /><span className="brand-copy"><strong>{session.business.name}</strong><small>{c.subtitle}</small></span></div>
         <nav aria-label={c.navigation}>
           <NavLink to="/pos"><Icon name="cart" /><span>{t('nav.order')}</span></NavLink>
@@ -108,17 +125,19 @@ export function AppShell({ session, children }: { session: Session; children: Re
           <span className={`shell-connection ${connection}`} role="status"><i /><span>{connection === 'online' ? c.connected : connection === 'offline' ? c.offline : c.checking}</span></span>
           <button className="screen-tools-button" aria-label={c.tools} aria-haspopup="dialog" aria-expanded={tools} onClick={() => setTools(true)}><Icon name="sliders" /><span>{c.tools}</span></button>
         </div>
-      </header>
+      </header>}
       <main id="workspace" tabIndex={-1}>{children}</main>
     </div>
     {tools && <div className="screen-tools"><Sheet title={c.tools} onClose={closeTools}>
       <div className="screen-tools-scroll">
+      {onKitchen && kitchenSettings}
       <a className="screen-option" href="/menu-board" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}><Icon name="menu" /><span><strong>{lang === 'nl' ? 'Digitaal menubord' : 'Digital menu board'}</strong><small>{lang === 'nl' ? 'Open het menu op een scherm voor je klanten.' : 'Open the menu on a display for your customers.'}</small></span><Icon name="external" /></a>
       <div className="screen-tools-intro"><span className="screen-tool-emblem"><Icon name="sun" size={28} /></span><div><h3>{c.device}</h3><p>{c.deviceHint}</p></div></div>
       <fieldset className="theme-picker"><legend>{c.appearance}</legend><div>{(['light', 'dark', 'system'] as const).map((value) => <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon name={value === 'dark' ? 'moon' : value === 'light' ? 'sun' : 'monitor'} /><span>{c[value]}</span></button>)}</div><p>{c.themeHint}</p></fieldset>
       <button className="screen-option" role="switch" aria-checked={sunlight && !dark} onClick={() => { if (dark) setTheme('light'); setSunlight(dark || !sunlight); }}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>
       <button className="screen-option" role="switch" aria-checked={awake} disabled={!navigator.wakeLock} onClick={() => setAwake(!awake)}><Icon name="eye" /><span><strong>{c.awake}</strong><small>{!navigator.wakeLock ? c.unsupported : awake ? awakeActive ? c.awakeOn : c.awakeWaiting : c.awakeHint}</small></span><i className="touch-switch" /></button>
       <button className="screen-option" disabled={!document.fullscreenEnabled} onClick={() => void toggleFullscreen()}><Icon name="expand" /><span><strong>{fullscreen ? c.exitFullscreen : c.fullscreen}</strong><small>{document.fullscreenEnabled ? c.fullscreenHint : c.unsupported}</small></span><Icon name="arrow-right" /></button>
+      {!onKitchen && kitchenSettings}
       <button className="screen-option" onClick={() => { setTools(false); setCleaning(true); }}><Icon name="sparkles" /><span><strong>{c.clean}</strong><small>{c.cleanHint}</small></span><Icon name="arrow-right" /></button>
       <div className="screen-language"><span><Icon name="language" />{c.language}</span><div><button aria-pressed={lang === 'en'} className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>English</button><button aria-pressed={lang === 'nl'} className={lang === 'nl' ? 'on' : ''} onClick={() => setLang('nl')}>Nederlands</button></div></div>
       <div className="screen-account"><span className="staff-avatar">{session.staff.name.slice(0, 1).toUpperCase()}</span><span><small>{c.signedIn}</small><strong>{session.staff.name}</strong></span><button className="ghost" disabled={signingOut} onClick={() => {

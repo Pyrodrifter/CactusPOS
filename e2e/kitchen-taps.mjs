@@ -15,6 +15,7 @@ export default async function (page) {
   const rest = await call('POST', '/orders', { lines: [{ itemId: 'fries', qty: 1 }] });
   const smear = await call('POST', '/orders', { lines: [{ itemId: 'fries', qty: 1 }] });
   await page.size(1180, 820);
+  await page.eval("localStorage.setItem('cactus.display.kitchenFlow', 'quick')"); // the default: one tap is Ready
   await page.goto('/kitchen');
   await page.wait(800);
 
@@ -30,9 +31,9 @@ export default async function (page) {
     await page.wait(900);
     return (await call('GET', `/orders/${order.id}`)).status;
   };
-  assert.equal(await press(quick), 'preparing', 'A short tap starts the ticket');
-  assert.equal(await press(rest, { holdMs: 1200 }), 'sent', 'A thumb resting on the ticket does not start it');
-  assert.equal(await press(smear, { slide: 40 }), 'sent', 'A finger sliding across the ticket does not start it');
+  assert.equal(await press(quick), 'ready', 'A short tap marks the ticket ready');
+  assert.equal(await press(rest, { holdMs: 1200 }), 'sent', 'A thumb resting on the ticket does not move it');
+  assert.equal(await press(smear, { slide: 40 }), 'sent', 'A finger sliding across the ticket does not move it');
   await page.shot('kitchen-taps');
 
   await page.click('.kitchen-wipe');
