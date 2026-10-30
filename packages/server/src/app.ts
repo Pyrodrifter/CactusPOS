@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import {
   type Ack, AddLinesBody, AvailabilityBody, CorrectOrderBody, BusinessSchema, CloseDayBody, CreateOrderBody, TabNameBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
-  StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, VoidBody, type Order, type ServerEvent,
+  StaffInput, StatusBody, TaxCategorySchema, TaxConfigError, TaxExemption, VoidBody, type Order, type ServerEvent,
 } from '@cactus/shared';
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
@@ -382,6 +382,13 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     const cat = admin.upsertTax(TaxCategorySchema.parse({ ...(req.body as object), id: idOf(req) }), by);
     menuChanged();
     return cat;
+  });
+  app.get('/api/admin/tax', async (req) => { ownerOf(req); return svc.taxSetup(); });
+  app.put('/api/admin/tax-exemption', async (req) => {
+    const by = ownerOf(req);
+    const saved = admin.setTaxExemption(TaxExemption.parse(req.body), by);
+    menuChanged();
+    return saved;
   });
 
   app.get('/api/admin/staff', async (req) => { ownerOf(req); return admin.listStaff(); });

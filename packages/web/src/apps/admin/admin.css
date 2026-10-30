@@ -148,6 +148,7 @@
 .admin .tag.warn { background: #fff0d8; color: #805112; }
 .admin .tag.good { background: #e6f3e6; color: #24613f; }
 .admin .warn-text { color: #8a5718; line-height: 1.5; }
+.admin .tax-switch { margin: 0 0 18px; }
 .admin .tax-check { border: 1px solid var(--admin-line); border-radius: 20px; padding: 16px 18px; margin: 0 0 18px; line-height: 1.5; }
 .admin .tax-check h3 { margin: 0 0 8px; }
 .admin .tax-check p { margin: 6px 0 0; }

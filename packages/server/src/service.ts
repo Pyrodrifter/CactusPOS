@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  computeTotals, formatMoney, sumCents, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
+  ABB_CHARGED, computeTotals, effectiveTaxCategories, formatMoney, sumCents, TaxExemption, type TaxCategory, type Order, type OrderLine, type OrderLineInput, type MenuItem, type MenuCategory,
   type AddLinesBodyT, type CorrectOrderBodyT, type CreateOrderBodyT, type PayBodyT, type Business, type MenuResponse, type PickupBoard, type ServiceMode,
 } from '@cactus/shared';
 import { Auth, type Staff } from './auth.js';
@@ -40,8 +40,15 @@ export class PosService {
     return new Intl.DateTimeFormat('en-CA', { timeZone: this.business().timezone }).format(now);
   }
 
+  /** The categories as the owner set them up, and the business-wide ABB switch. Admin > Tax edits these. */
+  taxSetup(): { categories: TaxCategory[]; exemption: TaxExemption } {
+    const categories = (this.db.prepare('SELECT data FROM tax_categories').all() as { data: string }[]).map((r) => JSON.parse(r.data) as TaxCategory);
+    return { categories, exemption: TaxExemption.parse(getKv(this.db, 'tax.exemption', ABB_CHARGED)) };
+  }
+  /** The categories sales are priced with: every category is exempt while ABB is switched off. */
   taxCategories(): TaxCategory[] {
-    return (this.db.prepare('SELECT data FROM tax_categories').all() as { data: string }[]).map((r) => JSON.parse(r.data));
+    const { categories, exemption } = this.taxSetup();
+    return effectiveTaxCategories(categories, exemption);
   }
   menu(): MenuResponse {
     const categories = this.db.prepare('SELECT id, name, sort FROM menu_categories ORDER BY sort, name').all() as unknown as MenuCategory[];

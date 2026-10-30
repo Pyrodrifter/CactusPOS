@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BONAIRE_DEFAULT_TAX, computeTotals, grossFromNet, rateAt, taxInGross, TaxCategorySchema, type TaxCategory } from './tax.js';
+import { ABB_CHARGED, BONAIRE_DEFAULT_TAX, computeTotals, effectiveTaxCategories, grossFromNet, rateAt, taxInGross, TaxExemption, TaxCategorySchema, type TaxCategory } from './tax.js';
 import { assertCents, formatMoney, MAX_CENTS, parseMoney, roundDiv, sumCents } from './money.js';
 
 const D = '2026-10-07';
@@ -200,5 +200,26 @@ describe('effective dates', () => {
       expect(TaxCategorySchema.safeParse(c).success).toBe(true);
       expect(c.unverified).toBe(true);
     }
+  });
+});
+
+describe('ABB switched off for the whole business', () => {
+  const off = { charged: false, reason: 'Food truck exemption' };
+  it('changes nothing while ABB is charged', () => {
+    expect(effectiveTaxCategories(BONAIRE_DEFAULT_TAX, ABB_CHARGED)).toEqual(BONAIRE_DEFAULT_TAX);
+  });
+  it('records every sale as exempt, same total, no ABB, same category ids', () => {
+    const cats = effectiveTaxCategories(BONAIRE_DEFAULT_TAX, off);
+    expect(cats.map((c) => c.id)).toEqual(BONAIRE_DEFAULT_TAX.map((c) => c.id));
+    for (const c of cats) expect(TaxCategorySchema.safeParse(c).success).toBe(true);
+    const t = computeTotals([{ taxCategoryId: 'service_6', grossCents: 1975 }, { taxCategoryId: 'goods_8', grossCents: 275 }], cats, D);
+    expect(t).toMatchObject({ totalCents: 2250, taxCents: 0, netCents: 2250 });
+    expect(t.breakdown.every((r) => r.kind === 'exempt' && r.bps === 0)).toBe(true);
+    expect(cats[0]).toMatchObject({ name: 'ABB 6% (exempt)', reason: 'Food truck exemption' });
+  });
+  it('cannot be switched off without a reason', () => {
+    expect(TaxExemption.safeParse({ charged: false, reason: '  ' }).success).toBe(false);
+    expect(TaxExemption.safeParse(off).success).toBe(true);
+    expect(TaxExemption.safeParse({ charged: true }).success).toBe(true);
   });
 });

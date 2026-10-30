@@ -135,7 +135,8 @@ export function buildReceipt(o: Order, b: Business, opts: ReceiptOptions = {}): 
   }
   out.push({ t: 'rule' });
   out.push({ t: 'row', left: t.total, right: m(o.totalCents), bold: true, size: 'large' });
-  out.push({ t: 'text', text: t.inclAbb });
+  // A business with ABB switched off sells everything exempt: then the receipt does not claim prices include ABB.
+  if (o.breakdown.some((r) => r.kind === 'taxed')) out.push({ t: 'text', text: t.inclAbb });
   for (const r of o.breakdown) {
     if (r.kind === 'taxed') out.push({ t: 'row', left: `ABB ${pct(r.bps)} ${t.abbOver} ${m(r.netCents)}`, right: m(r.taxCents) });
     else out.push({ t: 'row', left: r.kind === 'exempt' ? t.exempt : t.outside, right: m(r.grossCents) });

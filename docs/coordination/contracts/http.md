@@ -36,6 +36,8 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `DELETE /api/admin/menu/items/:id` | Past orders keep their own snapshot |
 | `GET` / `PUT /api/admin/business` | `BusinessSchema` |
 | `PUT /api/admin/tax/:id` | `TaxCategorySchema`. Change a rate by adding a `validFrom` row, never by editing one |
+| `GET /api/admin/tax` | Owner. `{ categories, exemption }`: the categories as set up (not the exempt view `/api/menu` gives while ABB is off) and the ABB switch |
+| `PUT /api/admin/tax-exemption` | Owner. `TaxExemption` `{ charged, reason }`; `reason` required when `charged` is false. Audit `tax.exemption`; broadcasts a menu change |
 | `GET /api/admin/staff` | `StaffRow[]` (PINs are never returned) |
 | `POST /api/admin/staff`, `PUT /api/admin/staff/:id` | `StaffInput`. PIN 4-8 digits, unique; at least one active owner must remain |
 | `GET /api/admin/staff/example-pins` | `{ staff: Staff[] }`: active people who can still sign in with a PIN every new database starts with (1234, 1111). Admin shows a reminder |

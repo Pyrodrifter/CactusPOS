@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { AuditRow, Business, MenuCategory, MenuItem, StaffInputT, StaffRow, TaxCategory } from '@cactus/shared';
+import type { AuditRow, Business, MenuCategory, MenuItem, StaffInputT, StaffRow, TaxCategory, TaxExemption } from '@cactus/shared';
 import { setKv, tx, type DB } from './db.js';
 import { hashPin, type Auth, type Staff } from './auth.js';
 import { HttpError, type PosService } from './service.js';
@@ -91,6 +91,15 @@ export class AdminService {
       this.db.prepare('INSERT INTO tax_categories(id, data) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data = excluded.data').run(cat.id, JSON.stringify(cat));
       this.log('tax.saved', cat, by);
       return cat;
+    });
+  }
+  /** Applies to sales from now on; orders already made keep the ABB they were sold with. */
+  setTaxExemption(ex: TaxExemption, by: Staff): TaxExemption {
+    const clean = { charged: ex.charged, reason: ex.reason.trim() };
+    return tx(this.db, () => {
+      setKv(this.db, 'tax.exemption', clean);
+      this.log('tax.exemption', clean, by);
+      return clean;
     });
   }
 

@@ -58,4 +58,21 @@ export default async function (page) {
   await page.wait(400);
   assert.equal((await menu()).items.find((i) => i.id === 'burger').priceCents, 1590);
   await page.eval(`localStorage.removeItem('cactus.admin.pricesWithoutAbb')`);
+
+  /* Switching ABB off for the whole business needs a reason; sales then carry no ABB; switching back restores it. */
+  await page.click({ text: 'Tax (ABB)' });
+  await page.click({ text: 'Charge ABB' });
+  await page.click('.admin-dialog-actions .primary');
+  assert.match(await text('.admin-dialog-foot .error'), /legal ground/, 'Refused without a reason');
+  await page.type('.admin-dialog input', 'Food truck arrangement');
+  await page.shot('tax-abb-off-dialog');
+  await page.click('.admin-dialog-actions .primary');
+  await page.wait(400);
+  assert.match(await text('.tax-switch'), /Off: every new sale is recorded as exempt \(Food truck arrangement\)/);
+  assert.match(await text('.tax-check'), /no sale gets ABB/);
+  assert.ok((await menu()).taxCategories.every((c) => c.kind === 'exempt'), 'The counter sees only exempt categories');
+  await page.shot('tax-abb-off');
+  await page.click({ text: 'Charge ABB' });
+  await page.wait(400);
+  assert.ok((await menu()).taxCategories.some((c) => c.kind === 'taxed'), 'ABB is back on');
 }

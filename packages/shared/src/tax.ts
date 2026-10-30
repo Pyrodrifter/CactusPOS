@@ -154,3 +154,25 @@ export const BONAIRE_DEFAULT_TAX: TaxCategory[] = [
   { id: 'exempt', name: 'Exempt', kind: 'exempt', rates: [], reason: 'Specify legal ground', unverified: true },
   { id: 'outside_scope', name: 'Outside scope', kind: 'outside_scope', rates: [], reason: 'Resale of imported goods', unverified: true },
 ];
+
+/**
+ * Business-wide switch for a business that charges no ABB at all (owner setting, Admin > Tax).
+ * Whether a business qualifies is the owner's and the accountant's call; the till only records it.
+ */
+export const TaxExemption = z.object({
+  /** True = ABB is charged as the categories say. False = every sale is recorded as exempt. */
+  charged: z.boolean(),
+  /** Legal ground, required while ABB is off. */
+  reason: z.string().max(200).default(''),
+}).refine((x) => x.charged || x.reason.trim().length > 0, { message: 'Write down why no ABB is charged', path: ['reason'] });
+export type TaxExemption = z.infer<typeof TaxExemption>;
+export const ABB_CHARGED: TaxExemption = { charged: true, reason: '' };
+
+/**
+ * The categories sales are priced with. While ABB is off every category becomes exempt with the owner's ground,
+ * keeping its id so menu items and order lines still point at it. Sales made earlier keep their own breakdown.
+ */
+export function effectiveTaxCategories(cats: readonly TaxCategory[], ex: TaxExemption): TaxCategory[] {
+  if (ex.charged) return [...cats];
+  return cats.map((c) => ({ ...c, name: c.kind === 'taxed' ? `${c.name} (exempt)` : c.name, kind: 'exempt', rates: [], reason: ex.reason.trim() }));
+}

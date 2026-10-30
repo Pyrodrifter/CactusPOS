@@ -112,6 +112,7 @@ From the app audit of master at 36f2e8d: [handoffs/2026-10-10-claude-app-audit.m
 | ID | Lane | Task | Deps | Status | Owner | Done when |
 |---|---|---|---|---|---|---|
 | TAX01 | shared / web-admin / qa | Owner request: Tax tab usable by any Bonaire business (new categories from presets, rename, legal ground, tax check), typing menu prices without ABB, sanity check of the 6% included setup; PyroBookKeeper left out | - | review | claude · 2026-10-30 | Categories can be added and named; check panel flags missing/unverified rates; ex-ABB entry stores the inclusive price exactly; checks and e2e pass; handoff 2026-10-30-claude-TAX01.md |
+| TAX02 | shared / server / receipt / web-admin / web-screens / books / qa | Owner requests: remove PyroBookKeeper entirely (ADR-0003, CSV exports kept); business-wide "Charge ABB" switch for food-truck exemption | TAX01 | review | claude · 2026-10-30 | No PyroBookKeeper code or route left; switch off = new sales exempt at the same total, earlier sales unchanged, reason required, owner only; receipt/menu board drop the ABB claim; checks and e2e pass; handoff 2026-10-30-claude-TAX02.md |
 
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06

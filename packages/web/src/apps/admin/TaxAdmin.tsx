@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { formatMoney, rateAt, taxInGross, TaxKind, type MenuResponse, type TaxCategory } from '@cactus/shared';
+import { formatMoney, rateAt, taxInGross, TaxKind, type MenuResponse, type TaxCategory, type TaxExemption } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { useLang } from '../../i18n';
 import { errText, newId } from './Admin';
 import { Icon } from '../../ui/Icon';
 import { AdminDialog } from './AdminDialog';
+import { AdminSwitch } from './controls';
 import { useAdminCopy } from './copy';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -44,6 +45,9 @@ const COPY = {
     kind: 'Kind', taxed: 'Taxed (ABB)', ground: 'Legal ground', groundHint: 'Write down why no ABB applies; the Belastingdienst can ask for it.',
     needName: 'Give the category a name', needGround: 'Write down the legal ground', already: 'already set up',
     preset: { service_6: 'Services 6%', goods_8: 'Goods from a producer, imports 8%', insurance_7: 'Insurance 7%', zero_rated: 'Zero-rated 0% (export)', exempt: 'Exempt', outside_scope: 'Outside scope' } satisfies Record<Preset['id'], string>,
+    charge: 'Charge ABB', chargeOn: 'Sales are taxed by the categories below.', chargeOff: (reason: string) => `Off: every new sale is recorded as exempt (${reason}). Earlier sales keep their ABB.`,
+    offTitle: 'Switch ABB off', offIntro: 'Only for a business that is allowed to sell without ABB. Check it with the accountant or the Belastingdienst first. Prices stay the same; from now on they hold no ABB.',
+    offReason: 'Why no ABB is charged', offExample: 'e.g. food truck (trukipan) arrangement', offCheck: 'ABB is switched off, so no sale gets ABB. Prices on the menu are what the customer pays.',
     grounds: { exempt: ['First necessities of life (staple foods)', 'Prescription medicines and medical aids', 'Water, electricity and gas from a licensed supplier'], outside_scope: ['Resale of goods bought or imported (not a producer)'] },
   },
   nl: {
@@ -57,6 +61,9 @@ const COPY = {
     kind: 'Soort', taxed: 'Belast (ABB)', ground: 'Wettelijke grond', groundHint: 'Schrijf op waarom er geen ABB geldt; de Belastingdienst kan erom vragen.',
     needName: 'Geef de categorie een naam', needGround: 'Vul de wettelijke grond in', already: 'al ingesteld',
     preset: { service_6: 'Diensten 6%', goods_8: 'Goederen van een producent, invoer 8%', insurance_7: 'Verzekeringen 7%', zero_rated: 'Nultarief 0% (export)', exempt: 'Vrijgesteld', outside_scope: 'Buiten toepassing' } satisfies Record<Preset['id'], string>,
+    charge: 'ABB rekenen', chargeOn: 'Verkopen worden belast volgens de categorieën hieronder.', chargeOff: (reason: string) => `Uit: elke nieuwe verkoop wordt als vrijgesteld vastgelegd (${reason}). Eerdere verkopen houden hun ABB.`,
+    offTitle: 'ABB uitzetten', offIntro: 'Alleen voor een bedrijf dat zonder ABB mag verkopen. Controleer dit eerst met de boekhouder of de Belastingdienst. De prijzen blijven gelijk; vanaf nu zit er geen ABB in.',
+    offReason: 'Waarom er geen ABB wordt gerekend', offExample: 'bijv. regeling voor foodtrucks (trukipan)', offCheck: 'ABB staat uit, dus geen enkele verkoop krijgt ABB. De prijzen op het menu zijn wat de klant betaalt.',
     grounds: { exempt: ['Eerste levensbehoeften (basisvoedsel)', 'Geneesmiddelen op recept en medische hulpmiddelen', 'Water, elektriciteit en gas van een vergunninghouder'], outside_scope: ['Doorverkoop van ingekochte of ingevoerde goederen (geen producent)'] },
   },
 };
@@ -72,13 +79,21 @@ export function TaxAdmin() {
   const c = COPY[lang];
   const copy = useAdminCopy();
   const [menu, setMenu] = useState<MenuResponse | null>(null);
+  const [setup, setSetup] = useState<{ categories: TaxCategory[]; exemption: TaxExemption } | null>(null);
+  const [switching, setSwitching] = useState<string | null>(null);
   const [adding, setAdding] = useState<{ cat: TaxCategory; pct: string; from: string } | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const load = useCallback(() => api<MenuResponse>('/menu').then(setMenu), []);
+  // The menu gives the items; the categories come from the tax setup itself, because the menu shows them as exempt while ABB is off.
+  const load = useCallback(async () => {
+    const [m, s] = await Promise.all([api<MenuResponse>('/menu'), api<{ categories: TaxCategory[]; exemption: TaxExemption }>('/admin/tax')]);
+    setMenu(m);
+    setSetup(s);
+  }, []);
   useEffect(() => { void load().catch((e) => setErr(errText(e))); }, [load]);
-  const cats = menu?.taxCategories ?? [];
+  const cats = setup?.categories ?? [];
+  const charged = setup?.exemption.charged ?? true;
   const used = (id: string) => menu?.items.filter((i) => i.taxCategoryId === id).length ?? 0;
 
   const save = async (cat: TaxCategory) => {
@@ -86,6 +101,13 @@ export function TaxAdmin() {
     setBusy(true);
     setErr('');
     try { await api(`/admin/tax/${cat.id}`, { method: 'PUT', body: cat }); await load(); return true; } catch (e) { setErr(errText(e)); return false; } finally { setBusy(false); }
+  };
+  const setCharged = async (exemption: TaxExemption) => {
+    if (busy) return;
+    if (!exemption.charged && !exemption.reason.trim()) return setErr(c.needGround);
+    setBusy(true);
+    setErr('');
+    try { await api('/admin/tax-exemption', { method: 'PUT', body: exemption }); await load(); setSwitching(null); } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
   };
   const addRate = async () => {
     if (!adding) return;
@@ -133,9 +155,16 @@ export function TaxAdmin() {
 
   return (
     <div>
-      <p className="notice">{c.intro}</p>
-      {err && !adding && !draft && <div className="error" role="alert">{err}</div>}
-      {menu && (
+      {charged && <p className="notice">{c.intro}</p>}
+      {err && !adding && !draft && switching === null && <div className="error" role="alert">{err}</div>}
+      {setup && (
+        <div className="tax-switch">
+          <AdminSwitch on={charged} disabled={busy} label={c.charge} hint={charged ? c.chargeOn : c.chargeOff(setup.exemption.reason)}
+            onChange={(on) => { setErr(''); if (on) void setCharged({ charged: true, reason: '' }); else setSwitching(setup.exemption.reason); }} />
+        </div>
+      )}
+      {menu && !charged && <section className="tax-check" aria-label={c.check}><h3>{c.check}</h3><p><Icon name="check" size={16} /> {c.offCheck}</p></section>}
+      {menu && charged && (
         <section className="tax-check" aria-label={c.check}>
           <h3>{c.check}</h3>
           {missingRate.map((x) => <p key={x.id} className="warn-text"><Icon name="warning" size={16} /> {c.noRate(x.name)}</p>)}
@@ -175,6 +204,15 @@ export function TaxAdmin() {
         })}
       </ul>
       <button type="button" disabled={busy || !menu} onClick={startNew}><Icon name="plus" />{c.addCategory}</button>
+      {switching !== null && (
+        <AdminDialog title={c.offTitle} onClose={() => setSwitching(null)} busy={busy} error={err} footer={<>
+          <button type="button" className="ghost" disabled={busy} onClick={() => setSwitching(null)}>{t('pay.cancel')}</button>
+          <button type="button" className="primary" disabled={busy} onClick={() => void setCharged({ charged: false, reason: switching })}><Icon name="check" />{busy ? copy.saving : c.offTitle}</button>
+        </>}>
+          <p>{c.offIntro}</p>
+          <label>{c.offReason}<input autoFocus value={switching} placeholder={c.offExample} onChange={(e) => setSwitching(e.target.value)} /></label>
+        </AdminDialog>
+      )}
       {adding && (
         <AdminDialog title={`${t('admin.newRate')} · ${adding.cat.name}`} onClose={() => setAdding(null)} busy={busy} error={err} footer={<>
           <button type="button" className="ghost" disabled={busy} onClick={() => setAdding(null)}>{t('pay.cancel')}</button>

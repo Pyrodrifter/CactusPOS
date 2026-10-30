@@ -23,5 +23,11 @@ Code: `packages/shared/src/money.ts`, `tax.ts`. Rules downstream consumers (rece
 - Default rows start 2011-01-01 (when ABB began). That is a starting point for the till, not evidence of historic rates.
 - `exempt` and `outside_scope` are distinct kinds, both 0%, and stay separate in the breakdown.
 
+## ABB switched off for the whole business
+- Owner setting `TaxExemption { charged, reason }` (kv `tax.exemption`, default charged). While `charged` is false, `effectiveTaxCategories` turns every category into `exempt` with the owner's reason, keeping ids, so new sales have 0 ABB and an `exempt` breakdown row at the same total.
+- `/api/menu` and every sale use the effective categories; `GET /api/admin/tax` returns the real ones. Orders made before a switch keep their stored ABB.
+- Receipts print "Prices include ABB" only when a sale has a taxed row; the menu board drops "include ABB" when no category is taxed.
+- Whether a business qualifies is not decided by the code (see QUESTIONS Q1b).
+
 ## Not decided here
 Classification of Cactus Blue's food, drinks and resold goods (QUESTIONS Q1, Q1b). Defaults stay `unverified: true`.
