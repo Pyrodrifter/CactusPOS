@@ -59,6 +59,10 @@
 /* In the sideways row a group name is only a thin divider; the side menu below shows the words. */
 .admin-tabs-group { flex: none; align-self: stretch; width: 2px; margin: 10px 2px; border-radius: 2px; background: #c9d6cf; overflow: hidden; color: transparent; font-size: 0; }
 .admin-tabs-group:first-child { display: none; }
+/* The chosen page looks like the chosen screen in the top bar, as a row and as a side menu. */
+.admin .admin-tabs .admin-scroll-track > button.on { background: #164e5c; border-color: #164e5c; color: #fff; box-shadow: none; }
+:root[data-theme=dark] .admin .admin-tabs .admin-scroll-track > button.on { background: #b6e29e; border-color: #b6e29e; color: #142d27; }
+:root[data-theme=dark] .admin-tabs-group { background: var(--line); }
 
 /* ---- fields ---- */
 .admin :is(input, select) { min-height: var(--admin-field); min-width: 0; font-size: 17px; padding: 0 16px; border-color: #cddad2; border-radius: 14px; }
@@ -245,18 +249,18 @@
 /* ---- landscape tablets and wider: the sections become a side menu, so the page itself starts at the top ---- */
 @media (min-width: 1100px) {
   .admin.admin { display: grid; grid-template-columns: 228px minmax(0, 1fr); column-gap: 28px; align-items: start; max-width: 1340px; }
-  .admin-tabbar { margin: 0; padding: 20px 0 16px; max-height: calc(100dvh - 100px); overflow-y: auto; scrollbar-width: thin; }
+  .admin-tabbar { margin: 0; padding: 16px 0; max-height: calc(100dvh - 100px); overflow-y: auto; scrollbar-width: thin; background: none; }
   .admin-tabbar::after { display: none; }
-  .admin-tabs.admin-scroll { border: 0; border-radius: 0; background: none; overflow: visible; }
-  .admin-tabs .admin-scroll-track { flex-direction: column; gap: 4px; padding: 0; overflow: visible; }
+  /* One rounded panel; rows are a little lower so all ten pages fit a tablet without scrolling. */
+  .admin-tabs.admin-scroll { overflow: visible; }
+  .admin-tabs .admin-scroll-track { flex-direction: column; gap: 2px; padding: 10px; overflow: visible; }
   .admin-tabs .admin-scroll-hint { display: none; }
-  .admin .admin-tabs .admin-scroll-track > button { flex: none; flex-direction: row; justify-content: flex-start; gap: 14px; min-width: 0; min-height: var(--tap); padding: 0 16px; border-radius: 14px; text-align: left; white-space: normal; }
+  .admin .admin-tabs .admin-scroll-track > button { flex: none; flex-direction: row; justify-content: flex-start; gap: 14px; min-width: 0; min-height: 52px; padding: 0 12px; border-radius: 12px; text-align: left; white-space: normal; }
   .admin .admin-tabs .admin-scroll-track > button svg { width: 24px; height: 24px; }
   .admin .admin-tabs .admin-scroll-track > button:not(.on):active { background: #e8eee6; }
-  .admin-tabs-group, .admin-tabs-group:first-child { display: block; width: auto; height: auto; margin: 16px 16px 4px; background: none; border-radius: 0; color: var(--admin-muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-  .admin-tabs-group:first-child { margin-top: 2px; }
-  .admin .admin-body { padding-top: 22px; }
-  :root[data-theme=dark] .admin .admin-tabs.admin-scroll { background: none; }
+  .admin-tabs-group, .admin-tabs-group:first-child, :root[data-theme=dark] .admin-tabs-group { display: block; width: auto; height: auto; margin: 14px 12px 4px; background: none; border-radius: 0; color: var(--admin-muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .admin-tabs-group:first-child { margin-top: 4px; }
+  .admin .admin-body { padding-top: 18px; }
   :root[data-theme=dark] .admin .admin-tabs .admin-scroll-track > button:not(.on):active { background: var(--soft); }
 }
 /* Beside the side menu the page is narrower: Delete keeps only its red bin, so the menu's tools stay on one row in Dutch too. */
