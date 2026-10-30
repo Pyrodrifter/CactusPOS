@@ -12,6 +12,7 @@ import './shell.css';
 import './theme.css';
 import { appPath } from '../lib/clientMode';
 import { PracticeControl } from './PracticeMode';
+import { AutoCollectPicker } from './AutoCollect';
 
 const copy = {
   en: {
@@ -109,6 +110,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
       <button className="screen-option" role="switch" aria-checked={kitchenLock} onClick={() => setDevicePref('kitchenLock', !kitchenLock)}><Icon name="lock" /><span><strong>{c.lock}</strong><small>{c.lockHint}</small></span><i className="touch-switch" /></button>
       <div className="kitchen-flow-picker">{(['quick', 'steps'] as const).map((value) => <button key={value} aria-pressed={kitchenFlow === value} onClick={() => setDevicePref('kitchenFlow', value)}><Icon name={value === 'quick' ? 'check' : 'kitchen'} /><span><strong>{c[value]}</strong><small>{c[`${value}Hint`]}</small></span></button>)}</div>
       <p>{c.flowHint}</p>
+      {session.staff.role === 'owner' && <AutoCollectPicker />}
     </fieldset>
   );
   return <div className={`shell${sunlight && !dark ? ' sunlight' : ''}${kitchenLock ? ' kitchen-locked' : ''}`} style={session.business.brandColor ? ({ '--brand': session.business.brandColor } as CSSProperties) : undefined}>

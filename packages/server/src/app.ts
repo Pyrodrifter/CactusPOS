@@ -24,7 +24,7 @@ import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplate
 import { getKv, openDb, setKv, type DB } from './db.js';
 import { seedPractice } from './practice.js';
 import { openingChecks } from './readiness.js';
-import { CashMovementBody } from '@cactus/shared';
+import { CashMovementBody, AutoCollect } from '@cactus/shared';
 
 interface ClientSocket { send(data: string): void; close(code?: number, reason?: string): void; ping(): void; terminate(): void; on(event: string, listener: () => void): unknown }
 interface SocketQuery { token?: string; room?: string; screen?: string }
@@ -47,6 +47,8 @@ export interface AppOptions {
   backupDir?: string;
   /** How often every live connection gets a sign of life. Tests shorten it. */
   heartbeatMs?: number;
+  /** How often ready orders are checked for automatic pick-up; tests make it short. */
+  autoCollectMs?: number;
   mode?: 'live' | 'practice';
   practiceDbPath?: string;
   disableStatic?: boolean;
@@ -183,6 +185,10 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   }, opts.heartbeatMs ?? 15_000);
   heartbeat.unref();
   app.addHook('onClose', async () => clearInterval(heartbeat));
+  // A ready order is picked up by itself after the set time (Screen tools → Kitchen screen), so nobody has to tap it.
+  const collector = setInterval(() => { try { for (const order of svc.autoCollect()) broadcastOrder(order); } catch { /* next round */ } }, opts.autoCollectMs ?? 5_000);
+  collector.unref();
+  app.addHook('onClose', async () => clearInterval(collector));
 
   app.get('/api/health', async () => ({ ok: true, app: 'cactuspos', version: VERSION, startedAt: STARTED_AT, business: svc.business().name, time: new Date().toISOString(), ...runtime }));
   app.get('/api/pickup', async () => svc.pickupBoard());
@@ -242,6 +248,12 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
 
   app.get('/api/menu', async (req) => { authOf(req); return svc.menu(); });
   app.get('/api/service-mode', async (req) => { authOf(req); return { mode: svc.serviceMode() }; });
+  app.get('/api/auto-collect', async (req) => { authOf(req); return { seconds: svc.autoCollectSeconds() }; });
+  app.put('/api/auto-collect', async (req) => {
+    const state = svc.setAutoCollect(AutoCollect.parse(req.body).seconds, ownerOf(req));
+    broadcast({ type: 'auto-collect.changed', ...state });
+    return state;
+  });
   app.put('/api/service-mode', async (req) => {
     const state = svc.setServiceMode(ServiceSettings.parse(req.body).mode, authOf(req));
     broadcast({ type: 'service-mode.changed', ...state });

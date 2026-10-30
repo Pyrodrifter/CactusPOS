@@ -21,6 +21,9 @@ export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+/** Who an automatic change is recorded under in the order history. */
+const AUTO_STAFF: Staff = { id: 'system', name: 'Automatic', role: 'staff' };
+
 export class PosService {
   readonly auth: Auth;
   constructor(private db: DB) { this.auth = new Auth(db); }
@@ -337,9 +340,35 @@ export class PosService {
       const order = this.getOrder(id);
       if (order.status === 'void') throw new HttpError(409, 'Order is void');
       order.status = status;
+      if (status === 'ready') order.readyAt = new Date().toISOString(); else delete order.readyAt;
       this.save(order, 'order.status', { status }, staff, this.rowDate(id));
       return order;
     });
+  }
+
+  /** Seconds after which a ready order counts as picked up by itself; 0 is off. */
+  autoCollectSeconds(): number { return getKv<number>(this.db, 'auto-collect-seconds', 60); }
+  setAutoCollect(seconds: number, staff: Staff): { seconds: number } {
+    return tx(this.db, () => {
+      setKv(this.db, 'auto-collect-seconds', seconds);
+      this.db.prepare('INSERT INTO audit_log(type,payload,staff_id,at) VALUES(?,?,?,?)').run('auto-collect.changed', JSON.stringify({ seconds }), staff.id, new Date().toISOString());
+      return { seconds };
+    });
+  }
+
+  /** Marks ready orders collected once they have been ready for the set time. Returns the orders it changed. */
+  autoCollect(now = Date.now()): Order[] {
+    const seconds = this.autoCollectSeconds();
+    if (!seconds) return [];
+    const due = this.activeOrders().filter((o) => o.status === 'ready' && Date.parse(o.readyAt ?? o.updatedAt) <= now - seconds * 1000);
+    return due.map((o) => tx(this.db, () => {
+      const order = this.getOrder(o.id);
+      if (order.status !== 'ready') return null;
+      order.status = 'collected';
+      delete order.readyAt;
+      this.save(order, 'order.status', { status: 'collected', auto: true }, AUTO_STAFF, this.rowDate(o.id));
+      return order;
+    })).filter((o): o is Order => o !== null);
   }
 
   voidOrder(id: string, reason: string, managerPin: string | undefined, staff: Staff): Order {
