@@ -1,3 +1,7 @@
+/** Dispatch this on `window` to pause touch for the 20-second wipe, as Screen tools > Clean the screen does.
+    The staff shell listens; the kitchen keeps a Wipe button in view for greasy hands. */
+export const CLEAN_SCREEN_EVENT = 'cactus:clean-screen';
+
 /** Keep a screen lock only while this screen is visible; never retry a rejected permission in a loop. */
 export function keepScreenAwake(onState: (active: boolean) => void): () => void {
   let disposed = false;

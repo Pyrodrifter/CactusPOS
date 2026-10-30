@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { api, setSession, type Session } from '../lib/api';
-import { keepScreenAwake } from '../lib/display';
+import { CLEAN_SCREEN_EVENT, keepScreenAwake } from '../lib/display';
 import { useTheme } from '../lib/theme';
 import { usePwa } from '../lib/pwa';
 import { setLang, useLang } from '../i18n';
@@ -77,6 +77,11 @@ export function AppShell({ session, children }: { session: Session; children: Re
   useEffect(() => {
     content.current?.toggleAttribute('inert', tools || cleaning);
   }, [tools, cleaning]);
+  useEffect(() => {
+    const open = () => { setTools(false); setCleaning(true); };
+    window.addEventListener(CLEAN_SCREEN_EVENT, open);
+    return () => window.removeEventListener(CLEAN_SCREEN_EVENT, open);
+  }, []);
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();

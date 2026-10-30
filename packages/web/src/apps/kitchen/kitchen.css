@@ -19,6 +19,10 @@
 .kitchen .kitchen-overview b { color: var(--ink); font-size: 20px; }
 .kitchen .kitchen-connection { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid #40574a; border-radius: 999px; background: #203b33; color: #c9ee96; font-weight: 600; white-space: nowrap; }
 .kitchen .reconnecting { color: #ffca8b; border-color: #6b5236; background: #3c3025; }
+/* Wipe: the cleaning pause from Screen tools, kept in view because a kitchen screen gets greasy. */
+.kitchen .kitchen-wipe { display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex: none; min-height: var(--tap-lg); min-width: var(--tap-lg); padding: 0 18px; border: 1px solid var(--line); border-radius: 16px; background: #22394a; color: var(--ink); font-size: 18px; font-weight: 700; white-space: nowrap; }
+.kitchen .kitchen-wipe svg { color: #c9ee96; }
+.kitchen .kitchen-wipe:active { background: #2e4a5c; }
 .kitchen .kitchen-offline { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid #765b3c; border-radius: 14px; background: #3c3025; color: #ffdaa9; margin-bottom: 16px; }
 
 /* ---- Undo: shown for a few seconds after "ready" or "collected". The bar along its lower edge runs out with the time. ---- */
@@ -69,7 +73,7 @@
    drops under the number and the age keeps the top right corner. */
 .kitchen .ticket .ticket-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
 .kitchen .ticket-id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; flex: 1 1 auto; min-width: 0; }
-.kitchen .ticket-number b { display: block; font-size: 34px; font-weight: 800; line-height: 40px; letter-spacing: -.8px; }
+.kitchen .ticket-number b { display: block; font-size: 38px; font-weight: 800; line-height: 42px; letter-spacing: -.8px; }
 .kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 15px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
 .kitchen .ticket-paid { background: #2b4a3e; color: #c8eeaf; }
 .kitchen .ticket-unpaid { background: #4a3b2d; color: #ffd09b; }
@@ -84,19 +88,20 @@
 
 .kitchen .ticket .ticket-lines { margin: 14px 0; font-size: 18px; }
 .kitchen .ticket-lines li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #3d526060; }
-.kitchen .ticket-quantity { display: grid; place-items: center; flex: none; min-width: 46px; height: 36px; padding: 0 6px; border-radius: 11px; background: #29414d; color: #c9ee96; font-size: 22px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.kitchen .ticket-quantity { display: grid; place-items: center; flex: none; min-width: 52px; height: 40px; padding: 0 7px; border-radius: 12px; background: #29414d; color: #c9ee96; font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .kitchen .ticket-quantity-many { background: #c9ee96; color: #153627; }
 .kitchen .ticket-item { flex: 1; min-width: 0; }
-.kitchen .ticket-item strong { display: block; padding-top: 4px; font-size: 23px; font-weight: 700; line-height: 1.2; }
-.kitchen .ticket-modifiers { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 6px; color: #c3d4da; font-size: 18px; line-height: 1.3; }
+.kitchen .ticket-item strong { display: block; padding-top: 6px; font-size: 23px; font-weight: 700; line-height: 1.2; }
+/* Options are part of what to cook, so they are nearly as bright as the item and only a little smaller. */
+.kitchen .ticket-modifiers { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; color: #e1ecf0; font-size: 20px; font-weight: 600; line-height: 1.3; }
 .kitchen .ticket-exclusion { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 7px; border: 1px solid #b0646a; border-radius: 9px; background: #57292e; color: #ffd0d0; font-weight: 750; }
-.kitchen .ticket-line-note { margin-top: 6px; color: #ffce96; font-size: 17px; font-weight: 600; }
+.kitchen .ticket-line-note { margin-top: 8px; color: #ffce96; font-size: 19px; font-weight: 700; }
 
 /* The step forward is the one big button; Recall is smaller and kept a clear gap away from Collected. */
-.kitchen .ticket .ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.kitchen .ticket .ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
 .kitchen .ticket-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; padding: 8px 14px; border-radius: 16px; font-weight: 750; line-height: 1.15; }
 .kitchen .ticket-actions .ticket-primary { flex: 3 1 auto; min-height: var(--tap-xl); background: #c9ee96; border-color: #c9ee96; color: #153627; font-size: 20px; }
-.kitchen .ticket-actions .ticket-recall { flex: 1 1 auto; min-height: var(--tap-lg); min-width: var(--tap-lg); background: #2a423f; border-color: #536e64; color: #edf4ee; font-size: 17px; }
+.kitchen .ticket-actions .ticket-recall { flex: 1 1 auto; min-height: var(--tap-lg); min-width: var(--tap-lg); background: transparent; border: 2px solid #536e64; color: #edf4ee; font-size: 17px; }
 
 /* Three columns on a small landscape tablet are narrow: keep Recall and Collected on one row. */
 @media (min-width: 901px) and (max-width: 1279px) {
@@ -137,6 +142,7 @@
   /* On a phone Undo takes the whole header row while it is up. */
   .kitchen .kitchen-top-undo .kitchen-title, .kitchen .kitchen-top-undo .kitchen-overview { display: none; }
   .kitchen .kitchen-undo { max-width: none; }
+  .kitchen .kitchen-wipe { padding: 0 14px; font-size: 17px; }
   .kitchen .kitchen-switch { gap: 8px; }
   .kitchen .kitchen-switch button { flex-direction: column-reverse; gap: 1px; padding: 4px 4px 8px; font-size: 15px; }
   .kitchen .kitchen-switch button svg { display: none; }

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { kitchenLines, type Order } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { beep, useNow, useOrders } from '../../lib/live';
+import { CLEAN_SCREEN_EVENT } from '../../lib/display';
 import { useLang } from '../../i18n';
 import { Icon, type IconName } from '../../ui/Icon';
 import { haptic } from '../../ui/touch';
@@ -9,7 +10,7 @@ import './kitchen.css';
 
 const copy = {
   en: {
-    subtitle: 'Every ticket, at a glance', live: 'Live updates', reconnect: 'Reconnecting',
+    subtitle: 'Every ticket, at a glance', reconnect: 'Reconnecting',
     active: 'active tickets', emptyHint: 'New orders will appear here automatically.',
     sentEmpty: 'No new tickets', preparingEmpty: 'Nothing cooking yet', readyEmpty: 'Nothing waiting for pickup',
     start: 'Start preparing', ready: 'Mark ready', recall: 'Recall', collected: 'Collected',
@@ -18,9 +19,10 @@ const copy = {
     elapsed: 'minutes since ordered',
     undo: 'Undo', undoFailed: 'Not undone, try again', show: 'Show tickets',
     added: 'Added', round: 'Round',
+    wipe: 'Wipe screen', wipeHint: 'Pauses touch for 20 seconds so you can wipe the screen',
   },
   nl: {
-    subtitle: 'Elke bon in één oogopslag', live: 'Live updates', reconnect: 'Verbinding herstellen',
+    subtitle: 'Elke bon in één oogopslag', reconnect: 'Verbinding herstellen',
     active: 'actieve bonnen', emptyHint: 'Nieuwe bestellingen verschijnen hier automatisch.',
     sentEmpty: 'Geen nieuwe bonnen', preparingEmpty: 'Nog niets in bereiding', readyEmpty: 'Niets klaar om af te halen',
     start: 'Start bereiding', ready: 'Markeer klaar', recall: 'Terug', collected: 'Opgehaald',
@@ -29,6 +31,7 @@ const copy = {
     elapsed: 'minuten sinds besteld',
     undo: 'Ongedaan maken', undoFailed: 'Niet gelukt, probeer opnieuw', show: 'Bonnen tonen',
     added: 'Toegevoegd', round: 'Ronde',
+    wipe: 'Scherm afnemen', wipeHint: 'Pauzeert aanrakingen 20 seconden zodat je het scherm kunt afnemen',
   },
 };
 
@@ -43,6 +46,30 @@ interface Undo { key: number; id: string; ticketNumber: number; to: 'ready' | 'c
 const UNDO_MS = 8000;
 /** After tickets move, ticket taps are ignored this long, so a double tap cannot hit the ticket that slid under the finger. */
 const SETTLE_MS = 350;
+/** A tap is short and stays put. A thumb resting on the screen to steady the tablet, or a greasy finger that
+    smears across a ticket, is held longer or travels further, and does not move the ticket on. */
+const TAP_MAX_MS = 700;
+const TAP_MAX_MOVE = 16;
+
+/** Follows one press on a ticket and says whether it was a deliberate tap. Keyboard presses always are. */
+function useDeliberateTap() {
+  const press = useRef<{ x: number; y: number; at: number; far: boolean } | null>(null);
+  const handlers = {
+    onPointerDown: (e: PointerEvent) => { press.current = { x: e.clientX, y: e.clientY, at: e.timeStamp, far: false }; },
+    onPointerMove: (e: PointerEvent) => {
+      const p = press.current;
+      if (p && !p.far && Math.hypot(e.clientX - p.x, e.clientY - p.y) > TAP_MAX_MOVE) p.far = true;
+    },
+    onPointerCancel: () => { press.current = null; },
+  };
+  const deliberate = (e: MouseEvent) => {
+    const p = press.current;
+    press.current = null;
+    if (e.detail === 0) return true; // Enter or Space on a focused button
+    return !!p && !p.far && e.timeStamp - p.at <= TAP_MAX_MS;
+  };
+  return { handlers, deliberate };
+}
 
 /** The shared icon set has no "undo" yet (see the UX07 kitchen handoff). */
 function UndoIcon() {
@@ -61,6 +88,7 @@ function Ticket({ o, now, online, settled, onMoved }: {
   const [pending, setPending] = useState<Order['status'] | null>(null);
   const [failed, setFailed] = useState(false);
   const inFlight = useRef(false);
+  const tap = useDeliberateTap();
   // A tab that orders again is a new ticket for the kitchen: its clock starts when that round arrived.
   const since = Date.parse(o.kitchenSince ?? o.createdAt);
   const mins = Math.max(0, Math.floor((now - since) / 60000));
@@ -86,12 +114,12 @@ function Ticket({ o, now, online, settled, onMoved }: {
   // New and preparing tickets have one obvious next step, so the whole ticket is the button.
   // Ready tickets are not: Collected takes the ticket off the board, so it keeps explicit buttons only.
   const forward: Step | null = o.status === 'sent' ? 'preparing' : o.status === 'preparing' ? 'ready' : null;
-  const press = (status: Step) => (e: MouseEvent) => { e.stopPropagation(); void setStatus(status); };
+  const press = (status: Step) => (e: MouseEvent) => { e.stopPropagation(); if (tap.deliberate(e)) void setStatus(status); };
   return (
     <article
       className={`ticket${late ? ' late' : warm ? ' warm' : ''}${fresh ? ' ticket-fresh' : ''}${o.status === 'ready' ? ' ticket-ready' : ''}${forward && !disabled ? ' ticket-tappable' : ''}`}
       aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-busy={pending !== null}
-      onClick={forward ? () => void setStatus(forward) : undefined}>
+      {...tap.handlers} onClick={forward ? (e) => { if (tap.deliberate(e)) void setStatus(forward); } : undefined}>
       <header className="ticket-heading">
         {/* Number and payment state wrap as a pair, so the age always keeps the top right corner. */}
         <div className="ticket-id">
@@ -231,7 +259,15 @@ export function Kitchen() {
               </button>
             )}
           </div>
-          <div className="kitchen-overview"><span className="kitchen-active"><b>{live.length}</b> {c.active}</span><span className={`kitchen-connection${online ? '' : ' reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} />{online ? c.live : c.reconnect}</span></div>
+          <div className="kitchen-overview">
+            <span className="kitchen-active"><b>{live.length}</b> {c.active}</span>
+            {/* The bar above already says the truck is connected; here only a lost connection is worth the room. */}
+            <span role="status">{!online && <span className="kitchen-connection reconnecting"><Icon name="wifi-off" size={20} />{c.reconnect}</span>}</span>
+            <button type="button" className="kitchen-wipe" title={c.wipeHint} aria-label={`${c.wipe}. ${c.wipeHint}`}
+              onClick={() => { haptic(10); window.dispatchEvent(new Event(CLEAN_SCREEN_EVENT)); }}>
+              <Icon name="sparkles" size={24} /><span>{c.wipe}</span>
+            </button>
+          </div>
         </header>
         <div className="kitchen-switch" role="group" aria-label={c.show}>
           {cols.map(({ status, title, icon }) => {
