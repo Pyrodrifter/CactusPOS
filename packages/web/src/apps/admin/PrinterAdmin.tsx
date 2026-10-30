@@ -7,11 +7,18 @@ import { AdminSwitch } from './controls';
 import { useAdminCopy } from './copy';
 
 interface Settings { enabled: boolean; host: string; port: number; columns: 32 | 42 | 48; cutter: boolean; drawer: boolean; autoReceipt: boolean; autoKitchen: boolean }
+/** One line under each switch, so it is clear what it changes without trying it. */
+const HINTS = {
+  en: { enabled: 'Off: receipts open in the browser print window instead.', cutter: 'Cuts the paper after each receipt.', drawer: 'Opens the drawer for cash payments.', autoReceipt: 'No tap on Receipt needed after paying.', autoKitchen: 'A paper ticket for the kitchen as soon as an order is sent.' },
+  nl: { enabled: 'Uit: bonnen openen in het printvenster van de browser.', cutter: 'Snijdt het papier af na elke bon.', drawer: 'Opent de lade bij contante betaling.', autoReceipt: 'Na betalen hoeft niemand op Bon te tikken.', autoKitchen: 'Een papieren keukenbon zodra een bestelling verstuurd is.' },
+} as const;
+
 interface Job { id: number; label: string; status: 'queued' | 'printing' | 'done' | 'failed'; attempts: number; error?: string }
 
 export function PrinterAdmin() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const copy = useAdminCopy();
+  const hint = HINTS[lang];
   const [s, setS] = useState<Settings | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [msg, setMsg] = useState('');
@@ -29,7 +36,7 @@ export function PrinterAdmin() {
 
   const set = (patch: Partial<Settings>) => { setMsg(''); setS({ ...s, ...patch }); };
   const toggle = (k: 'enabled' | 'cutter' | 'drawer' | 'autoReceipt' | 'autoKitchen', label: string) => (
-    <AdminSwitch on={s[k]} onChange={(on) => set({ [k]: on })} label={label} disabled={busy} />
+    <AdminSwitch on={s[k]} onChange={(on) => set({ [k]: on })} label={label} hint={hint[k]} disabled={busy} />
   );
   const save = async (): Promise<boolean> => {
     setErr(''); setMsg('');
@@ -51,6 +58,8 @@ export function PrinterAdmin() {
       <section className="admin-form-card">
         <h3><Icon name="printer" />{copy.connection}</h3>
         {toggle('enabled', t('printer.enabled'))}
+        {/* The details only matter once a printer is used; what was typed stays saved while it is off. */}
+        {s.enabled && <>
         <div className="two">
           <label>{t('printer.host')}<input value={s.host} disabled={busy} placeholder="192.168.1.50" autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => set({ host: e.target.value.trim() })} /></label>
           <label>{t('printer.port')}<input inputMode="numeric" value={s.port} disabled={busy} onChange={(e) => set({ port: Number(e.target.value.replace(/\D/g, '')) || 0 })} /></label>
@@ -63,8 +72,9 @@ export function PrinterAdmin() {
           </select>
         </label>
         <button type="button" disabled={busy} onClick={() => void act(test)}><Icon name="printer" />{t('printer.test')}</button>
+        </>}
       </section>
-      <section className="admin-form-card">
+      {s.enabled && <section className="admin-form-card">
         <h3><Icon name="receipt" />{copy.preferences}</h3>
         <div className="admin-switches">
           {toggle('cutter', t('printer.cutter'))}
@@ -72,7 +82,7 @@ export function PrinterAdmin() {
           {toggle('autoReceipt', t('printer.autoReceipt'))}
           {toggle('autoKitchen', t('printer.autoKitchen'))}
         </div>
-      </section>
+      </section>}
       <div className="admin-savebar">
         {err && <div className="error" role="alert">{err}</div>}
         {msg && <div className="ok" role="status">{msg}</div>}

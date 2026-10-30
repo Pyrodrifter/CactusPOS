@@ -23,9 +23,9 @@ export function PwaStatus() {
   const { lang } = useLang();
   const pwa = usePwa();
   const text = messages[lang];
-  // Offer installing only where nobody is mid-sale: on the sign-in screen and in Admin.
+  // Installing is offered on the sign-in screen; once signed in it is under Screen tools, not a bar over every page.
   const { pathname } = useLocation();
-  const offerInstall = pwa.installAvailable && (pathname === '/login' || pathname.startsWith('/admin'));
+  const offerInstall = pwa.installAvailable && pathname === '/login';
   if (pwa.connection !== 'offline' && !offerInstall && !pwa.updateAvailable) return null;
   return (
     <aside className={`pwa-status ${pwa.connection === 'offline' ? 'is-offline' : ''}`} aria-label="CactusPOS" aria-live="polite">

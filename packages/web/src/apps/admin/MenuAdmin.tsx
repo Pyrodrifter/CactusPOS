@@ -136,7 +136,8 @@ export function MenuAdmin() {
               <span className="admin-row-text">
                 <b>{i.name}</b>
                 <small>
-                  {menu.taxCategories.find((x) => x.id === i.taxCategoryId)?.name} · {stationName(i.station)}
+                  {/* Tax is the same for the whole menu (Admin > Tax), so the row shows only what differs per item. */}
+                  {stationName(i.station)}
                   {i.modifierGroups.length > 0 && ` · ${i.modifierGroups.map((g) => g.name).join(', ')}`}
                 </small>
               </span>

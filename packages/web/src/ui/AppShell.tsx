@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { api, setSession, type Session } from '../lib/api';
 import { CLEAN_SCREEN_EVENT, SCREEN_TOOLS_EVENT, keepScreenAwake, setDevicePref, useDevicePrefs } from '../lib/display';
 import { useTheme } from '../lib/theme';
-import { usePwa } from '../lib/pwa';
+import { installApp, usePwa } from '../lib/pwa';
 import { setLang, useLang } from '../i18n';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
@@ -20,6 +20,7 @@ const copy = {
     connected: 'Truck connected', offline: 'Reconnecting', checking: 'Connecting',
     device: 'Make yourself comfortable', deviceHint: 'Set up this screen for your shift.',
     sunlight: 'Sunlight mode', sunlightHint: 'Stronger counter outlines and darker menu text.',
+    install: 'Install as an app', installHint: 'Opens full screen from the home screen, like any other app.',
     awake: 'Keep screen awake', awakeOn: 'Active while this screen is open.', awakeWaiting: 'Waiting for the browser. Tap again to turn off.',
     awakeHint: 'Stop the display sleeping during service.', unsupported: 'Not available in this browser or connection.',
     fullscreen: 'Go fullscreen', exitFullscreen: 'Exit fullscreen', fullscreenHint: 'More room for the menu and your orders.',
@@ -36,6 +37,7 @@ const copy = {
     connected: 'Truck verbonden', offline: 'Opnieuw verbinden', checking: 'Verbinden',
     device: 'Maak het jezelf gemakkelijk', deviceHint: 'Stel dit scherm in voor je dienst.',
     sunlight: 'Zonlichtmodus', sunlightHint: 'Duidelijke randen en donkere menutekst op de kassa.',
+    install: 'Als app installeren', installHint: 'Opent schermvullend vanaf het beginscherm, zoals elke andere app.',
     awake: 'Scherm wakker houden', awakeOn: 'Actief zolang dit scherm open is.', awakeWaiting: 'Wacht op de browser. Tik opnieuw om uit te zetten.',
     awakeHint: 'Voorkom dat het scherm tijdens de dienst uitgaat.', unsupported: 'Niet beschikbaar in deze browser of verbinding.',
     fullscreen: 'Volledig scherm', exitFullscreen: 'Volledig scherm verlaten', fullscreenHint: 'Meer ruimte voor het menu en je bestellingen.',
@@ -57,7 +59,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
   const { lang, t } = useLang();
   const c = copy[lang];
   const { theme, dark, setTheme } = useTheme();
-  const { connection } = usePwa();
+  const { connection, installAvailable } = usePwa();
   const [tools, setTools] = useState(false);
   const [sunlight, setSunlight] = useState(() => preference('sunlight'));
   const [awake, setAwake] = useState(() => preference('awake'));
@@ -140,6 +142,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
       <div className="screen-tools-intro"><span className="screen-tool-emblem"><Icon name="sun" size={28} /></span><div><h3>{c.device}</h3><p>{c.deviceHint}</p></div></div>
       <fieldset className="theme-picker"><legend>{c.appearance}</legend><div>{(['light', 'dark', 'system'] as const).map((value) => <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon name={value === 'dark' ? 'moon' : value === 'light' ? 'sun' : 'monitor'} /><span>{c[value]}</span></button>)}</div><p>{c.themeHint}</p></fieldset>
       <button className="screen-option" role="switch" aria-checked={sunlight && !dark} onClick={() => { if (dark) setTheme('light'); setSunlight(dark || !sunlight); }}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>
+      {installAvailable && <button className="screen-option" onClick={() => { void installApp(); }}><Icon name="download" /><span><strong>{c.install}</strong><small>{c.installHint}</small></span><Icon name="arrow-right" /></button>}
       <button className="screen-option" role="switch" aria-checked={awake} disabled={!navigator.wakeLock} onClick={() => setAwake(!awake)}><Icon name="eye" /><span><strong>{c.awake}</strong><small>{!navigator.wakeLock ? c.unsupported : awake ? awakeActive ? c.awakeOn : c.awakeWaiting : c.awakeHint}</small></span><i className="touch-switch" /></button>
       <button className="screen-option" disabled={!document.fullscreenEnabled} onClick={() => void toggleFullscreen()}><Icon name={fullscreen ? "collapse" : "expand"} /><span><strong>{fullscreen ? c.exitFullscreen : c.fullscreen}</strong><small>{document.fullscreenEnabled ? c.fullscreenHint : c.unsupported}</small></span><Icon name="arrow-right" /></button>
       {!onKitchen && kitchenSettings}
