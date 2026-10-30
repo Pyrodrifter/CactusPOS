@@ -1,23 +1,18 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { ZReport } from '@cactus/shared';
-import { csvCell, dayBooking, daysCsv, DEFAULT_ACCOUNTS, journalCsv, lastSeq, latestPerDay, uuidv7, type PbkEnvelope } from '@cactus/books-bridge';
+import { csvCell, dayBooking, daysCsv, DEFAULT_ACCOUNTS, journalCsv, latestPerDay } from '@cactus/books-bridge';
 import { openDb, type DB } from './db.js';
 import { seedSample } from './seedData.js';
 import { buildApp } from './app.js';
 
 const BOM = new RegExp(`^${String.fromCharCode(0xfeff)}`);
 let db: DB;
-let dir: string;
 let app: ReturnType<typeof buildApp>['app'];
 let svc: ReturnType<typeof buildApp>['svc'];
 let owner: Record<string, string>;
 let staff: Record<string, string>;
 
 beforeEach(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'cactus-books-'));
   db = openDb(':memory:');
   seedSample(db);
   ({ app, svc } = buildApp(db, { webDist: '/nonexistent' }));
@@ -25,7 +20,6 @@ beforeEach(async () => {
   owner = await login('1234');
   staff = await login('1111');
 });
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 const sell = async (lines: object[], pay: object) => {
   const id = (await app.inject({ method: 'POST', url: '/api/orders', headers: staff, payload: { lines } })).json().id as string;
@@ -126,87 +120,5 @@ describe('CSV export', () => {
     const none = await app.inject({ method: 'GET', url: '/api/books/journal.csv?from=2020-01-01&to=2020-01-31', headers: owner });
     expect(none.body.replace(BOM, '').trim().split('\r\n')).toHaveLength(1);
     expect((await app.inject({ method: 'GET', url: '/api/books/journal.csv?from=yesterday', headers: owner })).statusCode).toBe(400);
-  });
-});
-
-describe('PyroBookKeeper link', () => {
-  const pbk = () => { const folder = join(dir, 'book'); mkdirSync(join(folder, 'journal'), { recursive: true }); return folder; };
-  const setFolder = (pbkFolder: string) => app.inject({ method: 'PUT', url: '/api/books/settings', headers: owner, payload: { pbkFolder, accounts: DEFAULT_ACCOUNTS } });
-  const post = () => app.inject({ method: 'POST', url: '/api/books/pbk/post', headers: owner, payload: {} });
-  const readJournal = (folder: string) => {
-    const files = readdirSync(join(folder, 'journal')).filter((f) => f.endsWith('.jsonl'));
-    return { files, events: files.flatMap((f) => readFileSync(join(folder, 'journal', f), 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l) as PbkEnvelope)) };
-  };
-
-  it('is off until a folder is chosen, and only accepts a real PyroBookKeeper data folder', async () => {
-    expect((await app.inject({ method: 'GET', url: '/api/books', headers: owner })).json().pbk).toEqual({ configured: false, ok: false, postedDays: 0, pendingDays: [] });
-    expect((await post()).statusCode).toBe(409);
-    expect((await setFolder(join(dir, 'missing'))).statusCode).toBe(400);
-    const notPbk = join(dir, 'plain'); mkdirSync(notPbk);
-    const res = await setFolder(notPbk);
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/not a PyroBookKeeper data folder/);
-    expect(readdirSync(notPbk)).toEqual([]); // nothing was written
-    expect((await setFolder(pbk())).statusCode).toBe(200);
-    expect((await app.inject({ method: 'PUT', url: '/api/books/settings', headers: staff, payload: { pbkFolder: '', accounts: DEFAULT_ACCOUNTS } })).statusCode).toBe(403);
-  });
-
-  it('posts each closed day once, in its own journal file, in PyroBookKeeper format', async () => {
-    const folder = pbk();
-    // Another device's journal already lives there and must not be touched.
-    const theirs = join(folder, 'journal', 'aaaaaaaa-0000-7000-8000-000000000001.jsonl');
-    writeFileSync(theirs, '{"id":"x","deviceId":"aaaaaaaa-0000-7000-8000-000000000001","seq":1,"at":"2026-01-01T00:00:00.000Z","schemaVersion":1,"actor":"desktop","event":{"type":"period.locked","periodKey":"2025-Q4","note":""}}\n');
-    const before = readFileSync(theirs, 'utf8');
-    await setFolder(folder);
-    await day();
-    await close();
-    expect((await app.inject({ method: 'GET', url: '/api/books', headers: owner })).json().pbk).toMatchObject({ ok: true, postedDays: 0, pendingDays: [svc.businessDate()] });
-
-    expect((await post()).json()).toMatchObject({ posted: 1, reversed: 0 });
-    expect((await post()).json()).toMatchObject({ posted: 0, reversed: 0 }); // running it again changes nothing
-    expect(readFileSync(theirs, 'utf8')).toBe(before);
-
-    const { files, events } = readJournal(folder);
-    expect(files).toHaveLength(2);
-    const mine = events.filter((e) => e.actor !== 'desktop');
-    expect(mine).toHaveLength(1);
-    const e = mine[0]!;
-    expect(files).toContain(`${e.deviceId}.jsonl`);
-    expect(e).toMatchObject({ seq: 1, schemaVersion: 1 });
-    expect(e.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    if (e.event.type !== 'journal.posted') throw new Error('expected a posted entry');
-    expect(e.event.entry).toMatchObject({ date: svc.businessDate(), source: { kind: 'import', batch: 'cactusblue-z1' } });
-    expect(e.event.entry.lines.reduce((s, l) => s + l.amount, 0)).toBe(0);
-    expect(e.event.entry.lines.every((l) => l.contactId === null && Number.isInteger(l.amount) && /^\d{4}$/.test(l.account))).toBe(true);
-    expect((await app.inject({ method: 'GET', url: '/api/books', headers: owner })).json().pbk).toMatchObject({ postedDays: 1, pendingDays: [] });
-  });
-
-  it('a day closed again is reversed and re-posted, never doubled; sequence numbers continue', async () => {
-    const folder = pbk();
-    await setFolder(folder);
-    await day();
-    await close();
-    await post();
-    await sell([{ itemId: 'juice', qty: 1 }], { method: 'cash' });
-    await close();
-    expect((await app.inject({ method: 'GET', url: '/api/books', headers: owner })).json().pbk.pendingDays).toEqual([svc.businessDate()]);
-    expect((await post()).json()).toMatchObject({ posted: 1, reversed: 1 });
-    const { events } = readJournal(folder);
-    expect(events.map((e) => [e.seq, e.event.type])).toEqual([[1, 'journal.posted'], [2, 'journal.reversed'], [3, 'journal.posted']]);
-    const first = events[0]!.event, undo = events[1]!.event, second = events[2]!.event;
-    if (first.type !== 'journal.posted' || undo.type !== 'journal.reversed' || second.type !== 'journal.posted') throw new Error('unexpected events');
-    expect(undo.id).toBe(first.entry.id);
-    expect(second.entry.source.batch).toBe('cactusblue-z2');
-    // What PyroBookKeeper ends up with for the day: only the second entry, 3250 of sales.
-    const cashAndCard = second.entry.lines.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
-    expect(cashAndCard).toBe(2800 + 450 + 200);
-    expect((await post()).json()).toMatchObject({ posted: 0, reversed: 0 });
-    expect(lastSeq(readFileSync(join(folder, 'journal', `${events[0]!.deviceId}.jsonl`), 'utf8'))).toBe(3);
-  });
-
-  it('helpers: uuidv7 is time ordered and lastSeq survives a half-written line', () => {
-    expect(uuidv7(1000) < uuidv7(2000)).toBe(true);
-    expect(lastSeq('{"seq":4}\n{"seq":9}\n{"seq":1')).toBe(9);
-    expect(lastSeq('')).toBe(0);
   });
 });

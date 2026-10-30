@@ -42,7 +42,7 @@ Auth: `x-token` header from `POST /api/login`. Errors: `{ "error": "message" }` 
 | `GET /api/admin/audit` | `AuditList`: last 200 changes, newest first, each `{ seq, type, payload, staffId, at }` |
 | `POST /api/admin/receipt-templates/restore` | `RestoreTemplateBody` `{ baseVersion, version }`. Publishes an earlier design again as a new version. `409` when another screen saved meanwhile. See `service-and-receipts.md` |
 | `POST /api/admin/receipt-templates/test-print` | `PreviewTemplateBody`. Prints a sample of an unsaved design. `409` without a printer |
-| `PUT /api/books/settings` | `BooksSettings` (PyroBookKeeper folder, account codes). See `books.md` |
+| `PUT /api/books/settings` | `BooksSettings` (account codes). See `books.md` |
 | `GET /api/admin/backups`, `PUT /api/admin/backups/settings`, `POST /api/admin/backups/run` | See `backups.md` |
 
 ## Day reports (owner only). Schemas in `packages/shared/src/reports.ts`

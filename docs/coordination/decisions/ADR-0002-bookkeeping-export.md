@@ -1,6 +1,6 @@
 # ADR-0002: Bookkeeping export is CSV first; PyroBookKeeper is an optional link that appends its own journal file
 
-Status: accepted (2026-10-08, Claude; closes spike T32)
+Status: accepted (2026-10-08, Claude; closes spike T32). The PyroBookKeeper part is superseded by [ADR-0003](ADR-0003-remove-pyrobookkeeper.md) (2026-10-30); the CSV part stands.
 
 ## Context
 The owner does not expect Cactus Blue to keep its books in PyroBookKeeper, but wants the option for other Bonaire businesses. PyroBookKeeper stores its books as append-only JSONL journals, one file per device in `<data folder>/journal/`, merged deterministically on load. Its design rule is that each device appends only to its own file.

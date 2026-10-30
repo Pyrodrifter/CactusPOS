@@ -10,7 +10,7 @@ Planned files (created by the owning task):
 - [`money-and-tax.md`](money-and-tax.md) — cents, rounding policy, rate dates (written)
 - `receipt-template.md` — block schema & variables (T13/T30)
 - `printer.md` — print job format, profiles (T14)
-- [`books.md`](books.md) — day booking, CSV columns, PyroBookKeeper link (written)
+- [`books.md`](books.md) — day booking, CSV columns (written)
 - [`backups.md`](backups.md) — when backups are made, where, the admin routes, how a restore works (written)
 - `beeper.md` — ESP32 protocol (T40)
 

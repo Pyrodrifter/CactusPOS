@@ -2,11 +2,10 @@ import type { ZReport } from '@cactus/shared';
 
 /**
  * Turns a closed day (Z report) into one balanced double-entry booking.
- * This is the neutral form every export is made from: CSV for an accountant, or a journal
- * entry for PyroBookKeeper. One summarised entry per day, never one per sale.
+ * The journal CSV is made from it. One summarised entry per day, never one per sale.
  */
 
-/** Ledger account codes. Defaults follow PyroBookKeeper's chart (Dutch decimal numbering). */
+/** Ledger account codes. Defaults use Dutch decimal numbering; the owner can change them for their bookkeeper. */
 export interface AccountMap {
   cash: string;
   /** Where card takings land until the bank pays them out. */
@@ -38,7 +37,7 @@ export const DEFAULT_ACCOUNTS: AccountMap = {
 
 export interface BookLine {
   account: string;
-  /** Positive is a debit, negative is a credit (the convention PyroBookKeeper uses). */
+  /** Positive is a debit, negative is a credit. */
   amountCents: number;
   description: string;
 }

@@ -19,8 +19,7 @@ export function assertCents(n: number, what = 'amount'): Cents {
 
 /**
  * Integer division rounding halves away from zero (commercial rounding).
- * Same rule and same algorithm as PyroBookKeeper `divRoundHalfUp`, so the till and the books
- * agree to the cent. Exact integer arithmetic; never returns -0.
+ * Exact integer arithmetic; never returns -0.
  */
 export function roundDiv(num: number, den: number): number {
   if (!Number.isSafeInteger(num)) throw new MoneyError(`numerator must be a safe integer, got ${num}`);

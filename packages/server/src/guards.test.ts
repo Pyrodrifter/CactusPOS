@@ -145,7 +145,7 @@ describe('owner reminders and the audit trail', () => {
 
   it('records printer and bookkeeping settings changes', async () => {
     await app.inject({ method: 'PUT', url: '/api/admin/printer', headers: owner, payload: { enabled: false, host: '', port: 9100, columns: 48, cutter: true, drawer: false, autoReceipt: true, autoKitchen: false } });
-    await app.inject({ method: 'PUT', url: '/api/books/settings', headers: owner, payload: { pbkFolder: '' } });
+    await app.inject({ method: 'PUT', url: '/api/books/settings', headers: owner, payload: {} });
     const rows = await audit();
     expect(rows.map((r) => r.type)).toEqual(expect.arrayContaining(['printer.saved', 'books.saved']));
     expect(rows.every((r) => r.staffId === 'owner')).toBe(true);

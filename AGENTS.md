@@ -36,7 +36,7 @@ git worktrees. They never talk directly. They communicate through **files in `do
 | web-core | `packages/web/src/{ui,lib}/**` | Design system, WS client, PWA shell. Small, shared; coordinate via REQUESTS. |
 | receipt | `packages/receipt/**`, `packages/web/src/apps/admin/receipt-editor/**` | Template model, renderers, editor. |
 | print | `packages/printer/**` | Print agent, ESC/POS transport, cash drawer. |
-| books | `packages/books-bridge/**` | PyroBookKeeper integration, Z-reports. |
+| books | `packages/books-bridge/**` | Bookkeeping CSV exports, Z-reports. |
 | ops | `ops/**`, `scripts/**`, root configs | Install, services, backups, kiosk, HTTPS. |
 | firmware | `firmware/**` | ESP32 beepers. |
 | qa | `e2e/**`, `**/*.test.ts` in cooperation | Playwright, fixtures, seed data. |

@@ -6,7 +6,7 @@ import { assertCents, MoneyError, roundDiv, sumCents, type Cents } from './money
  *  - consumer prices INCLUDE the tax,
  *  - "exempt" and "outside scope" are different things and reported separately,
  *  - rates are data with an effective date; add a row, never edit history.
- * See PyroBookKeeper docs/bonaire-tax.md. Defaults are flagged unverified until the owner confirms them.
+ * Source: Belastingdienst Caribisch Nederland. Defaults are flagged unverified until the owner confirms them.
  */
 export const TaxKind = z.enum(['taxed', 'exempt', 'outside_scope']);
 export type TaxKind = z.infer<typeof TaxKind>;
@@ -106,12 +106,12 @@ export interface Totals {
 
 /**
  * How the ABB on a receipt is rounded.
- *  - 'line'  (default): extract the tax from each line, then add the lines up. This is what
- *    PyroBookKeeper's `calculateDocument` does, so receipts and the books agree to the cent.
+ *  - 'line'  (default): extract the tax from each line, then add the lines up. Each order line
+ *    keeps its own ABB, so the receipt, the day report and the exports agree to the cent.
  *  - 'group': add the lines of a category up first, then extract once. Can differ from 'line'
  *    by a cent on receipts with several small lines (two 9-cent lines at 6%: 2 cents vs 1 cent).
  * Both keep the total equal to the sum of the prices charged. Which one the Belastingdienst
- * expects is not something this code decides: 'line' is chosen for parity with the books.
+ * expects is not something this code decides.
  */
 export type RoundingPolicy = 'line' | 'group';
 

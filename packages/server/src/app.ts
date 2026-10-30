@@ -301,14 +301,13 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   });
 
   /* ----- bookkeeping exports: owner only ----- */
-  app.get('/api/books', async (req) => { ownerOf(req); return { settings: books.settings(), pbk: books.status(), today: svc.businessDate() }; });
+  app.get('/api/books', async (req) => { ownerOf(req); return { settings: books.settings(), today: svc.businessDate() }; });
   app.put('/api/books/settings', async (req) => {
     const by = ownerOf(req);
     const saved = books.save(BooksSettings.parse(req.body));
     admin.log('books.saved', saved, by);
     return saved;
   });
-  app.post('/api/books/pbk/post', async (req) => { ownerOf(req); return books.postToPbk(); });
   const csv = (reply: import('fastify').FastifyReply, name: string, body: string) =>
     reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${name}"`).send(body);
   app.get('/api/books/days.csv', async (req, reply) => {

@@ -7,7 +7,7 @@ A surprise gift: a custom POS for the Cactus Blue food truck, Bonaire. Replaces 
 - Fast counter ordering, a kitchen screen, a customer-facing pickup board, and phone ordering (staff roaming the queue, or guests via QR).
 - Correct for **Bonaire / Caribisch Nederland**: USD, **ABB** (not VAT), tax-inclusive consumer prices, sequential receipts, 7-year records.
 - Beautiful, editable **receipts** (WiFi QR, giveaways, promos) with a real editor.
-- **Bookkeeping** flows into PyroBookKeeper (Allan's own Bonaire bookkeeping app).
+- **Bookkeeping**: closed days export as CSV for any accountant or accounting program.
 - Later: **ESP32 order beepers** that buzz when an order is ready.
 - Works with no internet. Easy for non-technical staff. Hard to break during a lunch rush.
 
@@ -32,7 +32,7 @@ Cactus Blue is customer #1, not hardcoded. Anything business-specific is configu
  |  packages/shared   zod contracts, money, ABB tax engine             |
  |  packages/receipt  template model -> HTML / PDF / ESC-POS bytes     |
  |  packages/printer  print agent: TCP 9100 / USB / BT, cash drawer    |
- |  packages/books-bridge  Z-report + sales -> PyroBookKeeper          |
+ |  packages/books-bridge  Z-report + sales -> CSV for the bookkeeper   |
  +---------------------------------------------------------------------+
         |                         |                       |
    receipt printer         ESP32 beepers (later)    nightly backup
@@ -67,7 +67,7 @@ Source of truth for the rules: `C:\Users\Pyro\Documents\PyroBookKeeper\docs\bona
 - Rates are data with `validFrom`: services 6%, goods by a producent 8% (Bonaire); some necessities exempt. Each menu item has a **tax category**; the receipt shows the ABB portion per rate.
 - **Open question (needs Allan/her accountant/BCN):** how prepared food and drinks sold from a truck are classified (service 6% vs producent goods 8%, and any exempt items). The engine supports all; the *default* config is decided in QUESTIONS.md Q1 before launch.
 - Receipts carry business name, CRIB number, sequential number, date, lines, ABB per rate, total.
-- Rounding: whole dollars/cents rules for returns are PyroBookKeeper's job; the till rounds each receipt to cents deterministically (rule in `shared/tax`).
+- Rounding: whole dollars/cents rules for returns are the bookkeeper's job; the till rounds each receipt to cents deterministically (rule in `shared/tax`).
 
 ### Receipts
 Template = ordered **blocks** (logo, text, order lines, totals, tax table, barcode/QR, footer, conditional blocks like "if total > $X show giveaway QR"), with variables (`{{order.number}}`, `{{wifi.qr}}`). One template model, three renderers: **ESC/POS bytes** (thermal), **HTML** (screen/WhatsApp/email), **PDF**. The editor is a visual drag-and-drop block editor with live preview at 58mm/80mm. Templates are versioned; every printed receipt records the template version.
@@ -75,8 +75,8 @@ Template = ordered **blocks** (logo, text, order lines, totals, tax table, barco
 ### Payments (v1)
 Cash (change calc, cash drawer kick), Card (recorded manually after the terminal approves; reference + optional tip), Split, Void/Refund with PIN. Direct terminal integration is a later task once we know the provider.
 
-### Bookkeeping (PyroBookKeeper)
-PBK is local-first: an append-only JSONL **event journal** per machine in a synced folder, replayed deterministically. The `books-bridge` package must **append to its own journal file** (own device id) or produce an import file in PBK's format. Daily **Z-report** closes the day: sales by tax category, cash vs card, tips, voids, cash drawer variance, and posts one summarized journal entry per day (not per order). First task is a spike to read PBK's journal event schema and decide: direct append vs. import file.
+### Bookkeeping
+Daily **Z-report** closes the day: sales by tax category, cash vs card, tips, voids, cash drawer variance. Closed days export as CSV (daily sales, and one summarized journal entry per day, not per order). The PyroBookKeeper link was removed on 2026-10-30 (ADR-0003).
 
 ### ESP32 beepers (later phase)
 Guests get a numbered beeper. Counter assigns it to an order; when kitchen marks ready, server tells that beeper to buzz/flash. Transport: WebSocket or MQTT over the truck WiFi; pairing by number; battery/low-signal reporting; fallback is the pickup board. Firmware in `firmware/` (PlatformIO).
@@ -87,7 +87,7 @@ Guests get a numbered beeper. Counter assigns it to an order; when kitchen marks
 | M0 | Foundations | Monorepo, contracts, DB, CI-style scripts, agent protocol live |
 | M1 | Walking skeleton | Order on `/pos` -> appears on `/kitchen` -> pay cash -> receipt prints. Real ABB math. |
 | M2 | Truck-ready | Card/split/void, menu admin, pickup board, phone ordering, offline PWA, backup, installer |
-| M3 | Receipt editor + books | Full editor, Z-report, PBK bridge, ABB report |
+| M3 | Receipt editor + books | Full editor, Z-report, CSV export, ABB report |
 | M4 | Beepers | ESP32 firmware + pairing + server integration |
 | M5 | Polish | Reports, inventory-lite (86 items), customer QR order, training mode |
 
