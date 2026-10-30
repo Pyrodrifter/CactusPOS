@@ -1,6 +1,6 @@
 ; CactusPOS setup program for Windows 10 and 11 (64-bit): one file a person double-clicks.
 ; Built with Inno Setup 6 by `node scripts/make-setup.mjs`, which passes the three values below:
-;   ISCC /DAppVersion=0.2.0 /DStage=<dist\redist\CactusPOS> /DOutDir=<dist\redist> ops\windows\setup.iss
+;   ISCC /DAppVersion=0.2.0 /DFileVersion=0.2.0 /DStage=<dist\redist\CactusPOS> /DOutDir=<dist\redist> ops\windows\setup.iss
 ;
 ; What the setup does on the computer:
 ;   1. Checks the computer: Windows 10 (1809) or newer, 64-bit; says so when neither Edge nor Chrome is there.
@@ -23,6 +23,10 @@
 #ifndef AppVersion
   #error AppVersion is not set. Build the setup with: node scripts/make-setup.mjs
 #endif
+; Windows file properties take numbers only (0.3.0), not a pre-release name such as 0.3.0-rc.1.
+#ifndef FileVersion
+  #define FileVersion AppVersion
+#endif
 #ifndef Stage
   #error Stage (the ready-made package folder) is not set. Build the setup with: node scripts/make-setup.mjs
 #endif
@@ -38,7 +42,8 @@ AppVersion={#AppVersion}
 AppVerName=CactusPOS {#AppVersion}
 AppPublisher=CactusPOS
 AppPublisherURL=https://github.com/Pyrodrifter/CactusPOS
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#FileVersion}
+VersionInfoTextVersion={#AppVersion}
 VersionInfoDescription=CactusPOS setup
 DefaultDirName={localappdata}\Programs\CactusPOS
 ; Nothing to choose: no folder page, no Start menu page, no "ready" page.

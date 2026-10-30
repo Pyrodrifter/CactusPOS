@@ -51,7 +51,7 @@ if (deepest.length > 180) fail(`A file in the package has a very long path (${de
 step(`Compiling the setup program with ${iscc}`);
 const setup = join(outDir, `CactusPOS-Setup-${pkg.version}.exe`);
 rmSync(setup, { force: true });
-const compiled = spawnSync(iscc, ['/Qp', `/DAppVersion=${pkg.version}`, `/DStage=${stage}`, `/DOutDir=${outDir}`, join(root, 'ops', 'windows', 'setup.iss')], { cwd: root, stdio: 'inherit' });
+const compiled = spawnSync(iscc, ['/Qp', `/DAppVersion=${pkg.version}`, `/DFileVersion=${pkg.version.replace(/-.*$/, '')}`, `/DStage=${stage}`, `/DOutDir=${outDir}`, join(root, 'ops', 'windows', 'setup.iss')], { cwd: root, stdio: 'inherit' });
 if (compiled.status !== 0 || !existsSync(setup)) fail('Inno Setup could not compile ops/windows/setup.iss. The messages above say why.');
 
 // The manual also goes beside the setup, so it can be attached to the release on its own.
