@@ -132,6 +132,8 @@ export const Order = z.object({
   kitchenRound: z.number().int().positive().optional(),
   /** When the kitchen's current ticket started: the order time, or when a later round became a fresh ticket. */
   kitchenSince: IsoDateTime.optional(),
+  /** When the order last became ready; the server marks it collected a set time later (see AutoCollect). */
+  readyAt: IsoDateTime.optional(),
   createdAt: IsoDateTime, updatedAt: IsoDateTime, createdBy: z.string(),
 });
 export type Order = z.infer<typeof Order>;
@@ -204,6 +206,9 @@ export const PayBody = z.object({
 });
 export type PayBodyT = z.infer<typeof PayBody>;
 export const StatusBody = z.object({ status: z.enum(['preparing', 'ready', 'collected']) });
+/** Ready orders become collected by themselves after `seconds`; 0 switches it off. Business-wide, owner sets it. */
+export const AutoCollect = z.object({ seconds: z.number().int().min(0).max(3600) });
+export type AutoCollect = z.infer<typeof AutoCollect>;
 export const VoidBody = z.object({ reason: z.string().min(2).max(200), managerPin: z.string().optional() });
 /**
  * Corrects a paid order: which of its lines stay (with their quantity as it should have been) and what is
@@ -278,6 +283,7 @@ export const ServerEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('order.changed'), order: Order }),
   z.object({ type: z.literal('menu.changed') }),
   z.object({ type: z.literal('service-mode.changed'), mode: ServiceMode }),
+  z.object({ type: z.literal('auto-collect.changed'), seconds: z.number().int().min(0) }),
   z.object({ type: z.literal('pickup.changed'), preparing: z.array(z.number().int()), ready: z.array(z.number().int()) }),
 ]);
 export type ServerEvent = z.infer<typeof ServerEventSchema>;
