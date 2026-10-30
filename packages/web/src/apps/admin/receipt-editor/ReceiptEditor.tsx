@@ -21,9 +21,9 @@ const copy = {
     nameChanged: 'The business name changed since this was drawn, so the receipt prints the name in printer letters. Choose a font to draw the new name.',
     size: 'Size', sizes: { small: 'Small', normal: 'Normal', tall: 'Tall', wide: 'Wide', large: 'Large', huge: 'Extra large' }, bold: 'Bold', underline: 'Underline', inverse: 'White on black',
     order: 'The order', number: 'Order number', item: 'Item text', phone: 'Show phone number', modifiers: 'Show modifiers', notes: 'Show notes',
-    protected: 'Receipt number, amounts, tax and sale-status markers stay visible. Kitchen order numbers, modifiers and notes stay visible.',
+    protected: 'Receipt number, amounts and sale-status markers stay visible. Kitchen order numbers, modifiers and notes stay visible.',
     headerLayout: 'Header layout', logoName: 'Logo + name', logoOnly: 'Logo only', nameOnly: 'Name only', nameHint: 'Turn off the separate name when your logo already contains it. Hidden content stays saved.',
-    visibility: { showBusinessName: 'Show business name', showLogo: 'Show logo', showAddress: 'Show address', showPhone: 'Show phone number', showTitle: 'Show top line', showSubtitle: 'Show subtitle', showOrderNumber: 'Show order number', showDateTime: 'Show date / time', showTabName: 'Show tab name', showModifiers: 'Show modifiers', showNotes: 'Show notes', showPaymentDetails: 'Show payment details', showPaymentReference: 'Show card reference', showFooter: 'Show closing line', showClosingImage: 'Show closing picture', showMessages: 'Show custom lines', showCodes: 'Show QR codes' },
+    visibility: { showBusinessName: 'Show business name', showLogo: 'Show logo', showAddress: 'Show address', showPhone: 'Show phone number', showTitle: 'Show top line', showSubtitle: 'Show subtitle', showOrderNumber: 'Show order number', showDateTime: 'Show date / time', showTabName: 'Show tab name', showModifiers: 'Show modifiers', showNotes: 'Show notes', showPaymentDetails: 'Show payment details', showPaymentReference: 'Show card reference', showTax: 'Show ABB lines', showFooter: 'Show closing line', showClosingImage: 'Show closing picture', showMessages: 'Show custom lines', showCodes: 'Show QR codes' },
     payment: 'Payment details', printLine: 'Print this line', printCode: 'Print this QR code',
     messages: 'Your own lines', add: 'Add a line', message: 'Line', words: 'Words', where: 'Where', above: 'Above the items', below: 'Below the total', up: 'Move up', down: 'Move down', remove: 'Remove',
     tokens: 'Use {{business}}, {{order}} or {{receipt}} for automatic text.',
@@ -49,9 +49,9 @@ const copy = {
     nameChanged: 'De bedrijfsnaam is veranderd sinds dit is getekend, dus de bon drukt de naam in printerletters af. Kies een lettertype om de nieuwe naam te tekenen.',
     size: 'Grootte', sizes: { small: 'Klein', normal: 'Normaal', tall: 'Hoog', wide: 'Breed', large: 'Groot', huge: 'Extra groot' }, bold: 'Vet', underline: 'Onderstreept', inverse: 'Wit op zwart',
     order: 'De bestelling', number: 'Bestelnummer', item: 'Artikeltekst', phone: 'Telefoon tonen', modifiers: 'Opties tonen', notes: 'Opmerkingen tonen',
-    protected: 'Bonnummer, bedragen, belasting en verkoopstatus blijven zichtbaar. Op keukenbonnen blijven bestelnummer, opties en opmerkingen zichtbaar.',
+    protected: 'Bonnummer, bedragen en verkoopstatus blijven zichtbaar. Op keukenbonnen blijven bestelnummer, opties en opmerkingen zichtbaar.',
     headerLayout: 'Indeling van de kop', logoName: 'Logo + naam', logoOnly: 'Alleen logo', nameOnly: 'Alleen naam', nameHint: 'Zet de losse naam uit als die al in het logo staat. Verborgen inhoud blijft bewaard.',
-    visibility: { showBusinessName: 'Bedrijfsnaam tonen', showLogo: 'Logo tonen', showAddress: 'Adres tonen', showPhone: 'Telefoon tonen', showTitle: 'Bovenste regel tonen', showSubtitle: 'Ondertitel tonen', showOrderNumber: 'Bestelnummer tonen', showDateTime: 'Datum / tijd tonen', showTabName: 'Rekeningnaam tonen', showModifiers: 'Opties tonen', showNotes: 'Opmerkingen tonen', showPaymentDetails: 'Betaalgegevens tonen', showPaymentReference: 'Pinreferentie tonen', showFooter: 'Slotregel tonen', showClosingImage: 'Slotplaatje tonen', showMessages: 'Eigen regels tonen', showCodes: 'QR-codes tonen' },
+    visibility: { showBusinessName: 'Bedrijfsnaam tonen', showLogo: 'Logo tonen', showAddress: 'Adres tonen', showPhone: 'Telefoon tonen', showTitle: 'Bovenste regel tonen', showSubtitle: 'Ondertitel tonen', showOrderNumber: 'Bestelnummer tonen', showDateTime: 'Datum / tijd tonen', showTabName: 'Rekeningnaam tonen', showModifiers: 'Opties tonen', showNotes: 'Opmerkingen tonen', showPaymentDetails: 'Betaalgegevens tonen', showPaymentReference: 'Pinreferentie tonen', showTax: 'ABB-regels tonen', showFooter: 'Slotregel tonen', showClosingImage: 'Slotplaatje tonen', showMessages: 'Eigen regels tonen', showCodes: 'QR-codes tonen' },
     payment: 'Betaalgegevens', printLine: 'Deze regel afdrukken', printCode: 'Deze QR-code afdrukken',
     messages: 'Je eigen regels', add: 'Regel toevoegen', message: 'Regel', words: 'Woorden', where: 'Waar', above: 'Boven de artikelen', below: 'Onder het totaal', up: 'Omhoog', down: 'Omlaag', remove: 'Verwijderen',
     tokens: 'Gebruik {{business}}, {{order}} of {{receipt}} voor automatisch ingevulde tekst.',
@@ -288,7 +288,7 @@ export function ReceiptEditor() {
         </div>
         <div className="re-toggles">{(kind === 'receipt' ? ['showOrderNumber', 'showDateTime', 'showTabName', 'showModifiers', 'showNotes'] as const : ['showDateTime', 'showTabName'] as const).map(visibilitySwitch)}</div><p className="re-hint">{c.protected}</p></section>
 
-        {kind === 'receipt' && <section className="re-card"><h2><Icon name="cash" />{c.payment}</h2><div className="re-toggles">{(['showPaymentDetails', 'showPaymentReference'] as const).map(visibilitySwitch)}</div></section>}
+        {kind === 'receipt' && <section className="re-card"><h2><Icon name="cash" />{c.payment}</h2><div className="re-toggles">{(['showPaymentDetails', 'showPaymentReference', 'showTax'] as const).map(visibilitySwitch)}</div></section>}
 
         <section className="re-card"><h2><Icon name="check" />{c.ending}</h2>
           <div className="re-toggles">{(['showFooter', 'showClosingImage'] as const).map(visibilitySwitch)}</div>

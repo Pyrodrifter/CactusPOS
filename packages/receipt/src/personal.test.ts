@@ -60,6 +60,15 @@ describe('receipt visibility controls', () => {
     const card = renderText(buildReceipt(sample, biz, { design: design({ showPaymentReference: false }) }));
     expect(card).toContain('Card'); expect(card).not.toContain('REFERENCE_SENTINEL'); expect(card).toContain('Tip');
   });
+  it('leaves the ABB and exempt lines off when showTax is off, keeping the total', () => {
+    const exempt = { ...order, breakdown: [...order.breakdown, { taxCategoryId: 'exempt', name: 'Exempt', kind: 'exempt' as const, bps: 0, grossCents: 500, taxCents: 0, netCents: 500 }] };
+    const on = renderText(buildReceipt(exempt, biz, { design: design({}) }));
+    expect(on).toMatch(/ABB/); expect(on).toContain('Exempt');
+    const blocks = buildReceipt(exempt, biz, { design: design({ showTax: false }) });
+    const off = renderText(blocks);
+    expect(off).not.toMatch(/ABB/); expect(off).not.toContain('Exempt');
+    expect(blocks.some((b) => b.t === 'row' && b.left === 'TOTAL')).toBe(true);
+  });
   it('disables individual messages/QR codes or all extras without discarding their configuration', () => {
     const d = design({ messages: [{ text: 'OFF SENTINEL', bold: false, align: 'left', enabled: false }, { text: 'ON SENTINEL', bold: false, align: 'left' }],
       codes: [{ kind: 'link', value: 'https://disabled.example', enabled: false }, { kind: 'link', value: 'https://enabled.example' }] });
