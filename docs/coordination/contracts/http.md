@@ -38,7 +38,7 @@ receipt-template compatibility and persisted database format stay the same.
 |---|---|
 | `PUT /api/admin/menu/categories/:id` | `MenuCategory` without id |
 | `DELETE /api/admin/menu/categories/:id` | `409` while it still has items |
-| `PUT /api/admin/menu/items/:id` | `MenuItem` without id. Option ids must be unique within the item |
+| `PUT /api/admin/menu/items/:id` | `MenuItem` without id. Option ids must be unique within the item. Optional `tags`: allergens and diet marks from `MENU_TAGS` |
 | `DELETE /api/admin/menu/items/:id` | Past orders keep their own snapshot |
 | `GET` / `PUT /api/admin/business` | `BusinessSchema` |
 | `PUT /api/admin/tax/:id` | `TaxCategorySchema`. Change a rate by adding a `validFrom` row, never by editing one |

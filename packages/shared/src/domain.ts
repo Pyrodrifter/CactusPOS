@@ -25,6 +25,17 @@ export type Role = z.infer<typeof Role>;
  */
 export const ModifierOption = z.object({ id: z.string().min(1), name: z.string().min(1).max(60), priceDeltaCents: CentsZ });
 export type ModifierOption = z.infer<typeof ModifierOption>;
+/** Allergens and diet marks the owner can tick per item. Shown to staff and customers as plain words. */
+export const MENU_TAGS = {
+  gluten: { en: 'Gluten', nl: 'Gluten' }, milk: { en: 'Milk', nl: 'Melk' }, egg: { en: 'Egg', nl: 'Ei' },
+  nuts: { en: 'Nuts', nl: 'Noten' }, peanuts: { en: 'Peanuts', nl: "Pinda's" }, soy: { en: 'Soy', nl: 'Soja' },
+  fish: { en: 'Fish', nl: 'Vis' }, shellfish: { en: 'Shellfish', nl: 'Schaaldieren' }, sesame: { en: 'Sesame', nl: 'Sesam' },
+  vegetarian: { en: 'Vegetarian', nl: 'Vegetarisch' }, vegan: { en: 'Vegan', nl: 'Veganistisch' }, spicy: { en: 'Spicy', nl: 'Pittig' },
+} as const;
+export type MenuTag = keyof typeof MENU_TAGS;
+export const MenuTag = z.enum(Object.keys(MENU_TAGS) as [MenuTag, ...MenuTag[]]);
+export const menuTagText = (tags: readonly MenuTag[] | undefined, lang: 'en' | 'nl') => (tags ?? []).map((tag) => MENU_TAGS[tag][lang]).join(' · ');
+
 export const ModifierGroup = z.object({
   id: z.string().min(1), name: z.string().max(60), required: z.boolean().default(false),
   multi: z.boolean().default(false), options: z.array(ModifierOption),
@@ -42,6 +53,8 @@ export const MenuItem = z.object({
   /** Market-price item: the cashier types the price for each sale (e.g. catch of the day). */
   openPrice: z.boolean().default(false),
   description: z.string().max(300).optional(),
+  /** Allergens and diet marks. Older items have none stored. */
+  tags: z.array(MenuTag).max(12).optional(),
 });
 export type MenuItem = z.infer<typeof MenuItem>;
 
