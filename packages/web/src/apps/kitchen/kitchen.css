@@ -143,6 +143,11 @@
   .kitchen .kitchen-top-undo .kitchen-title, .kitchen .kitchen-top-undo .kitchen-overview { display: none; }
   .kitchen .kitchen-undo { max-width: none; }
   .kitchen .kitchen-wipe { padding: 0 14px; font-size: 17px; }
+  /* The Kitchen button just above already says where this is; the row goes to the connection and Wipe. */
+  .kitchen h1.kitchen-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Room is short here: a connected screen shows only the green sign; Reconnecting keeps its word. */
+  .kitchen .kitchen-connection:not(.reconnecting) { padding: 8px 10px; }
+  .kitchen .kitchen-connection:not(.reconnecting) .kitchen-connection-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .kitchen .kitchen-switch { gap: 8px; }
   .kitchen .kitchen-switch button { flex-direction: column-reverse; gap: 1px; padding: 4px 4px 8px; font-size: 15px; }
   .kitchen .kitchen-switch button svg { display: none; }

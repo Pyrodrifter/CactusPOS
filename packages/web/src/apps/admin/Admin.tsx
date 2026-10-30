@@ -15,17 +15,23 @@ import { ScrollRow } from './controls';
 import './admin.css';
 import { ReceiptEditor } from './receipt-editor/ReceiptEditor';
 
-const TABS = ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books', 'backups'] as const;
-type Tab = (typeof TABS)[number];
+type Tab = 'reports' | 'menu' | 'receipts' | 'business' | 'staff' | 'tax' | 'printer' | 'books' | 'backups';
+/** The pages in three groups: what is used every day, what is set up once, and the records kept for later. */
+const GROUPS: { id: 'daily' | 'setup' | 'records'; tabs: Tab[] }[] = [
+  { id: 'daily', tabs: ['reports', 'menu'] },
+  { id: 'setup', tabs: ['receipts', 'business', 'staff', 'tax', 'printer'] },
+  { id: 'records', tabs: ['books', 'backups'] },
+];
 const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', receipts: 'edit', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download', backups: 'refresh' };
 
 export function Admin() {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const copy = useAdminCopy();
   const [tab, setTab] = useState<Tab>('reports');
   const root = useRef<HTMLDivElement>(null);
   /* The tabs stay pinned, so a new tab starts at its top instead of wherever the last one was scrolled to. */
   const choose = (x: Tab) => { setTab(x); root.current?.closest('main')?.scrollTo({ top: 0 }); };
+  const label = (x: Tab) => (x === 'receipts' ? copy.receiptDesign : t(`admin.${x}`));
   // A new database starts with the PINs 1234 and 1111. Until they are changed, the first Admin page says so
   // (one quiet line, not on every page); checked again after a visit to Staff.
   const [examplePins, setExamplePins] = useState<string[]>([]);
@@ -38,23 +44,32 @@ export function Admin() {
   return (
     <div className="admin" ref={root}>
       <div className="admin-tabbar">
+        {/* One list for every size: a row that scrolls sideways on phones and portrait tablets, a side menu on a
+            landscape tablet. The group names show in the side menu; in the row they are thin dividers. */}
         <ScrollRow nav className="admin-tabs" label={t('nav.admin')}>
-          {TABS.map((x) => (
-            <button key={x} type="button" className={tab === x ? 'on' : ''} data-active={tab === x} aria-current={tab === x ? 'page' : undefined} onClick={() => choose(x)}>
-              <Icon name={tabIcons[x]} /><span>{x === 'receipts' ? (lang === 'nl' ? 'Bonontwerp' : 'Receipt design') : t(`admin.${x}`)}</span>
-            </button>
-          ))}
+          {GROUPS.flatMap((g) => [
+            <span key={g.id} className="admin-tabs-group">{copy.groups[g.id]}</span>,
+            ...g.tabs.map((x) => (
+              <button key={x} type="button" data-tab={x} className={tab === x ? 'on' : ''} data-active={tab === x} aria-current={tab === x ? 'page' : undefined} onClick={() => choose(x)}>
+                <Icon name={tabIcons[x]} /><span>{label(x)}</span>
+              </button>
+            )),
+          ])}
         </ScrollRow>
       </div>
       <div className="admin-body">
+        {/* Menu and Staff show their one line of help beside their own buttons, to keep the list high on the screen.
+            The receipt editor opens with a heading of its own, so its page name is only for screen readers. */}
+        <header className={`admin-page-head${tab === 'receipts' ? ' is-quiet' : ''}`}>
+          <h1>{label(tab)}</h1>
+          {tab !== 'menu' && tab !== 'staff' && tab !== 'receipts' && <p>{copy[tab]}</p>}
+        </header>
         {examplePins.length > 0 && tab === 'reports' && (
           <p className="notice admin-pin-reminder" role="status">
             <span>{copy.examplePins(examplePins.join(', '))}</span>
             <button type="button" onClick={() => choose('staff')}><Icon name="staff" />{t('admin.staff')}</button>
           </p>
         )}
-        {/* Menu and Staff show their one line of help beside their own buttons, to keep the list high on the screen. */}
-        {tab !== 'menu' && tab !== 'staff' && tab !== 'receipts' && <p className="admin-hint">{copy[tab]}</p>}
         {tab === 'receipts' && <ReceiptEditor />}
         {tab === 'reports' && <ReportsAdmin />}
         {tab === 'menu' && <MenuAdmin />}

@@ -47,7 +47,7 @@ export function PrinterAdmin() {
 
   return (
     <div className="form" aria-busy={busy}>
-      <p className="notice">{t('printer.intro')}</p>
+      <p className="notice info">{t('printer.intro')}</p>
       <section className="admin-form-card">
         <h3><Icon name="printer" />{copy.connection}</h3>
         {toggle('enabled', t('printer.enabled'))}

@@ -155,7 +155,7 @@ export function TaxAdmin() {
 
   return (
     <div>
-      {charged && <p className="notice">{c.intro}</p>}
+      {charged && <p className="notice info">{c.intro}</p>}
       {err && !adding && !draft && switching === null && <div className="error" role="alert">{err}</div>}
       {setup && (
         <div className="tax-switch">

@@ -10,7 +10,7 @@ import './kitchen.css';
 
 const copy = {
   en: {
-    subtitle: 'Every ticket, at a glance', reconnect: 'Reconnecting',
+    subtitle: 'Every ticket, at a glance', live: 'Live updates', reconnect: 'Reconnecting',
     active: 'active tickets', emptyHint: 'New orders will appear here automatically.',
     sentEmpty: 'No new tickets', preparingEmpty: 'Nothing cooking yet', readyEmpty: 'Nothing waiting for pickup',
     start: 'Start preparing', ready: 'Mark ready', recall: 'Recall', collected: 'Collected',
@@ -22,7 +22,7 @@ const copy = {
     wipe: 'Wipe screen', wipeHint: 'Pauses touch for 20 seconds so you can wipe the screen',
   },
   nl: {
-    subtitle: 'Elke bon in één oogopslag', reconnect: 'Verbinding herstellen',
+    subtitle: 'Elke bon in één oogopslag', live: 'Live updates', reconnect: 'Verbinding herstellen',
     active: 'actieve bonnen', emptyHint: 'Nieuwe bestellingen verschijnen hier automatisch.',
     sentEmpty: 'Geen nieuwe bonnen', preparingEmpty: 'Nog niets in bereiding', readyEmpty: 'Niets klaar om af te halen',
     start: 'Start bereiding', ready: 'Markeer klaar', recall: 'Terug', collected: 'Opgehaald',
@@ -261,8 +261,7 @@ export function Kitchen() {
           </div>
           <div className="kitchen-overview">
             <span className="kitchen-active"><b>{live.length}</b> {c.active}</span>
-            {/* The bar above already says the truck is connected; here only a lost connection is worth the room. */}
-            <span role="status">{!online && <span className="kitchen-connection reconnecting"><Icon name="wifi-off" size={20} />{c.reconnect}</span>}</span>
+            <span className={`kitchen-connection${online ? '' : ' reconnecting'}`} role="status"><Icon name={online ? 'wifi' : 'wifi-off'} size={20} /><span className="kitchen-connection-label">{online ? c.live : c.reconnect}</span></span>
             <button type="button" className="kitchen-wipe" title={c.wipeHint} aria-label={`${c.wipe}. ${c.wipeHint}`}
               onClick={() => { haptic(10); window.dispatchEvent(new Event(CLEAN_SCREEN_EVENT)); }}>
               <Icon name="sparkles" size={24} /><span>{c.wipe}</span>

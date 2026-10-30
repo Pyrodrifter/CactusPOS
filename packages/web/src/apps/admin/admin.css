@@ -17,7 +17,12 @@
   margin: 0 auto;
 }
 .admin .admin-body { overflow: visible; padding: 8px 0 0; min-width: 0; }
-.admin-hint { margin: 0 2px 16px; color: var(--admin-muted); font-size: 15px; line-height: 1.5; }
+/* Every page opens with its name and, where it helps, one line on what it is for. */
+.admin-page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 4px 2px 16px; }
+.admin-page-head h1 { margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -.025em; color: var(--admin-ink); }
+.admin-page-head p { flex: 1 1 280px; margin: 0; color: var(--admin-muted); font-size: 16px; line-height: 1.45; }
+.admin-page-head.is-quiet { margin: 0; }
+.admin-page-head.is-quiet h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .admin .muted { color: var(--admin-muted); }
 
 /* ---- buttons ---- */
@@ -51,6 +56,9 @@
 .admin .admin-tabs .admin-scroll-track > button { flex: 1 0 auto; flex-direction: column; gap: 3px; min-width: 88px; padding: 8px 14px; line-height: 1.2; border-color: transparent; background: transparent; color: #46605d; }
 .admin .admin-tabs .admin-scroll-track > button svg { width: 26px; height: 26px; }
 .admin .admin-tabs .admin-scroll-track > button.on { background: #fff; color: #164e5c; box-shadow: 0 2px 7px #183f4b14; border-color: #dae5dd; }
+/* In the sideways row a group name is only a thin divider; the side menu below shows the words. */
+.admin-tabs-group { flex: none; align-self: stretch; width: 2px; margin: 10px 2px; border-radius: 2px; background: #c9d6cf; overflow: hidden; color: transparent; font-size: 0; }
+.admin-tabs-group:first-child { display: none; }
 
 /* ---- fields ---- */
 .admin :is(input, select) { min-height: var(--admin-field); min-width: 0; font-size: 17px; padding: 0 16px; border-color: #cddad2; border-radius: 14px; }
@@ -117,6 +125,8 @@
 /* ---- cards with their own buttons (tax, print jobs) ---- */
 .admin .orders { padding: 0; gap: 12px; }
 .admin .orders li { padding: 18px; border: 1px solid var(--admin-line); border-radius: 20px; box-shadow: 0 3px 12px #183f4b05; gap: 16px; min-height: var(--tap-xl); }
+/* The text keeps room to be read; when it would get narrower than this, the buttons move under it instead. */
+.admin .orders .grow { flex: 1 1 260px; }
 .admin .orders .grow b { font-size: 19px; }
 .admin .orders small { display: block; margin-top: 5px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 .admin .orders li.inactive { opacity: 1; background: #f0f2ed; }
@@ -129,6 +139,7 @@
 .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 0; }
 .admin-toolbar-hint { flex: 1 1 200px; margin: 0; color: var(--admin-muted); font-size: 15px; line-height: 1.45; }
 .admin .admin-remove { margin-left: 8px; }
+.staff-admin > .admin-toolbar:first-child { padding-top: 0; }
 .admin .admin-toolbar .admin-add { margin-left: auto; }
 /* Category name, its tools and Add item share one row, so the list starts high on a landscape tablet. */
 .menu-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "title tools add"; align-items: center; gap: 10px 18px; padding: 14px 0; }
@@ -143,6 +154,9 @@
 .admin .error { color: #9a3328; background: #fff0ed; border: 1px solid #f0c8bf; }
 .admin .ok { color: #2a6040; background: #edf5e8; border: 1px solid #cdddca; }
 .admin .notice { background: #fff9ea; border-color: #eadcb5; border-left: 4px solid #be8723; border-radius: 14px; padding: 16px; line-height: 1.55; color: #645522; margin: 0 0 18px; }
+/* Amber is kept for something to act on. A note that only explains is calm. */
+.admin .notice.info { background: #eef4f4; border-color: #d4e2e2; border-left-color: #6a959b; color: #34525a; font-size: 16px; }
+:root[data-theme=dark] .admin .notice.info { background: var(--info-soft); border-color: var(--line); border-left-color: var(--info); color: var(--ink); }
 .admin .tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 14px; font-weight: 700; line-height: 1.4; white-space: nowrap; }
 .admin .tag svg { width: 16px; height: 16px; }
 .admin .tag.warn { background: #fff0d8; color: #805112; }
@@ -228,6 +242,29 @@
 .books-accounts[open] summary::after { content: '−'; }
 .books .reports-status { margin: 0; }
 
+/* ---- landscape tablets and wider: the sections become a side menu, so the page itself starts at the top ---- */
+@media (min-width: 1100px) {
+  .admin.admin { display: grid; grid-template-columns: 228px minmax(0, 1fr); column-gap: 28px; align-items: start; max-width: 1340px; }
+  .admin-tabbar { margin: 0; padding: 20px 0 16px; max-height: calc(100dvh - 100px); overflow-y: auto; scrollbar-width: thin; }
+  .admin-tabbar::after { display: none; }
+  .admin-tabs.admin-scroll { border: 0; border-radius: 0; background: none; overflow: visible; }
+  .admin-tabs .admin-scroll-track { flex-direction: column; gap: 4px; padding: 0; overflow: visible; }
+  .admin-tabs .admin-scroll-hint { display: none; }
+  .admin .admin-tabs .admin-scroll-track > button { flex: none; flex-direction: row; justify-content: flex-start; gap: 14px; min-width: 0; min-height: var(--tap); padding: 0 16px; border-radius: 14px; text-align: left; white-space: normal; }
+  .admin .admin-tabs .admin-scroll-track > button svg { width: 24px; height: 24px; }
+  .admin .admin-tabs .admin-scroll-track > button:not(.on):active { background: #e8eee6; }
+  .admin-tabs-group, .admin-tabs-group:first-child { display: block; width: auto; height: auto; margin: 16px 16px 4px; background: none; border-radius: 0; color: var(--admin-muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .admin-tabs-group:first-child { margin-top: 2px; }
+  .admin .admin-body { padding-top: 22px; }
+  :root[data-theme=dark] .admin .admin-tabs.admin-scroll { background: none; }
+  :root[data-theme=dark] .admin .admin-tabs .admin-scroll-track > button:not(.on):active { background: var(--soft); }
+}
+/* Beside the side menu the page is narrower: Delete keeps only its red bin, so the menu's tools stay on one row in Dutch too. */
+@media (min-width: 1100px) and (max-width: 1279px) {
+  .admin .admin-toolbar .admin-remove { flex: none; width: var(--tap-lg); padding: 0; }
+  .admin .admin-toolbar .admin-remove span { display: none; }
+}
+
 /* ---- tablets: the reorder arrows drop their words so name, tools and Add item stay on one row, in Dutch too ---- */
 @media (max-width: 1279px) {
   .admin .admin-toolbar .admin-move { flex: none; width: var(--tap-lg); padding: 0; }
@@ -248,6 +285,12 @@
 /* ---- phones ---- */
 @media (max-width: 620px) {
   .admin.admin { padding-bottom: 28px; }
+  /* The chosen tab sits right above, so the page name is left to screen readers here. */
+  .admin-page-head { margin: 0 2px 12px; }
+  .admin-page-head h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-page-head p { font-size: 15px; }
+  .admin .notice { padding: 12px 14px; font-size: 15px; line-height: 1.45; }
+  .admin-pin-reminder button { min-height: var(--tap); }
   .admin .two { grid-template-columns: minmax(0, 1fr); }
   .admin-form-card { padding: 18px; gap: 16px; }
   .admin .admin-tabs .admin-scroll-track > button { flex-grow: 0; }
