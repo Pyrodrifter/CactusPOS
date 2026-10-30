@@ -57,45 +57,48 @@
 .kitchen .kitchen-empty h2 { font-size: 22px; margin: 0 0 4px; color: var(--ink); }
 .kitchen .kitchen-empty p { color: #b5c9bf; margin: 0; font-size: 16px; }
 
-/* ---- Ticket ---- */
-.kitchen .ticket { border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
-.kitchen .ticket.warm { border-color: #e2ad6d; box-shadow: inset 4px 0 #e2ad6d, 0 5px 18px #070f1426; }
-.kitchen .ticket.late { border-color: #ef9898; box-shadow: inset 4px 0 #ef9898, 0 5px 18px #070f1426; }
+/* ---- Ticket. A band on top with the number, the name and the wait; under it the food, one block per item,
+   with what to add and what to leave off on rows of their own. ---- */
+.kitchen .ticket { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; padding: 0 0 14px; margin-bottom: 16px; background: var(--card); box-shadow: 0 5px 18px #070f1426; overflow-wrap: anywhere; }
+.kitchen .ticket > :not(.ticket-heading) { margin-left: 16px; margin-right: 16px; }
 .kitchen .ticket-fresh { animation: kitchen-arrival 1.2s ease-out 2; }
-@keyframes kitchen-arrival { 0%, 100% { background-color: var(--card); } 40% { background-color: #35534c; } }
-.kitchen .ticket-ready { background: #203b38; border-color: #486859; }
+@keyframes kitchen-arrival { 0%, 100% { background-color: var(--card); } 40% { background-color: #2c4c47; } }
+.kitchen .ticket-ready { border-color: #486859; }
 /* New and preparing tickets: the whole ticket is the button for the next step.
    Pressed is a colour change only: a ticket this size should not jump when a scroll starts on it. */
 .kitchen .ticket-tappable { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: background-color .1s ease-out; }
-.kitchen .ticket-tappable:active { background-color: #2a4757; }
+.kitchen .ticket-tappable:active { background-color: #24404f; }
 
-/* Number, payment state and age share one row. When a narrow column cannot fit all three, the payment state
-   drops under the number and the age keeps the top right corner. */
-.kitchen .ticket .ticket-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
-.kitchen .ticket-id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; flex: 1 1 auto; min-width: 0; }
-.kitchen .ticket-number b { display: block; font-size: 38px; font-weight: 800; line-height: 42px; letter-spacing: -.8px; }
-.kitchen .ticket-payment { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 15px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
-.kitchen .ticket-paid { background: #2b4a3e; color: #c8eeaf; }
-.kitchen .ticket-unpaid { background: #4a3b2d; color: #ffd09b; }
-.kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 40px; padding: 0 11px; border-radius: 12px; background: #293e4b; color: #c9d9df; font-size: 17px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.kitchen .ticket-age-warm { color: #ffce96; background: #513f2c; }
-.kitchen .ticket-age-late { color: #ffd0d0; background: #502e31; }
+.kitchen .ticket .ticket-heading { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px 8px 16px; background: #26404f; }
+.kitchen .ticket.warm .ticket-heading { background: #6b4a1f; }
+.kitchen .ticket.late .ticket-heading { background: #7a2f35; }
+.kitchen .ticket-ready .ticket-heading { background: #2b5446; }
+.kitchen .ticket-number b { display: block; font-size: 36px; font-weight: 800; line-height: 1; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.kitchen .ticket-who { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.kitchen .ticket-tab { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 21px; font-weight: 750; line-height: 1.15; }
+.kitchen .ticket-round { padding: 2px 10px; border-radius: 99px; background: #0c1a2340; color: #dcecff; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.kitchen .ticket-age { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; padding: 6px 10px; border-radius: 12px; background: #0c1a2340; color: #f4f8f9; font-size: 18px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* The order note sits right under the ticket number, before the food, so it is read first. */
-.kitchen .ticket-note, .kitchen .ticket-error { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; }
-.kitchen .ticket-note { margin: 14px 0 0; border: 2px solid #f0b560; background: #4f3c1f; color: #ffe6bd; font-size: 18px; font-weight: 700; line-height: 1.3; }
-.kitchen .ticket-error { margin: 0 0 14px; background: #502e31; color: #ffd0d0; font-size: 16px; }
+/* The order note comes before the food, so it is read first. */
+.kitchen .ticket-note, .kitchen .ticket-error { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; }
+.kitchen .ticket-note { margin-top: 12px; margin-bottom: 0; border: 2px solid #f0b560; background: #4f3c1f; color: #ffe6bd; font-size: 18px; font-weight: 750; line-height: 1.3; }
+.kitchen .ticket-error { margin-top: 12px; margin-bottom: 0; background: #502e31; color: #ffd0d0; font-size: 16px; }
 
-.kitchen .ticket .ticket-lines { margin: 14px 0; font-size: 18px; }
-.kitchen .ticket-lines li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #3d526060; }
-.kitchen .ticket-quantity { display: grid; place-items: center; flex: none; min-width: 52px; height: 40px; padding: 0 7px; border-radius: 12px; background: #29414d; color: #c9ee96; font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.kitchen .ticket .ticket-lines { margin-top: 4px; margin-bottom: 12px; }
+.kitchen .ticket-lines li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.kitchen .ticket-lines li + li { border-top: 2px solid #2c4350; }
+/* The count is a plain number; more than one stands out, because that is the one that gets missed. */
+.kitchen .ticket-quantity { display: grid; place-items: center; flex: none; min-width: 48px; height: 40px; padding: 0 6px; border-radius: 10px; color: var(--muted); font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .kitchen .ticket-quantity-many { background: #c9ee96; color: #153627; }
 .kitchen .ticket-item { flex: 1; min-width: 0; }
-.kitchen .ticket-item strong { display: block; padding-top: 6px; font-size: 23px; font-weight: 700; line-height: 1.2; }
-/* Options are part of what to cook, so they are nearly as bright as the item and only a little smaller. */
-.kitchen .ticket-modifiers { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; color: #e1ecf0; font-size: 20px; font-weight: 600; line-height: 1.3; }
-.kitchen .ticket-exclusion { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 7px; border: 1px solid #b0646a; border-radius: 9px; background: #57292e; color: #ffd0d0; font-weight: 750; }
-.kitchen .ticket-line-note { margin-top: 8px; color: #ffce96; font-size: 19px; font-weight: 700; }
+.kitchen .ticket-item strong { display: block; padding-top: 5px; font-size: 22px; font-weight: 750; line-height: 1.2; }
+.kitchen .ticket-choice { color: #b9d0da; font-weight: 600; }
+/* Extras and leave-offs wrap as short words in a row, so a busy burger stays a few lines high. */
+.kitchen .ticket-extras, .kitchen .ticket-without { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.kitchen .ticket-extras span, .kitchen .ticket-without span { padding: 3px 10px; border-radius: 8px; font-size: 18px; font-weight: 700; line-height: 1.3; }
+.kitchen .ticket-extras span { background: #2b4a3e; color: #d6f5b4; }
+.kitchen .ticket-without span { background: #5c262c; color: #ffd6d6; text-transform: uppercase; letter-spacing: .02em; font-size: 16px; padding-top: 4px; padding-bottom: 4px; }
+.kitchen .ticket-line-note { margin-top: 8px; color: #ffce96; font-size: 18px; font-weight: 700; font-style: italic; }
 
 /* The step forward is the one big button; Recall is smaller and kept a clear gap away from Collected. */
 .kitchen .ticket .ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
@@ -106,13 +109,11 @@
 /* Three columns on a small landscape tablet are narrow: keep Recall and Collected on one row. */
 @media (min-width: 901px) and (max-width: 1279px) {
   .kitchen .kcols { gap: 14px; }
-  .kitchen .ticket { padding: 14px; }
   .kitchen .ticket-actions .ticket-recall { flex-direction: column; gap: 2px; padding: 6px 10px; font-size: 15px; }
 }
 @media (min-width: 901px) and (max-width: 1099px) {
   .kitchen .ticket-ready .ticket-primary svg { display: none; }
-  /* Without their icons, number, payment state and age usually still fit on one row. */
-  .kitchen .ticket-payment svg, .kitchen .ticket-age svg { display: none; }
+  .kitchen .ticket-age svg { display: none; }
 }
 
 /* ---- Phones and portrait tablets: one column at a time, chosen with the switcher under the header ---- */
@@ -155,12 +156,9 @@
   .kitchen .kitchen-switch button[aria-pressed='true'] .kitchen-count { background: none; color: #10222b; }
 }
 
-/* ---- tabs: who it is for, which round, what was added ---- */
-.kitchen .ticket-tab { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 22px; font-weight: 750; letter-spacing: -.01em; overflow-wrap: anywhere; }
-.kitchen .ticket-round { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 99px; background: #3a5a78; color: #dcecff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+/* ---- tabs: what a later round added ---- */
 .kitchen .ticket-added { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0; padding: 3px 9px; border-radius: 99px; background: #c9ee96; color: #1f3a12; font-size: 14px; font-weight: 750; vertical-align: middle; white-space: nowrap; }
-.kitchen .ticket-line-added { background: rgba(201, 238, 150, .09); border-radius: 12px; }
-.kitchen .ticket-lines li.ticket-line-added { padding-left: 10px; padding-right: 10px; margin: 0 -10px; }
+.kitchen .ticket-lines li.ticket-line-added { padding-left: 10px; padding-right: 10px; margin: 0 -10px; border-radius: 12px; background: rgba(201, 238, 150, .09); }
 
 /* ---- Locked to the kitchen: Screen tools sits at the start of the header ---- */
 .kitchen .kitchen-tools { display: grid; place-items: center; flex: none; width: var(--tap-lg); min-height: var(--tap-lg); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #22394a; color: var(--ink); }
@@ -170,10 +168,7 @@
 .kitchen .kitchen-grid { display: grid; grid-template-columns: repeat(var(--kitchen-cols, 1), minmax(0, 1fr)); align-items: start; gap: 14px; }
 .kitchen .kitchen-grid-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .kitchen .kitchen-grid .kitchen-column-empty { grid-column: 1 / -1; padding: 22px 16px; }
-.kitchen-quick .ticket { margin-bottom: 0; padding: 14px; }
-.kitchen-quick .ticket .ticket-lines { margin: 10px 0 12px; }
-.kitchen-quick .ticket-lines li { padding: 9px 0; }
-.kitchen-quick .ticket-note { margin-top: 10px; }
+.kitchen-quick .ticket { margin-bottom: 0; }
 /* The whole ticket is the button; this bar only says what a tap does, so it need not be the tallest thing on it. */
 .kitchen .ticket-actions .ticket-quick { flex: 1 1 100%; min-height: var(--tap); font-size: 19px; }
 

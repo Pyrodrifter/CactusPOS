@@ -122,6 +122,20 @@ function useColumnCount(grid: RefObject<HTMLDivElement | null>, active: boolean)
   return count;
 }
 
+/** "No tomato", "Geen ui": something to leave off. */
+const isExclusion = (name: string) => /^(no|geen|without|zonder)\s/i.test(name);
+
+/**
+ * Splits a line's options the way a cook reads them: a free choice (which sauce, which drink) belongs with the
+ * item's name; paid extras are what to add; "No ..." is what to leave off, in red, last.
+ */
+function splitOptions(mods: Order['lines'][number]['modifiers']) {
+  const choices = mods.filter((m) => !isExclusion(m.name) && m.priceDeltaCents === 0);
+  const extras = mods.filter((m) => !isExclusion(m.name) && m.priceDeltaCents !== 0);
+  const without = mods.filter((m) => isExclusion(m.name));
+  return { choices, extras, without };
+}
+
 /** When the kitchen started on this order; a tab that orders again starts a new clock for that round. */
 const kitchenSince = (o: Order) => Date.parse(o.kitchenSince ?? o.createdAt);
 
@@ -168,39 +182,34 @@ function Ticket({ o, now, online, settled, onMoved, quick }: {
   return (
     <article
       className={`ticket${late ? ' late' : warm ? ' warm' : ''}${fresh ? ' ticket-fresh' : ''}${o.status === 'ready' ? ' ticket-ready' : ''}${forward && !disabled ? ' ticket-tappable' : ''}`}
-      aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-busy={pending !== null}
+      aria-label={`${t('ticket')} ${o.ticketNumber}`} aria-description={o.paid ? t('orders.paid') : t('orders.unpaid')} aria-busy={pending !== null}
       {...tap.handlers} onClick={forward ? (e) => { if (tap.deliberate(e)) void setStatus(forward); } : undefined}>
+      {/* The band says which order and how long it has waited; its colour turns amber, then red, as it waits. */}
       <header className="ticket-heading">
-        {/* Number and payment state wrap as a pair, so the age always keeps the top right corner. */}
-        <div className="ticket-id">
-          <div className="ticket-number"><b>#{o.ticketNumber}</b></div>
-          {firstRound > 1 && <div className="ticket-round">{c.round} {firstRound}</div>}
-          <div className={`ticket-payment ${o.paid ? 'ticket-paid' : 'ticket-unpaid'}`}>
-            <Icon name={o.paid ? 'check' : 'cash'} size={18} />{o.paid ? t('orders.paid') : t('orders.unpaid')}
-          </div>
+        <div className="ticket-number"><b>#{o.ticketNumber}</b></div>
+        <div className="ticket-who">
+          {o.tabName && <span className="ticket-tab">{o.tabName}</span>}
+          {firstRound > 1 && <span className="ticket-round">{c.round} {firstRound}</span>}
         </div>
-        <span className={`ticket-age${late ? ' ticket-age-late' : warm ? ' ticket-age-warm' : ''}`} aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={20} />{mins} min</span>
+        <span className="ticket-age" aria-label={`${mins} ${c.elapsed}`}><Icon name="clock" size={20} />{mins} min</span>
       </header>
-      {o.tabName && <p className="ticket-tab"><Icon name="staff" size={22} /><span>{o.tabName}</span></p>}
-      {o.note && <p className="ticket-note"><Icon name="edit" size={22} /><span>{o.note}</span></p>}
+      {o.note && <p className="ticket-note"><Icon name="warning" size={22} /><span>{o.note}</span></p>}
       <ul className="ticket-lines">
-        {lines.map((l) => (
-          <li key={l.id} className={(l.round ?? 1) > firstRound ? 'ticket-line-added' : undefined}>
-            <b className={`ticket-quantity${l.qty > 1 ? ' ticket-quantity-many' : ''}`}>{l.qty}×</b>
-            <div className="ticket-item">
-              <strong>{l.name}</strong>
-              {(l.round ?? 1) > firstRound && <span className="ticket-added"><Icon name="plus" size={16} />{c.added}</span>}
-              {l.modifiers.length > 0 && (
-                <div className="ticket-modifiers">
-                  {l.modifiers.map((m) => /^(no|geen)\s/i.test(m.name)
-                    ? <div key={m.id} className="ticket-exclusion"><Icon name="close" size={18} />{m.name}</div>
-                    : <div key={m.id}>{m.name}</div>)}
-                </div>
-              )}
-              {l.note && <div className="ticket-line-note">{l.note}</div>}
-            </div>
-          </li>
-        ))}
+        {lines.map((l) => {
+          const { choices, extras, without } = splitOptions(l.modifiers);
+          return (
+            <li key={l.id} className={(l.round ?? 1) > firstRound ? 'ticket-line-added' : undefined}>
+              <b className={`ticket-quantity${l.qty > 1 ? ' ticket-quantity-many' : ''}`}>{l.qty}×</b>
+              <div className="ticket-item">
+                <strong>{l.name}{choices.length > 0 && <span className="ticket-choice"> · {choices.map((m) => m.name).join(', ')}</span>}</strong>
+                {(l.round ?? 1) > firstRound && <span className="ticket-added"><Icon name="plus" size={16} />{c.added}</span>}
+                {extras.length > 0 && <div className="ticket-extras">{extras.map((m) => <span key={m.id}>+ {m.name}</span>)}</div>}
+                {without.length > 0 && <div className="ticket-without">{without.map((m) => <span key={m.id}>{m.name}</span>)}</div>}
+                {l.note && <div className="ticket-line-note">“{l.note}”</div>}
+              </div>
+            </li>
+          );
+        })}
       </ul>
       {failed && <p className="ticket-error" role="alert"><Icon name="warning" size={20} /><span>{c.failed}</span></p>}
       <footer className="ticket-actions">
