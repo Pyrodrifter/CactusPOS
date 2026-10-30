@@ -191,6 +191,10 @@ MIGRATIONS.push({ version: 6, name: 'drawer-cash-movements', up: (db) => {
   ${appendOnly('cash_movements', 'id')}`);
 } });
 
+MIGRATIONS.push({ version: 7, name: 'category-color', up: (db) => {
+  db.exec('ALTER TABLE menu_categories ADD COLUMN color TEXT;');
+} });
+
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
 export function schemaVersion(db: DB): number {

@@ -3,7 +3,7 @@ import { useLang } from '../../i18n';
 const copy = {
   en: {
     title: 'Make it yours', intro: 'Your menu, team and truck settings in one place.',
-    receiptDesign: 'Receipt design', openingTitle: 'Ready to open', taxSetInTax: 'Set for the whole menu under Tax.', groups: { daily: 'Every day', setup: 'Set up', records: 'Records' },
+    receiptDesign: 'Receipt design', openingTitle: 'Ready to open', groups: { daily: 'Every day', setup: 'Set up', records: 'Records' },
     reports: 'Today at a glance, and closing the day for the books.',
     menu: 'Keep your menu ready for service. Prices include ABB.',
     business: 'Business details and the personal touches on every receipt.',
@@ -17,8 +17,7 @@ const copy = {
     close: 'Close', optionPrice: 'Extra price (USD)', optionName: 'Option name',
     menuItems: 'Menu items', categories: 'Categories', settings: 'Settings',
     details: 'Business details', receipt: 'Receipt & appearance', connection: 'Printer connection',
-    preferences: 'Printing preferences', optionsHint: 'Offer extras or choices with this item.',
-    availableHint: 'Tap an item to change it. Use its switch when it is sold out. Prices include ABB.',
+    preferences: 'Printing preferences', allergies: 'Allergies and diet', categoryColor: 'Colour',
     emptyStaff: 'Add the first person to your team.',
     on: 'On', off: 'Off',
     newCategory: 'New category', renameCategory: 'Rename category', categoryExample: 'e.g. Burgers',
@@ -30,12 +29,10 @@ const copy = {
     role: 'Role', activeHint: 'Switch off to stop this person from signing in.',
     staffHint: 'Tap a person to change their name, PIN or access.',
     verified: 'Verified',
-    exAbb: 'Type prices without ABB', withoutAbb: ' (without ABB)', priceEx: 'Price (without ABB)', exAbbHint: 'The till adds the ABB; the menu and the receipt show the price with ABB.',
-    customerPays: (price: string, tax: string, rate: string) => `Customer pays ${price}, of which ${tax} ABB (${rate})`,
   },
   nl: {
     title: 'Maak het eigen', intro: 'Je menu, team en instellingen op één plek.',
-    receiptDesign: 'Bonontwerp', openingTitle: 'Klaar om te openen', taxSetInTax: 'Ingesteld voor het hele menu onder Belasting.', groups: { daily: 'Elke dag', setup: 'Instellen', records: 'Administratie' },
+    receiptDesign: 'Bonontwerp', openingTitle: 'Klaar om te openen', groups: { daily: 'Elke dag', setup: 'Instellen', records: 'Administratie' },
     reports: 'Vandaag in één oogopslag, en de dag afsluiten voor de boekhouding.',
     menu: 'Houd je menu klaar voor verkoop. Prijzen zijn inclusief ABB.',
     business: 'Bedrijfsgegevens en de persoonlijke details op elke bon.',
@@ -49,8 +46,7 @@ const copy = {
     close: 'Sluiten', optionPrice: 'Meerprijs (USD)', optionName: 'Naam van de optie',
     menuItems: 'Menu-items', categories: 'Categorieën', settings: 'Instellingen',
     details: 'Bedrijfsgegevens', receipt: 'Bon & uitstraling', connection: 'Printerverbinding',
-    preferences: 'Afdrukvoorkeuren', optionsHint: 'Bied extra’s of keuzes aan bij dit item.',
-    availableHint: 'Tik op een item om het te wijzigen. Gebruik de schakelaar als het uitverkocht is. Prijzen zijn inclusief ABB.',
+    preferences: 'Afdrukvoorkeuren', allergies: 'Allergieën en dieet', categoryColor: 'Kleur',
     emptyStaff: 'Voeg de eerste persoon toe aan je team.',
     on: 'Aan', off: 'Uit',
     newCategory: 'Nieuwe categorie', renameCategory: 'Categorie hernoemen', categoryExample: 'bijv. Burgers',
@@ -62,8 +58,6 @@ const copy = {
     role: 'Rol', activeHint: 'Zet uit om te voorkomen dat deze persoon kan inloggen.',
     staffHint: 'Tik op een persoon om naam, pincode of toegang te wijzigen.',
     verified: 'Gecontroleerd',
-    exAbb: 'Prijzen zonder ABB invoeren', withoutAbb: ' (zonder ABB)', priceEx: 'Prijs (zonder ABB)', exAbbHint: 'De kassa telt de ABB erbij op; het menu en de bon tonen de prijs met ABB.',
-    customerPays: (price: string, tax: string, rate: string) => `Klant betaalt ${price}, waarvan ${tax} ABB (${rate})`,
   },
 } as const;
 

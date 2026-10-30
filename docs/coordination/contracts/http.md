@@ -36,7 +36,7 @@ receipt-template compatibility and persisted database format stay the same.
 ## Owner only (`403` otherwise). Every change is written to the append-only `audit_log`.
 | Route | Body |
 |---|---|
-| `PUT /api/admin/menu/categories/:id` | `MenuCategory` without id |
+| `PUT /api/admin/menu/categories/:id` | `MenuCategory` without id. Send `color` every time: leaving it out clears the choice |
 | `DELETE /api/admin/menu/categories/:id` | `409` while it still has items |
 | `PUT /api/admin/menu/items/:id` | `MenuItem` without id. Option ids must be unique within the item. Optional `tags`: allergens and diet marks from `MENU_TAGS` |
 | `DELETE /api/admin/menu/items/:id` | Past orders keep their own snapshot |

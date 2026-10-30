@@ -1,4 +1,4 @@
-# Database (schema version 6)
+# Database (schema version 7)
 
 SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openDb()`, which sets the pragmas and runs migrations.
 
@@ -11,6 +11,7 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 - v4 `receipt-design-versions`: the `receipt_templates` table.
 - v5 `money-dates`: `orders.paid_date` and `orders.void_date`, filled for existing orders from the payment time and the time of the void event (business time zone), and the trigger that fixes them.
 - v6 `drawer-cash-movements`: append-only cash-in/out journal, unique retry keys and reversal links.
+- v7 `category-color`: `menu_categories.color`, the colour the owner picked (empty means the next palette colour).
 - Pragmas on every connection: WAL, `foreign_keys`, `synchronous = FULL`, `recursive_triggers = ON`, `busy_timeout = 5000`.
 
 ## Tables

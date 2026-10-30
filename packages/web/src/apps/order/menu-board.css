@@ -17,6 +17,7 @@
 .mb-item b { font-size: clamp(25px, 2.2vw, 40px); color: var(--mb-accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mb-item b.mb-market { font-size: clamp(18px, 1.4vw, 25px); white-space: normal; text-align: right; }
 .mb-item p { font-size: clamp(17px, 1.2vw, 23px); line-height: 1.45; margin: 12px 0 0; color: var(--mb-muted); overflow-wrap: anywhere; }
+.mb-item .mb-tags { margin-top: 6px; font-size: clamp(15px, 1vw, 19px); font-weight: 700; color: inherit; }
 .mb-footer { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; color: var(--mb-muted); font-size: 15px; }
 .mb-footer strong { font-weight: 600; }
 .mb-progress { display: flex; margin-left: auto; }

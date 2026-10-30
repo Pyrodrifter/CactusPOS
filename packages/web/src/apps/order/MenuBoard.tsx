@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatMoney, MenuResponse, type Session } from '@cactus/shared';
+import { formatMoney, MenuResponse, menuTagText, type Session } from '@cactus/shared';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { keepScreenAwake } from '../../lib/display';
@@ -72,7 +72,7 @@ export function MenuBoard({ session }: { session: Session }) {
   return <main className={`menu-board${dark ? ' menu-board-dark' : ''}`}>
     <header className="mb-header"><div className="mb-brand"><Logo size={68} /><div><span>{c.menu}</span><h1>{session.business.name}</h1></div></div><p>{c.welcome}</p></header>
     <section className="mb-content" aria-label={c.menu}>
-      {current ? <div key={current.key} className="mb-page"><div className="mb-category"><span>{String(currentIndex + 1).padStart(2, '0')}</span><h2>{current.category.name}</h2><i /></div><div className="mb-items">{current.items.map((item) => <article key={item.id} className="mb-item"><div className="mb-item-title"><h3>{item.name}</h3><b className={item.openPrice ? 'mb-market' : ''}>{item.openPrice ? c.market : formatMoney(item.priceCents)}</b></div><p>{item.description || (item.openPrice ? c.ask : '')}</p></article>)}</div></div>
+      {current ? <div key={current.key} className="mb-page"><div className="mb-category"><span>{String(currentIndex + 1).padStart(2, '0')}</span><h2>{current.category.name}</h2><i /></div><div className="mb-items">{current.items.map((item) => <article key={item.id} className="mb-item"><div className="mb-item-title"><h3>{item.name}</h3><b className={item.openPrice ? 'mb-market' : ''}>{item.openPrice ? c.market : formatMoney(item.priceCents)}</b></div><p>{item.description || (item.openPrice ? c.ask : '')}</p>{!!item.tags?.length && <p className="mb-tags">{menuTagText(item.tags, language)}</p>}</article>)}</div></div>
         : <div className="mb-empty"><Icon name="menu" size={56} /><h2>{menu ? c.empty : offline ? c.retry : c.loading}</h2></div>}
     </section>
     <footer className="mb-footer"><strong>{menu && !menu.taxCategories.some((x) => x.kind === 'taxed') ? c.usd : c.tax}</strong><div className="mb-progress" aria-label={`${currentIndex + 1} / ${count || 1}`}>{pages.map((entry, index) => <button key={entry.key} aria-label={entry.category.name} aria-pressed={currentIndex === index} onClick={() => setPage(index)}><span /></button>)}</div>{offline && <span role="status">{menu ? c.stale : c.retry}</span>}</footer>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order, type Session,
+  computeTotals, formatMoney, categoryColor, isOpenTab, menuTagText, type MenuCategory, type MenuItem, type MenuResponse, type ModifierGroup, type Order, type Session,
 } from '@cactus/shared';
 import { api, ApiError, getSession, newRequestId, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
@@ -79,9 +79,7 @@ export function PosDraftProvider({ children, session }: { children: ReactNode; s
   return <DraftContext.Provider value={draft}>{children}</DraftContext.Provider>;
 }
 
-/** One colour per category (the palette of a hand-painted menu board), so the grid reads at a glance. */
-const CAT_COLORS = ['#0e93ab', '#e2741a', '#d63384', '#3f9a3a', '#3567e0', '#8a56d8'];
-const catStyle = (index: number) => ({ '--c': CAT_COLORS[Math.max(0, index) % CAT_COLORS.length] }) as CSSProperties;
+const catStyle = (categories: readonly MenuCategory[], id: string) => ({ '--c': categoryColor(categories, id) }) as CSSProperties;
 
 const money = (c: number) => formatMoney(c);
 const today = () => new Date().toISOString().slice(0, 10);
@@ -266,15 +264,16 @@ export function Pos() {
           <section className="menu">
             <div className="cats">
               <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="grid" />{ui.all}</button>
-              {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
+              {menu.categories.map((c) => <button key={c.id} style={catStyle(menu.categories, c.id)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
             <div className="pos-menu-caption"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
             <div className="items">
               {items.map((i) => (
-                <button key={i.id} className="item" style={catStyle(menu.categories.findIndex((x) => x.id === i.categoryId))} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
+                <button key={i.id} className="item" style={catStyle(menu.categories, i.categoryId)} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
                   <span className="pos-item-name">{i.name}</span>
                   {cart.some((l) => l.item.id === i.id) && <span className="pos-item-count pos-count">{cart.filter((l) => l.item.id === i.id).reduce((sum, l) => sum + l.qty, 0)}</span>}
                   {i.description && <small className="pos-item-description">{i.description}</small>}
+                  {!!i.tags?.length && <small className="pos-item-tags">{menuTagText(i.tags, lang)}</small>}
                   <span className="pos-item-footer"><b>{!i.available ? t('soldout') : i.openPrice ? t('pos.market') : money(i.priceCents)}</b><span className="pos-item-add"><Icon name={i.modifierGroups.length || i.openPrice ? 'more' : 'plus'} /></span></span>
                 </button>
               ))}
@@ -414,6 +413,7 @@ function ModifierSheet({ item, onAdd, onCancel }: { item: MenuItem; onAdd: (ids:
     <Sheet onCancel={onCancel} titleId="pos-modifier-title" kind="pos-modifier">
         <header className="pos-sheet-heading"><div><p className="pos-eyebrow">{c.options}</p><h2 id="pos-modifier-title">{item.name}</h2></div><button className="ghost pos-close" aria-label={c.close} onClick={onCancel}><Icon name="close" /></button></header>
         {item.description && <small className="muted">{item.description}</small>}
+        {!!item.tags?.length && <small className="pos-item-tags">{menuTagText(item.tags, lang)}</small>}
         {item.openPrice && (
           <div className="pos-price-entry"><h3>{t('pos.enterPrice')}</h3><div className="amount" aria-live="polite">{money(price)}</div><MoneyPad cents={price} onChange={setPrice} max={1_000_000} /></div>
         )}

@@ -336,3 +336,6 @@
 .draft-recovery .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .draft-restored { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .practice-sheet-label { display: block; padding: 8px 16px; background: #ffdf78; color: #352600; text-align: center; }
+.pos-item-tags { color: var(--ink); font-size: 13px; font-weight: 650; line-height: 1.35; }
+/* With marks under it, a description keeps to one whole line. */
+.pos .pos-item-description:has(+ .pos-item-tags) { -webkit-line-clamp: 1; padding-bottom: 2px; }

@@ -21,7 +21,7 @@ export class AdminService {
   /* ----- menu ----- */
   upsertCategory(c: MenuCategory, by: Staff): MenuCategory {
     return tx(this.db, () => {
-      this.db.prepare('INSERT INTO menu_categories(id, name, sort) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, sort = excluded.sort').run(c.id, c.name, c.sort);
+      this.db.prepare('INSERT INTO menu_categories(id, name, sort, color) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, sort = excluded.sort, color = excluded.color').run(c.id, c.name, c.sort, c.color ?? null);
       this.log('menu.category.saved', c, by);
       return c;
     });

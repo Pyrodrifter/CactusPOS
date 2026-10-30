@@ -54,7 +54,7 @@ export class PosService {
     return effectiveTaxCategories(categories, exemption);
   }
   menu(): MenuResponse {
-    const categories = this.db.prepare('SELECT id, name, sort FROM menu_categories ORDER BY sort, name').all() as unknown as MenuCategory[];
+    const categories = this.db.prepare('SELECT id, name, sort, color FROM menu_categories ORDER BY sort, name').all() as unknown as MenuCategory[];
     const items = (this.db.prepare('SELECT data FROM menu_items').all() as { data: string }[]).map((r) => JSON.parse(r.data) as MenuItem);
     return { categories, items, taxCategories: this.taxCategories() };
   }

@@ -58,8 +58,18 @@ export const MenuItem = z.object({
 });
 export type MenuItem = z.infer<typeof MenuItem>;
 
-export const MenuCategory = z.object({ id: z.string().min(1), name: z.string().min(1).max(60), sort: z.number().int().default(0) });
+/** One colour per category (the palette of a hand-painted menu board), so the till grid reads at a glance. */
+export const CATEGORY_COLORS = ['#0e93ab', '#e2741a', '#d63384', '#3f9a3a', '#3567e0', '#8a56d8', '#d13b3b', '#8a6a3b'] as const;
+export const MenuCategory = z.object({
+  id: z.string().min(1), name: z.string().min(1).max(60), sort: z.number().int().default(0),
+  /** Chosen by the owner; without one the category takes the next palette colour. */
+  color: z.string().regex(/^#[0-9a-f]{6}$/).nullable().optional(),
+});
 export type MenuCategory = z.infer<typeof MenuCategory>;
+export const categoryColor = (categories: readonly MenuCategory[], id: string) => {
+  const index = Math.max(0, categories.findIndex((c) => c.id === id));
+  return categories[index]?.color ?? CATEGORY_COLORS[index % CATEGORY_COLORS.length]!;
+};
 
 /* ---------- orders ---------- */
 export const OrderLineInput = z.object({

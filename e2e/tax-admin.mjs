@@ -1,4 +1,4 @@
-// Browser check for the Tax tab and typing menu prices without ABB (TAX01).
+// Browser check for the Tax tab and allergy marks on a menu item (TAX01, UX21).
 // MUTATES THE SAMPLE MENU AND TAX SETUP. Run through `npm run e2e`, which starts the throwaway till at localhost:3082.
 import assert from 'node:assert/strict';
 
@@ -8,7 +8,6 @@ export default async function (page) {
   assert.equal(await page.eval('location.origin'), 'http://localhost:3082', 'Use the throwaway till that `npm run e2e` starts');
   const text = (selector) => page.eval(`document.querySelector(${JSON.stringify(selector)})?.textContent ?? ''`);
   const menu = () => page.eval(`fetch('/api/menu', { headers: { 'x-token': JSON.parse(localStorage.getItem('cactus.session')).token } }).then((r) => r.json())`);
-  await page.eval(`localStorage.removeItem('cactus.admin.pricesWithoutAbb')`);
 
   /* The check shows what a $10.00 price holds and warns about unverified categories. */
   await page.goto('/admin');
@@ -38,26 +37,30 @@ export default async function (page) {
   assert.match(await text('.admin-dialog-foot .error'), /legal ground/, 'Refused without a ground');
   await page.click('.admin-dialog-actions .ghost');
 
-  /* Typing a price without ABB: $15.00 at 6% is stored as $15.90; the receipt gets the same $0.90 back. */
+  /* The menu creator has one price, the one the customer pays, and no ABB fields. Allergy marks save with the item. */
   await page.click({ text: 'Menu' });
   await page.click('[aria-label="Edit: Burger"]');
   assert.equal(await page.eval(`document.querySelector('.admin-dialog input[inputmode=decimal]').value`), '14.00');
-  await page.click({ text: 'Type prices without ABB' });
-  assert.equal(await page.eval(`document.querySelector('.admin-dialog input[inputmode=decimal]').value`), '13.21', 'Shows the price without its ABB');
-  await page.type('.admin-dialog input[inputmode=decimal]', '15.00');
-  assert.match(await text('.admin-dialog'), /Customer pays \$15\.90, of which \$0\.90 ABB \(6%\)/);
-  await page.shot('menu-price-without-abb');
+  assert.doesNotMatch(await text('.admin-dialog'), /ABB|Tax/, 'No tax in the menu creator');
+  await page.type('.admin-dialog input[inputmode=decimal]', '15.90');
+  await page.click({ text: 'Gluten' });
+  await page.shot('menu-item-allergies');
   await page.click('.admin-dialog-actions .primary');
   await page.wait(400);
-  assert.equal((await menu()).items.find((i) => i.id === 'burger').priceCents, 1590, 'Stored with ABB in it');
+  const burger = (await menu()).items.find((i) => i.id === 'burger');
+  assert.equal(burger.priceCents, 1590);
+  assert.deepEqual(burger.tags, ['gluten'], 'The allergy mark is saved');
 
-  /* Opening and saving untouched in that mode keeps the price to the cent. */
-  await page.click('[aria-label="Edit: Burger"]');
-  assert.equal(await page.eval(`document.querySelector('.admin-dialog input[inputmode=decimal]').value`), '15.00');
-  await page.click('.admin-dialog-actions .primary');
+  /* A category colour chosen in the menu is saved and reaches the till. */
+  await page.click('.menu-colors button:nth-of-type(4)');
+  await page.wait(500);
+  const colored = (await menu()).categories.find((c) => c.color);
+  assert.equal(colored?.color, '#3f9a3a', 'The chosen colour is saved');
+  await page.goto('/pos');
+  await page.wait(700);
+  assert.equal(await page.eval(`document.querySelector('.pos .cats button[style*="--c: #3f9a3a"], .pos .item[style*="--c: #3f9a3a"]') !== null`), true, 'The till uses the chosen colour');
+  await page.goto('/admin');
   await page.wait(400);
-  assert.equal((await menu()).items.find((i) => i.id === 'burger').priceCents, 1590);
-  await page.eval(`localStorage.removeItem('cactus.admin.pricesWithoutAbb')`);
 
   /* Switching ABB off for the whole business needs a reason; sales then carry no ABB; switching back restores it. */
   await page.click({ text: 'Tax (ABB)' });

@@ -151,7 +151,6 @@
 .menu-head .admin-add { grid-area: add; }
 .menu-title { grid-area: title; display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 280px; margin: 0; font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; }
 .admin-count { flex: none; background: #e8eee6; padding: 4px 12px; border-radius: 99px; font-size: 15px; font-weight: 600; white-space: nowrap; }
-.admin-list-note { margin: 14px 2px 0; font-size: 15px; line-height: 1.5; color: var(--admin-muted); }
 
 /* ---- messages ---- */
 .admin :is(.error, .ok) { border-radius: 14px; padding: 14px 16px; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -364,5 +363,14 @@
 .cash-drawer, .day-sales-review { margin-bottom: 20px; }
 
 /* Menu item: the tax category is shown, not chosen (it is set for the whole menu under Tax). */
-.admin .menu-tax-readonly, .admin-dialog .menu-tax-readonly { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.menu-tax-readonly strong { display: flex; align-items: center; min-height: 60px; padding: 0 14px; border: 1px dashed var(--line, #c9d3dc); border-radius: 12px; font-size: 17px; }
+
+/* Allergies and diet: tap to mark, tap again to clear. */
+.admin-dialog .menu-tags { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.admin-dialog .menu-tags button { min-height: var(--tap); padding: 6px 10px; font-size: 16px; font-weight: 650; }
+.admin-dialog .menu-tags button[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--card); }
+
+/* The category's colour on the till: one tap, saved at once. */
+.menu-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+.menu-colors > span { margin-right: 6px; font-size: 15px; font-weight: 650; color: var(--admin-muted); }
+.admin .menu-colors button { display: grid; place-items: center; width: var(--tap); height: var(--tap); min-width: 0; padding: 0; border: 0; border-radius: 14px; color: #fff; }
+.admin .menu-colors button[aria-pressed=true] { outline: 3px solid var(--ink); outline-offset: 2px; }
