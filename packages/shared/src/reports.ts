@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CentsZ, IsoDateTime, PaymentMethod, PriceZ } from './domain.js';
+import { CentsZ, IsoDateTime, PaymentMethod, PriceZ, Order } from './domain.js';
 import { IsoDate, TaxBreakdownRow } from './tax.js';
 import { DrawerSummary } from './cash.js';
 
@@ -92,3 +92,7 @@ export const ZReport = z.object({
 export type ZReport = z.infer<typeof ZReport>;
 export const ZReportList = z.array(ZReport);
 export const ReportQuery = z.object({ date: IsoDate.optional() });
+export const DayReview = z.object({ report: DayReport, closed: ZReport.nullable(), today: IsoDate,
+  revision: z.string().length(64), changedSinceClose: z.boolean() });
+export type DayReview = z.infer<typeof DayReview>;
+export const DaySales = z.array(Order);

@@ -11,6 +11,8 @@ export const CashMovement = CashMovementBody.extend({
   id: z.string().min(1), businessDate: IsoDate, at: IsoDateTime, staffId: z.string(), staffName: z.string(),
 });
 export type CashMovement = z.infer<typeof CashMovement>;
+export const CashRequestStatus = z.object({ movement: CashMovement.nullable() });
+export type CashRequestStatus = z.infer<typeof CashRequestStatus>;
 export const DrawerSummary = z.object({
   cashInCents: PriceZ, cashOutCents: PriceZ, expectedCents: CentsZ, movements: z.array(CashMovement),
 });

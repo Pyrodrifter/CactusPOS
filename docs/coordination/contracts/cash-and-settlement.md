@@ -3,6 +3,9 @@
 Owner confirmed 2026-10-30: count **all physical cash including opening float** at settlement.
 
 - Owner-only GET `/api/cash/movements?date=YYYY-MM-DD` returns `CashMovement[]` for a business date.
+- Owner-only read-only GET `/api/cash/movements/request/:id` returns `CashRequestStatus` (movement or null).
+  The browser saves the original cash request before sending, reads status after interruption, and offers an
+  explicit retry of that frozen request. No automatic write replay and no need to move the physical cash again.
 - Owner-only POST `/api/cash/movements` requires an `Idempotency-Key` and `CashMovementBody`: positive
   integer cents, direction `in|out`, required reason. Server stamps the current business date, staff id/name,
   UUID and timestamp. Opening float is a cash-in (record it each morning); top-ups and withdrawals are other
