@@ -102,5 +102,42 @@ export default async function (page) {
   assert.match(await page.eval("document.querySelector('.re-eyebrow').textContent"), /Version 1\s+Published/);
   assert.equal(await page.eval("document.querySelectorAll('.re-message:not(.re-code)').length"), 2);
   assert.equal(await page.eval("document.querySelectorAll('.re-code').length"), 2);
+  // A saved logo can carry the brand on its own. All switches survive publish/reload and old receipts stay fixed.
+  const branded = structuredClone(state.current.template);
+  branded.receipt.logo = branded.receipt.nameArt.image; // fixture logo with the brand already drawn in it
+  await call('PUT', '/admin/receipt-templates', { baseVersion: 1, template: branded });
+  await page.goto('/admin'); await page.click({ text: 'Receipt design' }); await settle();
+  await page.click('.re-logo-only');
+  for (const setting of ['showAddress', 'showDateTime', 'showTabName', 'showOrderNumber', 'showFooter', 'showPaymentDetails']) await page.click(`[data-setting="${setting}"]`);
+  await page.click('.re-message:not(.re-code) .re-entry-toggle');
+  await page.click('.re-code .re-entry-toggle'); await settle();
+  assert.equal(await page.eval("document.querySelector('[data-setting=showBusinessName]').getAttribute('aria-checked')"), 'false');
+  assert.ok(!/aria-label="Cactus Blue"/.test(await preview()), 'Separate name lettering is hidden');
+  assert.ok(!/Fresh from the grill/.test(await preview()), 'One disabled message is retained but hidden');
+  assert.ok(!/QR WIFI:/.test(await preview()), 'One disabled QR code is retained but hidden');
+  assert.match(await preview(), /QR https:\/\/www\.cactusblue\.us/);
+  await page.shot('receipt-logo-only-1180');
+  await page.size(390,844);
+  await page.eval("document.querySelector('[data-setting=showBusinessName]').scrollIntoView({block:'center'})");
+  const togglesAudit=await page.measure();
+  assert.deepEqual(togglesAudit.overflowX,[],JSON.stringify(togglesAudit)); assert.deepEqual(togglesAudit.small,[],JSON.stringify(togglesAudit));
+  await page.shot('receipt-toggles-390');
+  await page.size(1180,820); await page.click('.re-publish'); await page.wait(900);
+  const hidden = await call('GET', '/admin/receipt-templates');
+  assert.equal(hidden.current.version,3);
+  assert.equal(hidden.current.template.receipt.showBusinessName,false);
+  assert.equal(hidden.current.template.receipt.messages[0].enabled,false);
+  assert.equal(hidden.current.template.receipt.codes[0].enabled,false);
+  assert.ok(hidden.current.template.receipt.logo); assert.ok(hidden.current.template.receipt.nameArt);
+  const newOrder=await call('POST','/orders',{lines:[{itemId:'cola',qty:1}]});
+  await call('POST',`/orders/${newOrder.id}/pay`,{method:'cash'});
+  const newReceipt=await call('GET',`/orders/${newOrder.id}/receipt`);
+  assert.ok(!/aria-label="Cactus Blue"|Fresh from the grill|QR WIFI:/.test(newReceipt));
+  assert.match(newReceipt,/QR https:\/\/www\.cactusblue\.us/); assert.match(newReceipt,/TOTAL/);
+  assert.equal(await call('GET',`/orders/${order.id}/receipt`),receipt,'Already-issued receipt remains byte-for-byte unchanged');
+  await page.eval("localStorage.setItem('cactus.lang','nl')"); await page.goto('/admin'); await page.click({text:'Bonontwerp'}); await settle();
+  assert.match(await page.eval("document.querySelector('[data-setting=showBusinessName]').textContent"),/Bedrijfsnaam tonen/);
+  assert.equal(await page.eval("document.querySelector('[data-setting=showBusinessName]').getAttribute('aria-checked')"),'false');
+  await page.shot('receipt-logo-only-nl');
   console.log('Receipt editor: lettering for the name and a line, printer looks, divider, huge number, WiFi and link codes, publish and a real receipt passed.');
 }
