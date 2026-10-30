@@ -1,4 +1,4 @@
-# Database (schema version 5)
+# Database (schema version 6)
 
 SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openDb()`, which sets the pragmas and runs migrations.
 
@@ -10,6 +10,7 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 - v3 `z-reports`: the `z_reports` table.
 - v4 `receipt-design-versions`: the `receipt_templates` table.
 - v5 `money-dates`: `orders.paid_date` and `orders.void_date`, filled for existing orders from the payment time and the time of the void event (business time zone), and the trigger that fixes them.
+- v6 `drawer-cash-movements`: append-only cash-in/out journal, unique retry keys and reversal links.
 - Pragmas on every connection: WAL, `foreign_keys`, `synchronous = FULL`, `recursive_triggers = ON`, `busy_timeout = 5000`.
 
 ## Tables
@@ -36,6 +37,10 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 - Events written before v2 carry only a summary (no snapshot); for those orders the `orders` row remains the record and its payments were backfilled into `payments`.
 
 ## Writers and contention
+- Migration 6 adds append-only `cash_movements` (id, unique request_key, business_date, unique optional
+  reverses foreign key, JSON data). Update/delete/replace guards cover the id and every unique key. Entries
+  retain positive integer cents, direction, reason, staff id/name and server date/time; reversal is a new row.
+  See [cash and settlement](cash-and-settlement.md). No live entries are copied into practice.
 - All writes use `BEGIN IMMEDIATE`. A writer waits up to `busy_timeout` for another program, then fails with "database is locked" (HTTP 503, nothing written).
 - Receipt numbers are taken inside the payment transaction, so a failed payment never burns a number. Tested with four processes paying concurrently.
 - The server itself is a single process; multi-writer support exists for backups and tools, not for running two servers on one file.

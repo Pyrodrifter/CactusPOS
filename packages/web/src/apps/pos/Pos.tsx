@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order,
+  computeTotals, formatMoney, isOpenTab, type MenuItem, type MenuResponse, type ModifierGroup, type Order, type Session,
 } from '@cactus/shared';
 import { api, ApiError, getSession, newRequestId, printReceipt } from '../../lib/api';
 import { MENU_CHANGED, useOrders } from '../../lib/live';
@@ -11,6 +11,8 @@ import { haptic, MoneyPad, Stepper, toast } from '../../ui/touch';
 import { TabList, tabLabel } from './Tabs';
 import './pos.css';
 import { ServiceModeControl, useServiceMode } from './ServiceModeControl';
+import { isPractice } from '../../lib/clientMode';
+import { draftKey, emptyDraft, readDraft, saveDraft, type CartLine, type PendingSend, type SavedDraft } from './draftStore';
 
 const copy = {
   en: { menu: 'On the menu', choose: 'Choose something good', current: 'Your order', items: 'items', emptyTitle: 'A fresh start', options: 'Choose options', add: 'Add one', remove: 'Remove one', sending: 'Sending…', paying: 'Processing…', today: 'Today’s orders', required: 'Choose an option to continue', optional: 'Optional', paymentHint: 'Choose how the customer is paying', close: 'Close', loading: 'Loading menu…', sent: 'Sent to the kitchen', paid: 'Payment received', noItems: 'No items in this category', priceHint: 'Enter today’s price to continue', amountDue: 'Amount due' },
@@ -35,29 +37,45 @@ function Sheet({ children, onCancel, busy = false, dismissable = true, titleId, 
       const first = controls[0]; const last = controls.at(-1);
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
-    }}>{children}</div>
+    }}>{isPractice() && <strong className="practice-sheet-label">PRACTICE / OEFENEN</strong>}{children}</div>
   </div>;
 }
 
 type Menu = MenuResponse;
-interface CartLine { key: string; item: MenuItem; qty: number; optionIds: string[]; note?: string; priceCents?: number }
 
 // Lives above the routes, so the draft, an in-flight send and the reason a send failed survive screen changes.
-// Reload/sign-out clears it. The request identity survives a lost reply and a return to the till.
-function useDraftState() {
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [note, setNote] = useState('');
+// Device-local storage is scoped to staff, database instance and practice/live mode.
+function useDraftState(session: Session) {
+  const key = draftKey(session, location.origin, isPractice());
+  const [initial] = useState(() => { try { return readDraft(localStorage, key); } catch { return null; } });
+  const [cart, setCart] = useState<CartLine[]>(initial?.cart ?? []);
+  const [note, setNote] = useState(initial?.note ?? '');
   const [sending, setSending] = useState(false);
   const placing = useRef(false);
   const request = useRef({ signature: '', id: newRequestId() });
   // T29: when set, the cart is a new round for this open tab instead of a new order.
-  const [tab, setTab] = useState<{ id: string; label: string } | null>(null);
+  const [tab, setTab] = useState<{ id: string; label: string } | null>(initial?.tab ?? null);
+  const [pendingSend, setPendingSend] = useState<PendingSend | null>(initial?.pendingSend ?? null);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(initial?.paymentOrderId ?? null);
+  const [recovered, setRecovered] = useState(!!initial);
+  const [storageProblem, setStorageProblem] = useState(false);
+  const snapshot = useRef<SavedDraft>(emptyDraft());
+  snapshot.current = { version: 1, cart, note, tab, pendingSend, paymentOrderId };
+  const persist = (patch: Partial<SavedDraft> = {}) => {
+    const value = { ...snapshot.current, ...patch };
+    let ok = false;
+    try { ok = saveDraft(localStorage, key, value); } catch { /* restricted browser storage */ }
+    setStorageProblem(!ok); return ok;
+  };
+  useLayoutEffect(() => { persist(); }, [cart, note, tab, pendingSend, paymentOrderId]);
+  useEffect(() => { const flush = () => { try { saveDraft(localStorage, key, snapshot.current); } catch { /* unavailable */ } }; window.addEventListener('pagehide', flush); return () => window.removeEventListener('pagehide', flush); }, [key]);
   const [error, setError] = useState('');
-  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError };
+  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError,
+    pendingSend, setPendingSend, paymentOrderId, setPaymentOrderId, recovered, setRecovered, storageProblem, persist };
 }
 const DraftContext = createContext<ReturnType<typeof useDraftState> | null>(null);
-export function PosDraftProvider({ children }: { children: ReactNode }) {
-  const draft = useDraftState();
+export function PosDraftProvider({ children, session }: { children: ReactNode; session: Session }) {
+  const draft = useDraftState(session);
   return <DraftContext.Provider value={draft}>{children}</DraftContext.Provider>;
 }
 
@@ -77,7 +95,12 @@ export function Pos() {
   const serviceMode = useServiceMode();
   const { t, lang } = useLang();
   const c = copy[lang];
-  const { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError } = useContext(DraftContext)!;
+  const { cart, setCart, note, setNote, sending: transmitting, setSending, placing, request, tab, setTab, error, setError,
+    pendingSend, setPendingSend, paymentOrderId, setPaymentOrderId, recovered, setRecovered, storageProblem, persist } = useContext(DraftContext)!;
+  const sending = transmitting || !!pendingSend || !!paymentOrderId;
+  const pendingRef = useRef(pendingSend); pendingRef.current = pendingSend;
+  const [recoveredOrder, setRecoveredOrder] = useState<Order | null>(null);
+  const [checkingRecovery, setCheckingRecovery] = useState(false), [discarding, setDiscarding] = useState(false);
   const [naming, setNaming] = useState(false);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [cat, setCat] = useState('');
@@ -112,15 +135,44 @@ export function Pos() {
       setCat((c) => (m.categories.some((x) => x.id === c) ? c : ''));
       setUndo(null);
       // Drop cart lines whose item was removed or sold out while the order was being built.
-      setCart((lines) => lines.flatMap((l) => {
+      if (!pendingRef.current) setCart((lines) => lines.flatMap((l) => {
         const item = m.items.find((i) => i.id === l.item.id);
-        return item && item.available ? [{ ...l, item }] : [];
+        return item && item.available ? [{ ...l, item }] : recovered ? [l] : [];
       }));
     }).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
     load();
     window.addEventListener(MENU_CHANGED, load);
     return () => window.removeEventListener(MENU_CHANGED, load);
   }, []);
+
+  const received = (order: Order) => {
+    request.current = { signature: '', id: newRequestId() };
+    persist({ cart: [], note: '', tab: null, pendingSend: null, paymentOrderId: order.id });
+    setCart([]); setNote(''); setTab(null); setPendingSend(null); setPaymentOrderId(order.id); setRecoveredOrder(order); setRecovered(false); setError('');
+  };
+  const checkRecovery = async () => {
+    setCheckingRecovery(true);
+    try {
+      if (pendingSend) {
+        const result = await api<{ order: Order | null }>(`/request-status/${pendingSend.id}?kind=${pendingSend.kind}`);
+        if (result.order) received(result.order);
+      } else if (paymentOrderId) {
+        const order = await api<Order>(`/orders/${paymentOrderId}`); received(order);
+      }
+    } catch (problem) { setError(problem instanceof Error ? problem.message : String(problem)); }
+    finally { setCheckingRecovery(false); }
+  };
+  useEffect(() => { if (!transmitting && (pendingSend || paymentOrderId)) void checkRecovery(); }, []);
+  const retrySend = async () => {
+    if (!pendingSend || checkingRecovery) return;
+    setCheckingRecovery(true); setError('');
+    try {
+      const order = await api<Order>(pendingSend.kind === 'create' ? '/orders' : `/orders/${pendingSend.orderId}/lines`, { body: JSON.parse(pendingSend.body), requestId: pendingSend.id });
+      received(order);
+    } catch (problem) { setError(problem instanceof Error ? problem.message : String(problem)); }
+    finally { setCheckingRecovery(false); }
+  };
+  const dismissRecovery = () => { persist({ paymentOrderId: null }); setPaymentOrderId(null); setRecoveredOrder(null); setRecovered(false); };
 
   const totals = useMemo(() => {
     if (!menu || cart.length === 0) return null;
@@ -162,10 +214,15 @@ export function Pos() {
       const body = tab ? { lines } : { lines, note: note || undefined, tabName: tabName?.trim() || undefined };
       const signature = JSON.stringify([tab?.id ?? '', body]);
       if (request.current.signature !== signature) request.current = { signature, id: newRequestId() };
+      const pending: PendingSend = { id: request.current.id, kind: tab ? 'add' : 'create', orderId: tab?.id, body: JSON.stringify(body), intent: reportSuccess ? 'send' : 'pay' };
+      persist({ pendingSend: pending }); setPendingSend(pending);
       const order = await api<Order>(tab ? `/orders/${tab.id}/lines` : '/orders', {
         body, requestId: request.current.id,
       });
       request.current = { signature: '', id: newRequestId() };
+      const paymentId = !reportSuccess && !tab ? order.id : null;
+      persist({ cart: [], note: '', tab: null, pendingSend: null, paymentOrderId: paymentId });
+      setPendingSend(null); setPaymentOrderId(paymentId); setRecovered(false);
       setCart([]); setNote('');
       if (tab) {
         const message = `${tabUi.addedTo} ${tab.label}`;
@@ -177,7 +234,7 @@ export function Pos() {
         toast(`${message} · #${order.ticketNumber}`);
       }
       return order;
-    } catch (e) { setError(e instanceof ApiError ? e.message : String(e)); return null; }
+    } catch (e) { setError(e instanceof ApiError ? e.message : String(e)); setNaming(false); setPaying(null); return null; }
     finally { placing.current = false; setSending(false); }
   };
 
@@ -189,10 +246,15 @@ export function Pos() {
 
   return (
     <div className="pos">
+      {storageProblem && <p className="notice" role="alert">{lang === 'nl' ? 'Deze browser kan de bestelling niet op dit apparaat bewaren. Sluit de app niet tijdens een bestelling.' : 'This browser cannot save the cart on this device. Keep the app open while taking an order.'}</p>}
+      {recovered && !pendingSend && !paymentOrderId && <p className="notice draft-restored" role="status">{lang === 'nl' ? 'Uw onvoltooide bestelling is hersteld. Controleer de huidige prijzen voordat u verstuurt.' : 'Your unfinished cart was restored. Check current prices before sending.'}<button onClick={() => setRecovered(false)}>{lang === 'nl' ? 'Begrepen' : 'Got it'}</button></p>}
+      {pendingSend && !transmitting && <section className="draft-recovery notice" role="status"><strong>{lang === 'nl' ? 'Versturen was onderbroken' : 'Sending was interrupted'}</strong><p>{lang === 'nl' ? 'De bestelling kan al zijn ontvangen. Controleer of probeer dezelfde verzending opnieuw; de kassa gebruikt dezelfde sleutel.' : 'The order may already have arrived. Check its status or retry the same send; the till keeps the original request key.'}</p><div className="actions"><button className="draft-check" disabled={checkingRecovery} onClick={() => void checkRecovery()}>{lang === 'nl' ? 'Bevestiging controleren' : 'Check confirmation'}</button><button className="primary draft-retry" disabled={checkingRecovery} onClick={() => void retrySend()}>{lang === 'nl' ? 'Dezelfde verzending herhalen' : 'Retry original send'}</button><button disabled={checkingRecovery} onClick={() => setDiscarding(true)}>{lang === 'nl' ? 'Concept wegdoen' : 'Discard draft'}</button></div></section>}
+      {recoveredOrder && <section className="draft-recovery notice" role="status"><strong>{lang === 'nl' ? 'Bestelling teruggevonden' : 'Order recovered'} · #{recoveredOrder.ticketNumber}</strong><p>{recoveredOrder.paid ? (lang === 'nl' ? 'Al betaald. Breng niets opnieuw in rekening.' : 'Already paid. Do not charge again.') : (lang === 'nl' ? 'De bestelling is ontvangen, maar een betaling is niet bevestigd. Controleer de betaalautomaat voordat u een betaling vastlegt.' : 'The order was received, but payment is not confirmed. Check the card terminal before recording a payment.')}</p><div className="actions">{!recoveredOrder.paid && recoveredOrder.status !== 'void' && <button className="primary draft-resume-pay" onClick={() => setPaying({ order: recoveredOrder })}>{lang === 'nl' ? 'Betaling afronden' : 'Continue payment'}</button>}<button onClick={() => { setView('orders'); dismissRecovery(); }}>{lang === 'nl' ? 'Bestellingen bekijken' : 'View Orders'}</button><button className="draft-reviewed" onClick={dismissRecovery}>{lang === 'nl' ? 'Bestelling gecontroleerd' : 'Order checked'}</button></div></section>}
+      {discarding && <Sheet titleId="discard-draft" kind="draft-discard" onCancel={() => setDiscarding(false)}><h2 id="discard-draft">{lang === 'nl' ? 'Concept wegdoen?' : 'Discard this draft?'}</h2><p>{lang === 'nl' ? 'Controleer eerst Bestellingen: een eerdere verzending kan al zijn ontvangen. Dit verwijdert alleen het concept op dit apparaat, nooit een verkoop op de server.' : 'Check Orders first: an earlier send may already have arrived. This clears only this device’s draft, never a server sale.'}</p><div className="actions"><button onClick={() => setDiscarding(false)}>{lang === 'nl' ? 'Bewaren' : 'Keep draft'}</button><button className="primary" onClick={() => { persist(emptyDraft()); setCart([]); setNote(''); setTab(null); setPendingSend(null); setPaymentOrderId(null); setRecovered(false); setDiscarding(false); }}>{lang === 'nl' ? 'Concept wegdoen' : 'Discard draft'}</button></div></Sheet>}
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
       <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
-        <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="staff" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
+        <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="tabs" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || (o.serviceMode !== 'counter' && o.status !== 'collected'))).length}</span></button>
       </div>
       {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
@@ -203,7 +265,7 @@ export function Pos() {
         <div className="pos-grid">
           <section className="menu">
             <div className="cats">
-              <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="menu" />{ui.all}</button>
+              <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="grid" />{ui.all}</button>
               {menu.categories.map((c, index) => <button key={c.id} style={catStyle(index)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
             <div className="pos-menu-caption"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
@@ -279,7 +341,7 @@ export function Pos() {
       {paying && (
         <PaySheet
           total={'order' in paying ? paying.order.totalCents : paying.cartTotal}
-          onCancel={() => setPaying(null)}
+          onCancel={() => { setPaying(null); if (paymentOrderId) void checkRecovery(); }}
           onPay={async (body) => {
             // The amount on the sheet is what the cashier agreed with the guest (and typed into the card terminal).
             const shown = 'order' in paying ? paying.order.totalCents : paying.cartTotal;
@@ -287,10 +349,13 @@ export function Pos() {
             if (!order) throw new Error(t('pay.failed'));
             // Keep the created order for a payment retry; never create the cart twice.
             setPaying({ order });
+            persist({ paymentOrderId: order.id }); setPaymentOrderId(order.id);
             // With a receipt printer the server prints on payment. Without one nothing prints by itself:
             // a print dialog nobody asked for blocks the till. The paid screen has a Receipt button.
             try {
-              return await api<Order>(`/orders/${order.id}/pay`, { body: { ...body, expectedTotalCents: shown }, requestId: `pay-${order.id}` });
+              const paid = await api<Order>(`/orders/${order.id}/pay`, { body: { ...body, expectedTotalCents: shown }, requestId: `pay-${order.id}` });
+              persist({ paymentOrderId: null }); setPaymentOrderId(null); setRecoveredOrder(null);
+              return paid;
             } catch (e) {
               // 409: the order is no longer what this sheet shows (a round was added on another screen, or it was
               // paid there). Show it as it is now; nothing was recorded, and the cashier confirms the new amount.
@@ -454,13 +519,13 @@ function PaySheet({ total, onPay, onCancel }: {
  * payment method. The server keeps the original on record as void and makes a replacement sale with its own
  * receipt number; this sheet only says what to give back or collect.
  */
-function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: Menu; onDone: () => void; onCancel: () => void }) {
+export function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: Menu; onDone: () => void; onCancel: () => void }) {
   const { t, lang } = useLang();
   const c = copy[lang];
   const ui = lang === 'nl' ? {
     eyebrow: 'Bon', title: 'Bestelling corrigeren', addItem: 'Iets toevoegen', search: 'Zoek op het menu', added: 'Toegevoegd', was: 'Was', now: 'Wordt',
     reason: 'Wat ging er mis?', reasons: ['Verkeerd artikel', 'Verkeerd aantal', 'Verkeerde betaalwijze'], save: 'Correctie opslaan', done: 'Gecorrigeerd',
-    same: 'Het totaal blijft gelijk.', moved: (m: string) => `Het totaal blijft gelijk. De betaling telt nu als ${m}.`,
+    same: 'Het totaal blijft gelijk.', moved: (m: string) => `De betaalwijze wordt ${m}. Controleer de werkelijke contante en pinbetalingen voordat u geld teruggeeft of bijvraagt.`,
     back: (a: string, card: boolean) => (card ? `Stort ${a} terug op het pinapparaat.` : `Geef ${a} terug uit de lade.`),
     more: (a: string, card: boolean) => (card ? `Reken ${a} extra af op het pinapparaat.` : `Vraag ${a} extra.`),
     keeps: 'De eerste bon blijft bewaard als geannuleerd. De gecorrigeerde verkoop krijgt een nieuw bonnummer.', empty: 'Er moet minstens één artikel overblijven. Annuleer de bestelling als alles weg moet.',
@@ -468,7 +533,7 @@ function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: M
   } : {
     eyebrow: 'Receipt', title: 'Correct order', addItem: 'Add something', search: 'Search the menu', added: 'Added', was: 'Was', now: 'Becomes',
     reason: 'What went wrong?', reasons: ['Wrong item', 'Wrong quantity', 'Wrong payment method'], save: 'Save correction', done: 'Corrected',
-    same: 'The total stays the same.', moved: (m: string) => `The total stays the same. The payment now counts as ${m}.`,
+    same: 'The total stays the same.', moved: (m: string) => `Payment method becomes ${m}. Verify actual cash and card transactions before making a refund or extra charge.`,
     back: (a: string, card: boolean) => (card ? `Refund ${a} on the card machine.` : `Give ${a} back from the drawer.`),
     more: (a: string, card: boolean) => (card ? `Charge ${a} more on the card machine.` : `Collect ${a} more.`),
     keeps: 'The first receipt stays on record as void. The corrected sale gets a new receipt number.', empty: 'At least one item has to stay. Void the order if everything has to go.',
@@ -500,8 +565,7 @@ function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: M
     setAdded((list) => [...list, { key: `${item.id}|${Date.now()}|${list.length}`, item, qty: n, optionIds, priceCents }]);
     setQuery('');
   };
-  const money$ = diff === 0
-    ? (method !== paidBy ? ui.moved(method === 'card' ? ui.card : ui.cash) : ui.same)
+  const money$ = method !== paidBy ? ui.moved(method === 'card' ? ui.card : ui.cash) : diff === 0 ? ui.same
     : diff < 0 ? ui.back(money(-diff), method === 'card') : ui.more(money(diff), method === 'card');
   const save = async () => {
     if (busy) return;

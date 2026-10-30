@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ServerEventSchema, type Order, type ServerEvent } from '@cactus/shared';
 import { api, getSession } from './api';
 import { openLive } from './liveSocket';
+import { appBase } from './clientMode';
 
 /** Parses a socket message; anything that is not a known, well-formed event is ignored. */
 function readEvent(data: unknown): ServerEvent | null {
@@ -12,7 +13,7 @@ function readEvent(data: unknown): ServerEvent | null {
   } catch { return null; }
 }
 
-const socketUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?${query}`;
+const socketUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${appBase()}/ws?${query}&screen=${encodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) ?? 'pos')}`;
 
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';

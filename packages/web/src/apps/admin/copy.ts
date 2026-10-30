@@ -3,7 +3,7 @@ import { useLang } from '../../i18n';
 const copy = {
   en: {
     title: 'Make it yours', intro: 'Your menu, team and truck settings in one place.',
-    receiptDesign: 'Receipt design', groups: { daily: 'Every day', setup: 'Set up', records: 'Records' },
+    receiptDesign: 'Receipt design', openingTitle: 'Ready to open', groups: { daily: 'Every day', setup: 'Set up', records: 'Records' },
     reports: 'Today at a glance, and closing the day for the books.',
     menu: 'Keep your menu ready for service. Prices include ABB.',
     business: 'Business details and the personal touches on every receipt.',
@@ -35,7 +35,7 @@ const copy = {
   },
   nl: {
     title: 'Maak het eigen', intro: 'Je menu, team en instellingen op één plek.',
-    receiptDesign: 'Bonontwerp', groups: { daily: 'Elke dag', setup: 'Instellen', records: 'Administratie' },
+    receiptDesign: 'Bonontwerp', openingTitle: 'Klaar om te openen', groups: { daily: 'Elke dag', setup: 'Instellen', records: 'Administratie' },
     reports: 'Vandaag in één oogopslag, en de dag afsluiten voor de boekhouding.',
     menu: 'Houd je menu klaar voor verkoop. Prijzen zijn inclusief ABB.',
     business: 'Bedrijfsgegevens en de persoonlijke details op elke bon.',

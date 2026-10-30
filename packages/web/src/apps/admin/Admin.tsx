@@ -14,15 +14,16 @@ import { useAdminCopy } from './copy';
 import { ScrollRow } from './controls';
 import './admin.css';
 import { ReceiptEditor } from './receipt-editor/ReceiptEditor';
+import { OpeningCheck } from './OpeningCheck';
 
-type Tab = 'reports' | 'menu' | 'receipts' | 'business' | 'staff' | 'tax' | 'printer' | 'books' | 'backups';
+type Tab = 'reports' | 'opening' | 'menu' | 'receipts' | 'business' | 'staff' | 'tax' | 'printer' | 'books' | 'backups';
 /** The pages in three groups: what is used every day, what is set up once, and the records kept for later. */
 const GROUPS: { id: 'daily' | 'setup' | 'records'; tabs: Tab[] }[] = [
-  { id: 'daily', tabs: ['reports', 'menu'] },
+  { id: 'daily', tabs: ['reports', 'opening', 'menu'] },
   { id: 'setup', tabs: ['receipts', 'business', 'staff', 'tax', 'printer'] },
   { id: 'records', tabs: ['books', 'backups'] },
 ];
-const tabIcons: Record<Tab, IconName> = { reports: 'receipt', menu: 'menu', receipts: 'edit', business: 'leaf', staff: 'staff', tax: 'tax', printer: 'printer', books: 'download', backups: 'refresh' };
+const tabIcons: Record<Tab, IconName> = { opening: 'check', reports: 'chart', menu: 'grid', receipts: 'edit', business: 'store', staff: 'staff', tax: 'tax', printer: 'printer', books: 'book', backups: 'backup' };
 
 export function Admin() {
   const { t } = useLang();
@@ -31,7 +32,7 @@ export function Admin() {
   const root = useRef<HTMLDivElement>(null);
   /* The tabs stay pinned, so a new tab starts at its top instead of wherever the last one was scrolled to. */
   const choose = (x: Tab) => { setTab(x); root.current?.closest('main')?.scrollTo({ top: 0 }); };
-  const label = (x: Tab) => (x === 'receipts' ? copy.receiptDesign : t(`admin.${x}`));
+  const label = (x: Tab) => (x === 'receipts' ? copy.receiptDesign : x === 'opening' ? copy.openingTitle : t(`admin.${x}`));
   // A new database starts with the PINs 1234 and 1111. Until they are changed, the first Admin page says so
   // (one quiet line, not on every page); checked again after a visit to Staff.
   const [examplePins, setExamplePins] = useState<string[]>([]);
@@ -59,10 +60,10 @@ export function Admin() {
       </div>
       <div className="admin-body">
         {/* Menu and Staff show their one line of help beside their own buttons, to keep the list high on the screen.
-            The receipt editor opens with a heading of its own, so its page name is only for screen readers. */}
-        <header className={`admin-page-head${tab === 'receipts' ? ' is-quiet' : ''}`}>
+            The receipt editor and Ready to open have a heading of their own, so their page name is only for screen readers. */}
+        <header className={`admin-page-head${tab === 'receipts' || tab === 'opening' ? ' is-quiet' : ''}`}>
           <h1>{label(tab)}</h1>
-          {tab !== 'menu' && tab !== 'staff' && tab !== 'receipts' && <p>{copy[tab]}</p>}
+          {tab !== 'menu' && tab !== 'staff' && tab !== 'receipts' && tab !== 'opening' && <p>{copy[tab]}</p>}
         </header>
         {examplePins.length > 0 && tab === 'reports' && (
           <p className="notice admin-pin-reminder" role="status">
@@ -70,6 +71,7 @@ export function Admin() {
             <button type="button" onClick={() => choose('staff')}><Icon name="staff" />{t('admin.staff')}</button>
           </p>
         )}
+        {tab === 'opening' && <OpeningCheck />}
         {tab === 'receipts' && <ReceiptEditor />}
         {tab === 'reports' && <ReportsAdmin />}
         {tab === 'menu' && <MenuAdmin />}

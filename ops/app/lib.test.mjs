@@ -18,6 +18,11 @@ describe('dataHome', () => {
 });
 
 describe('settings', () => {
+  it('validates local discovery settings and supports disabling the optional listener', () => {
+    expect(normalizeConfig({ hostname: 'other-shop.local', lanPort: 0, lanEnabled: false }).problems).toEqual([]);
+    expect(normalizeConfig({ hostname: 'bad.local/pos', lanPort: -1, lanEnabled: 'yes' }).problems).toHaveLength(3);
+    expect(parseArgs(['--hostname', 'other-shop.local', '--lan-port', '8080', '--no-lan']).overrides).toEqual({ hostname: 'other-shop.local', lanPort: 8080, lanEnabled: false });
+  });
   it('reads a file saved with a byte order mark, and an empty file', () => {
     expect(parseConfigText(`${String.fromCharCode(0xfeff)}{ "port": 3100 }`)).toEqual({ port: 3100 });
     expect(parseConfigText('  ')).toEqual({});

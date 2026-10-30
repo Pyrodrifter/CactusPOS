@@ -10,3 +10,8 @@ coverage/
 !.env.example
 .local/
 .claude/
+ops/android/.gradle/
+ops/android/**/build/
+ops/android/local.properties
+*.jks
+*.keystore

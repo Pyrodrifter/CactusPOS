@@ -38,6 +38,11 @@ export class Auth {
   login(pin: string): { token: string; staff: Staff } | null {
     const staff = this.findByPin(pin);
     if (!staff) return null;
+    return this.sessionFor(staff);
+  }
+
+  /** Used after an already authenticated operator explicitly enters the isolated practice till. */
+  sessionFor(staff: Staff): { token: string; staff: Staff } {
     const token = randomUUID() + randomBytes(8).toString('hex');
     this.db.prepare('INSERT INTO sessions(token, staff_id, created_at) VALUES (?,?,?)').run(token, staff.id, new Date().toISOString());
     return { token, staff };

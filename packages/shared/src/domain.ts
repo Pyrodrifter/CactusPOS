@@ -258,8 +258,9 @@ export const ErrorResponse = z.object({ error: z.string(), issues: z.array(z.unk
 /** `app` lets the launcher tell CactusPOS from another program on the port; `startedAt` identifies one run of the server. */
 export const HealthResponse = z.object({
   ok: z.literal(true), app: z.literal('cactuspos'), version: z.string(), startedAt: IsoDateTime, business: z.string(), time: IsoDateTime,
+  instanceId: z.string().optional(), mode: z.enum(['live', 'practice']).optional(),
 });
-export const LoginResponse = z.object({ token: z.string().min(16), staff: StaffSchema, business: BusinessSchema });
+export const LoginResponse = z.object({ token: z.string().min(16), staff: StaffSchema, business: BusinessSchema, instanceId: z.string().optional(), mode: z.enum(['live', 'practice']).optional() });
 /** What the browser keeps after signing in. */
 export type Session = z.infer<typeof LoginResponse>;
 export const MenuResponse = z.object({

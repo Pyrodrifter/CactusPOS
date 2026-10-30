@@ -14,13 +14,15 @@ import { Kitchen } from './apps/kitchen/Kitchen';
 import { Pickup } from './apps/pickup/Pickup';
 import { Admin } from './apps/admin/Admin';
 import { MenuBoard } from './apps/order/MenuBoard';
+import { appBase, isPractice, androidPracticeSupported } from './lib/clientMode';
+import { PracticeBanner } from './ui/PracticeMode';
 
 function Shell({ session }: { session: Session }) {
   // A tablet locked to the kitchen (Screen tools) has no other screen: every address leads back there.
   const { kitchenLock } = useDevicePrefs();
   return (
-    <PosDraftProvider><AppShell session={session}>
-        {kitchenLock ? (
+    <PosDraftProvider session={session}><AppShell session={session}>
+        {isPractice() && !androidPracticeSupported() ? <p className="notice">Update the Android app to use practice mode safely. / Werk de Android-app bij om veilig te oefenen.</p> : kitchenLock ? (
           <Routes>
             <Route path="/kitchen" element={<Kitchen />} />
             <Route path="*" element={<Navigate to="/kitchen" replace />} />
@@ -42,10 +44,11 @@ function App() {
   const { kitchenLock } = useDevicePrefs();
   const home = kitchenLock ? '/kitchen' : '/pos';
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={appBase() || undefined}>
       <div className="app-frame">
         <Toasts />
         <PwaStatus />
+        <PracticeBanner />
         <Routes>
           <Route path="/pickup" element={<Pickup />} />
           <Route path="/menu-board" element={session ? <MenuBoard session={session} /> : <Navigate to="/login?next=menu-board" replace />} />

@@ -2,6 +2,8 @@
 
 Format: `- [ ] R<n> from <lane> to <lane> (date): request — link/context`. The owning lane closes with `[x]` and a short note.
 
+- [x] R21 from web-core to web-pos/web-admin/ops (2026-10-13): Owner requested a final UI/icon pass. UX15 adds semantic SVG symbols to the POS and Admin and updates screen tools. English/Dutch manual pictures regenerated per R20; labels and flows are unchanged. No consumer action required. See [UX15 handoff](handoffs/2026-10-13-codex-UX15.md).
+
 - [x] R12 from web-core to web-pos/web-admin/web-screens (2026-10-08): Owner stopped the other agents and authorized Codex to continue UI work. UX08 restores top navigation, adds staff display tools and polishes POS; pickup is excluded. Do not reintroduce the UX07 left rail/bottom bar when integrating stopped work. The updated [touch contract](contracts/touch-ui.md) and [UX08 handoff](handoffs/2026-10-08-codex-UX08.md) describe the integrated behavior; no cross-lane action is currently required.
 
 
@@ -26,3 +28,8 @@ Format: `- [ ] R<n> from <lane> to <lane> (date): request — link/context`. The
 - [ ] R18 from claude to codex (2026-10-10), review and heads-up: the owner asked for an app audit and then for every finding to be fixed. A01–A09 and T27 (backups) are in `review`: [audit](handoffs/2026-10-10-claude-app-audit.md), [fixes](handoffs/2026-10-10-claude-audit-fixes.md). Shared files you also work in changed: `lib/api.ts` (every request has a 12 s limit; no answer is `ApiError` status 0, not a `TypeError`), `lib/live.ts` (connection handling moved to `lib/liveSocket.ts`, reconnects after 40 s of silence), `Pos.tsx` (pay sends `expectedTotalCents`; the send error lives in the draft context), `Admin.tsx` (Backups tab, example-PIN line), `app.ts`, `service.ts`, `db.ts` (schema 5). `Order`, `PayBody` and `DayReport` gained optional fields. Started without `CACTUS_DB`, the server now opens `%LOCALAPPDATA%\CactusPOS\data\cactus.sqlite` instead of `data/` under the start folder; `npm run dev` is unchanged. `npm run e2e` runs the browser checks against a throwaway till; please add new scenarios to `e2e/` and keep `e2e/run.mjs`'s order list in step.
 - [ ] R17 from web-core/web-pos (claude) to codex (2026-10-09), please merge master into UX09: the owner tested the UX09 working tree and got stuck on the "Paid" screen. Cause (old code of mine, also on your branch): after a payment without a receipt printer the till opened the receipt in a popup window and called `print()` there. A print dialog in a popup freezes the page that opened it, and the popup was behind the till, so no tap did anything. Fixed on master in `lib/print.ts` (new, prints from a sandboxed frame inside the page), `lib/api.ts`, `ReportsAdmin.tsx` and two spots in `Pos.tsx` (no automatic browser print after paying; the Receipt button on the paid screen prints the original first, copies after). If the receipt editor previews or prints HTML, please use `printHtml()` and never `window.open(...).print()`. See handoffs/2026-10-09-claude-fix-receipt-popup.md.
 
+- [ ] R22 from REL08 server/web-admin to books (2026-10-30): new optional `DayReport.drawer` captures cash-in/out
+  and expected physical cash; `ZReport.cashCountBasis` identifies whole-drawer vs legacy sales-only count.
+  Cash variance remains correct; sales/PBK tender postings keep their meaning. Please extend daily CSV with
+  explicit count-basis/drawer columns and design cash-transfer account mapping once Allan answers Q35.
+  Do not post float or withdrawals as sales/ABB. Contract: `contracts/cash-and-settlement.md`.

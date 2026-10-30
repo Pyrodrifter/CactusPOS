@@ -25,6 +25,71 @@ const before = (bytes: Uint8Array, seq: number[], text: string) => {
   return at >= 0 && cmd >= 0;
 };
 
+describe('receipt visibility controls', () => {
+  const logo = { width: 8, height: 1, hex: 'aa' };
+  it('prints an uploaded logo without a duplicate business name or name lettering', () => {
+    const d = design({ logo, nameArt: art(biz.name), showBusinessName: false });
+    const blocks = buildReceipt(order, biz, { design: d });
+    expect(blocks.some((b) => b.t === 'raster' && b.image === d.logo)).toBe(true);
+    expect(blocks.some((b) => b.t === 'raster' && b.alt === biz.name)).toBe(false);
+    expect(renderText(blocks)).not.toContain(biz.name);
+    expect(has(renderEscPos(blocks), [0x1d, 0x76, 0x30, 0, 1, 0, 1, 0, 0xaa])).toBe(true);
+    expect(renderHtml(blocks)).not.toContain(`>${biz.name}</div>`);
+    expect(renderText(buildReceipt(order, biz, { design: { ...d, showLogo: false, showBusinessName: true } }))).toContain(biz.name);
+  });
+  it('hides header lines independently without deleting saved words or images', () => {
+    const d = design({ logo, title: 'TOP SENTINEL', subtitle: 'SUB SENTINEL', showLogo: false, showBusinessName: false, showAddress: false, showPhone: false, showTitle: false, showSubtitle: false });
+    const text = renderText(buildReceipt(order, biz, { design: d }));
+    for (const value of [biz.name, biz.address, biz.phone, 'TOP SENTINEL', 'SUB SENTINEL']) if (value) expect(text).not.toContain(value);
+    expect(text).toContain(`CRIB ${biz.crib}`);
+    expect(d.logo).toEqual(logo); expect(d.title).toBe('TOP SENTINEL');
+  });
+  it('hides duplicate order numbers, time and tab labels while preserving receipt identity and status', () => {
+    const sample = { ...order, tabName: 'TAB SENTINEL', status: 'void' as const };
+    const text = renderText(buildReceipt(sample, biz, { copy: true, design: design({ showOrderNumber: false, showDateTime: false, showTabName: false }) }));
+    expect(text).toContain(`Receipt #${order.receiptNumber}`); expect(text).toContain('COPY'); expect(text).toContain('VOID');
+    expect(text).not.toContain(`Ticket ${order.ticketNumber}`); expect(text).not.toContain(`ORDER #${order.ticketNumber}`); expect(text).not.toContain('TAB SENTINEL');
+    const date = new Intl.DateTimeFormat('en-GB', { timeZone: biz.timezone, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(order.payments[0]!.at));
+    expect(text).not.toContain(date);
+  });
+  it('hides the payment section or only the card reference without changing totals', () => {
+    const sample = { ...order, payments: [{ ...order.payments[0]!, method: 'card' as const, reference: 'REFERENCE_SENTINEL', tipCents: 123 }] };
+    const without = buildReceipt(sample, biz, { design: design({ showPaymentDetails: false }) });
+    expect(without.some((b) => b.t === 'row' && /^(Cash|Card|Change|Tip)/.test(b.left))).toBe(false);
+    expect(without.some((b) => b.t === 'row' && b.left === 'TOTAL')).toBe(true);
+    const card = renderText(buildReceipt(sample, biz, { design: design({ showPaymentReference: false }) }));
+    expect(card).toContain('Card'); expect(card).not.toContain('REFERENCE_SENTINEL'); expect(card).toContain('Tip');
+  });
+  it('disables individual messages/QR codes or all extras without discarding their configuration', () => {
+    const d = design({ messages: [{ text: 'OFF SENTINEL', bold: false, align: 'left', enabled: false }, { text: 'ON SENTINEL', bold: false, align: 'left' }],
+      codes: [{ kind: 'link', value: 'https://disabled.example', enabled: false }, { kind: 'link', value: 'https://enabled.example' }] });
+    const blocks = buildReceipt(order, biz, { design: d });
+    expect(renderText(blocks)).not.toContain('OFF SENTINEL'); expect(renderText(blocks)).toContain('ON SENTINEL');
+    expect(blocks.filter((b) => b.t === 'qr').map((b) => b.data)).toEqual(['https://enabled.example']);
+    const allOff = buildReceipt(order, biz, { design: { ...d, showMessages: false, showCodes: false } });
+    expect(renderText(allOff)).not.toContain('ON SENTINEL'); expect(allOff.some((b) => b.t === 'qr')).toBe(false);
+    expect(d.messages).toHaveLength(2); expect(d.codes).toHaveLength(2);
+  });
+  it('suppresses both an explicit/footer fallback and a closing image independently', () => {
+    const d = design({ closing: logo, showFooter: false, showClosingImage: false });
+    const sampleBiz = { ...biz, receiptFooter: 'BUSINESS FOOTER SENTINEL' };
+    expect(renderText(buildReceipt(order, sampleBiz, { design: d }))).not.toContain('BUSINESS FOOTER SENTINEL');
+    expect(renderText(buildReceipt(order, sampleBiz, { design: { ...d, footer: 'DESIGN FOOTER SENTINEL' } }))).not.toContain('DESIGN FOOTER SENTINEL');
+    expect(buildReceipt(order, biz, { design: d }).some((b) => b.t === 'raster')).toBe(false);
+    expect(buildReceipt(order, biz, { design: { ...d, showClosingImage: true } }).some((b) => b.t === 'raster')).toBe(true);
+  });
+  it('keeps kitchen routing/preparation instructions when optional branding/time/tab details are off', () => {
+    const sample = { ...order, tabName: 'TAB SENTINEL', note: 'ORDER NOTE SENTINEL', lines: order.lines.map((line) => ({ ...line, note: 'LINE NOTE SENTINEL', modifiers: [{ id: 'extra', name: 'EXTRA SENTINEL', priceDeltaCents: 0 }] })) };
+    const blocks = buildKitchenTicket(sample, biz, { design: design({ logo, showBusinessName: false, showLogo: false, showOrderNumber: false, showDateTime: false, showTabName: false, showNotes: false, showModifiers: false }) });
+    const text = renderText(blocks);
+    expect(text).toContain(`ORDER #${order.ticketNumber}`); expect(text).toContain('ORDER NOTE SENTINEL');
+    expect(text).toContain('LINE NOTE SENTINEL'); expect(text).toContain('EXTRA SENTINEL');
+    expect(text).not.toContain(biz.name); expect(text).not.toContain('TAB SENTINEL');
+    for (const line of order.lines) for (const modifier of line.modifiers) expect(text).toContain(modifier.name);
+    expect(blocks.find((b) => b.t === 'row')).toMatchObject({ right: '' });
+  });
+});
+
 describe('designs saved before looks existed', () => {
   it('still parse, and print byte for byte as they did', () => {
     const old = { receipt: { widthMm: 80, align: 'center', title: 'Welcome', subtitle: 'Donkey Beach', footer: '', logo: null, numberSize: 'large', itemSize: 'normal', separator: 'solid', showPhone: true, showModifiers: true, showNotes: true, messages: [{ text: 'See you soon', bold: true, align: 'center' }] }, kitchen: DEFAULT_RECEIPT_TEMPLATE.kitchen };

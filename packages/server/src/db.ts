@@ -179,6 +179,18 @@ BEGIN SELECT RAISE(ABORT, 'the day an order was paid or voided cannot change onc
   },
 });
 
+MIGRATIONS.push({ version: 6, name: 'drawer-cash-movements', up: (db) => {
+  db.exec(`CREATE TABLE cash_movements (
+    id TEXT PRIMARY KEY, request_key TEXT NOT NULL UNIQUE, business_date TEXT NOT NULL,
+    reverses TEXT UNIQUE REFERENCES cash_movements(id), data TEXT NOT NULL
+  );
+  CREATE INDEX cash_movements_date ON cash_movements(business_date);
+  CREATE TRIGGER cash_movements_unique_keys BEFORE INSERT ON cash_movements
+  WHEN EXISTS (SELECT 1 FROM cash_movements WHERE request_key=NEW.request_key OR (NEW.reverses IS NOT NULL AND reverses=NEW.reverses))
+  BEGIN SELECT RAISE(ABORT, 'cash_movements is append-only'); END;
+  ${appendOnly('cash_movements', 'id')}`);
+} });
+
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
 export function schemaVersion(db: DB): number {

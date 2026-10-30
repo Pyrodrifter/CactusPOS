@@ -2,7 +2,8 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
 import {
   type Ack, AddLinesBody, AvailabilityBody, CorrectOrderBody, BusinessSchema, CloseDayBody, CreateOrderBody, TabNameBody, ReportQuery, RequestId, IdParams, LoginBody, MenuCategory, MenuItem, MoneyError, OrdersQuery, PayBody,
@@ -11,7 +12,7 @@ import {
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
 import { PrinterSettings, Printing } from './printing.js';
-import { Reports } from './reports.js';
+import { Reports, reportRevision } from './reports.js';
 import { Books, BooksSettings, ExportQuery } from './books.js';
 import { buildDayReport, renderHtml } from '@cactus/receipt';
 import type { Transport } from '@cactus/printer';
@@ -20,12 +21,19 @@ import { renderReceiptHtml } from './receipt.js';
 import { ReceiptTemplates, previewHtml } from './receiptTemplates.js';
 import { Backups, BackupSettings } from './backup.js';
 import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplateBody } from '@cactus/shared';
-import type { DB } from './db.js';
+import { getKv, openDb, setKv, type DB } from './db.js';
+import { seedPractice } from './practice.js';
+import { openingChecks } from './readiness.js';
+import { CashMovementBody } from '@cactus/shared';
+
+interface ClientSocket { send(data: string): void; close(code?: number, reason?: string): void; ping(): void; terminate(): void; on(event: string, listener: () => void): unknown }
+interface SocketQuery { token?: string; room?: string; screen?: string }
 
 interface Client {
   send(data: string): void; kind: 'staff' | 'pickup';
   /** Answered the last heartbeat. A screen that stops answering is dropped, see the heartbeat below. */
   alive: boolean; ping(): void; drop(): void;
+  screen: string;
 }
 
 const VERSION = (JSON.parse(readFileSync(resolve(import.meta.dirname, '../package.json'), 'utf8')) as { version: string }).version;
@@ -39,21 +47,50 @@ export interface AppOptions {
   backupDir?: string;
   /** How often every live connection gets a sign of life. Tests shorten it. */
   heartbeatMs?: number;
+  mode?: 'live' | 'practice';
+  practiceDbPath?: string;
+  disableStatic?: boolean;
+  printerProbe?: (host: string, port: number) => Promise<boolean>;
 }
 
-export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books; backups: Backups } {
+export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance; svc: PosService; admin: AdminService; printing: Printing; reports: Reports; books: Books; backups: Backups; connectSocket: (socket: ClientSocket, query: SocketQuery) => void } {
+  const practiceMode = opts.mode === 'practice';
+  const instanceId = getKv<string>(db, 'instance.id', '') || randomUUID();
+  setKv(db, 'instance.id', instanceId);
+  const runtime = { instanceId, mode: practiceMode ? 'practice' as const : 'live' as const };
   const svc = new PosService(db);
   const templates = new ReceiptTemplates(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
   const throttle = new LoginThrottle();
-  const printing = new Printing(db, () => svc.business(), opts.printerTransport);
+  const printing = new Printing(db, () => svc.business(), opts.printerTransport, practiceMode);
   app.addHook('onClose', async () => printing.queue.stop());
   const reports = new Reports(db, svc);
   const books = new Books(db, svc);
   const backups = new Backups(db, opts.backupDir ?? null);
   app.addHook('onClose', async () => backups.stop());
   const clients = new Set<Client>();
+  let sandbox: ReturnType<typeof buildApp> | undefined;
+  let sandboxDb: DB | undefined;
+  const practice = async () => {
+    if (practiceMode || !opts.practiceDbPath) throw new HttpError(409, 'Practice mode is not configured on this server');
+    if (!sandbox) {
+      sandboxDb = openDb(opts.practiceDbPath);
+      seedPractice(db, sandboxDb);
+      sandbox = buildApp(sandboxDb, { mode: 'practice', disableStatic: true,
+        backupDir: opts.practiceDbPath === ':memory:' ? undefined : join(dirname(opts.practiceDbPath), 'backups') });
+      await sandbox.app.ready(); sandbox.backups.start();
+    }
+    return sandbox;
+  };
+  app.addHook('onClose', async () => { await sandbox?.app.close(); sandboxDb?.close(); });
+  if (practiceMode) app.addHook('onSend', async (_req, reply, payload) => {
+    if (typeof payload === 'string' && String(reply.getHeader('content-type') ?? '').includes('text/html')) {
+      const stamp = '<div style="font: bold 18px sans-serif;text-align:center;border:3px solid;padding:8px">PRACTICE / OEFENEN<br>Not a sales receipt / Geen verkoopbon</div>';
+      return /<body/i.test(payload) ? payload.replace(/<body([^>]*)>/i, `<body$1>${stamp}`) : /<\/style>/i.test(payload) ? payload.replace(/<\/style>/i, `$&${stamp}`) : `${stamp}${payload}`;
+    }
+    return payload;
+  });
 
   const broadcast = (ev: ServerEvent) => {
     const msg = JSON.stringify(ev);
@@ -106,14 +143,12 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     return value === undefined ? undefined : RequestId.parse(value);
   };
 
-  app.register(websocket);
-  app.register(async (f) => {
-    f.get('/ws', { websocket: true }, (socket, req) => {
-      const q = req.query as { token?: string; room?: string };
+  const connectSocket = (socket: ClientSocket, q: SocketQuery) => {
       const pickup = q.room === 'pickup';
       if (!pickup && !svc.auth.staffFor(q.token)) { socket.close(4401, 'login required'); return; }
       const client: Client = {
         send: (d) => socket.send(d), kind: pickup ? 'pickup' : 'staff', alive: true,
+        screen: pickup ? 'pickup' : ['pos', 'kitchen', 'admin', 'menu-board'].includes(q.screen ?? '') ? q.screen! : 'pos',
         ping: () => { try { socket.ping(); } catch { /* closing; the next round drops it */ } },
         drop: () => socket.terminate(),
       };
@@ -122,6 +157,12 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
       socket.on('close', () => clients.delete(client));
       socket.send(JSON.stringify({ type: 'hello', serverTime: new Date().toISOString() } satisfies ServerEvent));
       if (pickup) socket.send(JSON.stringify({ type: 'pickup.changed', ...svc.pickupBoard() } satisfies ServerEvent));
+  };
+  app.register(websocket);
+  app.register(async (f) => {
+    f.get('/ws', { websocket: true }, (socket, req) => connectSocket(socket, req.query as SocketQuery));
+    if (!practiceMode) f.get('/practice/ws', { websocket: true }, (socket, req) => {
+      void practice().then((context) => context.connectSocket(socket, req.query as SocketQuery)).catch(() => socket.close(1011, 'practice unavailable'));
     });
   });
 
@@ -143,7 +184,7 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   heartbeat.unref();
   app.addHook('onClose', async () => clearInterval(heartbeat));
 
-  app.get('/api/health', async () => ({ ok: true, app: 'cactuspos', version: VERSION, startedAt: STARTED_AT, business: svc.business().name, time: new Date().toISOString() }));
+  app.get('/api/health', async () => ({ ok: true, app: 'cactuspos', version: VERSION, startedAt: STARTED_AT, business: svc.business().name, time: new Date().toISOString(), ...runtime }));
   app.get('/api/pickup', async () => svc.pickupBoard());
 
   app.post('/api/login', async (req) => {
@@ -152,7 +193,45 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     const session = svc.auth.login(pin);
     if (!session) { throttle.fail(req.ip); throw new HttpError(401, 'Wrong PIN'); }
     throttle.ok(req.ip);
-    return { ...session, business: svc.business() };
+    return { ...session, business: svc.business(), ...runtime };
+  });
+  if (!practiceMode) {
+    app.post('/api/practice/start', async (req) => {
+      const staff = authOf(req);
+      const context = await practice();
+      const active = sandboxDb!.prepare('SELECT id,name,role FROM staff WHERE id=? AND active=1').get(staff.id) as Staff | undefined;
+      if (!active) throw new HttpError(409, 'This staff member is disabled in the practice till');
+      const health = (await context.app.inject({ method: 'GET', url: '/api/health' })).json() as { instanceId: string };
+      return { session: { ...context.svc.auth.sessionFor(active), business: context.svc.business(), instanceId: health.instanceId, mode: 'practice' }, path: '/practice/pos' };
+    });
+    app.all('/api/practice/*', async (req, reply) => {
+      const context = await practice();
+      const headers = { ...req.headers };
+      delete headers['content-length']; delete headers['transfer-encoding']; delete headers.connection;
+      const response = await context.app.inject({ method: req.method as 'GET', url: req.url.replace(/^\/api\/practice/, '/api'), headers, payload: req.body as object | undefined });
+      reply.code(response.statusCode);
+      for (const [key, value] of Object.entries(response.headers)) if (value !== undefined && !['content-length', 'connection', 'transfer-encoding'].includes(key)) reply.header(key, value);
+      return reply.send(response.rawPayload);
+    });
+  }
+  if (practiceMode) app.addHook('onRequest', async (req) => {
+    const path = req.url.split('?')[0];
+    if ((path?.startsWith('/api/books') && (req.method !== 'GET' || path.endsWith('.csv'))) || path === '/api/admin/backups/settings' ||
+        (path === '/api/admin/printer' && req.method === 'PUT')) {
+      authOf(req); throw new HttpError(409, 'External printers, bookkeeping and backup copies are disabled in practice mode');
+    }
+  });
+  app.get('/api/request-status/:id', async (req) => {
+    authOf(req);
+    const id = RequestId.parse((req.params as { id: string }).id);
+    const kind = (req.query as { kind?: string }).kind ?? 'create';
+    if (!['create', 'add'].includes(kind)) throw new HttpError(400, 'Invalid request kind');
+    const found = db.prepare('SELECT order_id FROM requests WHERE key=?').get(`${kind}:${id}`) as { order_id: string } | undefined;
+    return { order: found ? svc.getOrder(found.order_id) : null };
+  });
+  app.get('/api/admin/readiness', async (req, reply) => {
+    ownerOf(req); reply.header('cache-control', 'no-store');
+    return openingChecks(svc, printing, backups, [...clients].filter((client) => client.screen === 'kitchen').length, practiceMode, opts.printerProbe);
   });
   app.post('/api/logout', async (req) => {
     const h = req.headers['x-token'];
@@ -276,10 +355,21 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   });
 
   /* ----- day reports: owner only ----- */
+  app.get('/api/cash/movements', async (req) => { ownerOf(req); return reports.cash.list(ReportQuery.parse(req.query).date ?? svc.businessDate()); });
+  app.get('/api/cash/movements/request/:id', async (req) => { ownerOf(req); return { movement: reports.cash.request(RequestId.parse((req.params as { id: string }).id)) }; });
+  app.post('/api/cash/movements', async (req, reply) => {
+    const by = ownerOf(req), body = CashMovementBody.parse(req.body), key = requestIdOf(req);
+    if (!key) throw new HttpError(400, 'An Idempotency-Key is required for a cash entry');
+    const entry = reports.cash.add(body, by, key);
+    backups.runIfChanged();
+    return reply.code(201).send(entry);
+  });
+  app.get('/api/reports/day/orders', async (req) => { ownerOf(req); return reports.orders(ReportQuery.parse(req.query).date ?? svc.businessDate()); });
   app.get('/api/reports/day', async (req) => {
     ownerOf(req);
     const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
-    return { report: reports.day(date), closed: reports.latestFor(date), today: svc.businessDate() };
+    const report = reports.day(date), closed = reports.latestFor(date), revision = reportRevision(report);
+    return { report, closed, today: svc.businessDate(), revision, changedSinceClose: !!closed && reportRevision(closed.report) !== revision };
   });
   app.post('/api/reports/day/close', async (req, reply) => {
     const z = reports.close(CloseDayBody.parse(req.body), ownerOf(req));
@@ -408,12 +498,12 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   app.post('/api/admin/backups/run', async (req) => { ownerOf(req); backups.run(); return backups.state(); });
 
   const dist = opts.webDist ?? resolve(import.meta.dirname, '../../web/dist');
-  if (existsSync(dist)) {
+  if (!opts.disableStatic && existsSync(dist)) {
     app.register(fastifyStatic, { root: dist });
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api')) return reply.code(404).send({ error: 'Not found' });
       return reply.sendFile('index.html');
     });
   }
-  return { app, svc, admin, printing, reports, books, backups };
+  return { app, svc, admin, printing, reports, books, backups, connectSocket };
 }

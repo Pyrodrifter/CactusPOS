@@ -34,6 +34,7 @@ const paths = {
   log: join(home, 'logs', 'server.log'),
   launcherLog: join(home, 'logs', 'launcher.log'),
   state: join(home, 'server.json'),
+  lan: join(home, 'lan.json'),
   profile: join(home, 'app-profile'),
   lock: join(home, 'launch.lock'),
 };
@@ -140,6 +141,8 @@ function startServer(config) {
   rotateLog();
   const out = openSync(paths.log, 'a');
   const env = { ...process.env, PORT: String(config.port), CACTUS_STRICT_PORT: '1', CACTUS_DB: paths.db };
+  env.CACTUS_LAN_SETTINGS = JSON.stringify({ enabled: config.lanEnabled && process.env.CACTUS_DISABLE_LAN !== '1', hostname: config.hostname, port: config.lanPort });
+  env.CACTUS_LAN_STATUS_FILE = paths.lan;
   if (config.seed) env.CACTUS_SEED = config.seed; else delete env.CACTUS_SEED;
   writeFileSync(out, `\n--- ${new Date().toISOString()} starting CactusPOS from ${root} on port ${config.port}\n`);
   // Detached with its own hidden console: the server keeps running after this launcher and the app window are gone.
@@ -251,6 +254,7 @@ async function stop(config) {
 async function status(config, json) {
   const h = await health(config.port);
   const running = h.reached && isCactusHealth(h.body);
+  const lan = readLanStatus();
   const info = {
     running,
     portBusyWithOtherProgram: h.reached && !running,
@@ -259,12 +263,16 @@ async function status(config, json) {
     business: running ? h.body.business : null,
     thisComputer: appUrl(config.port, config.screen),
     otherDevices: lanUrls(networkInterfaces(), config.port),
+    friendlyUrl: running && lan?.advertised ? `http://${lan.hostname}${(lan.aliasPort ?? config.port) === 80 ? '' : `:${lan.aliasPort ?? config.port}`}` : null,
+    lanProblems: running ? lan?.problems ?? [] : [],
     home, program: root, settings: paths.config, database: paths.db, log: paths.log,
     startedByThisLauncher: running && readState()?.startedAt === h.body.startedAt,
   };
   if (json) { console.log(JSON.stringify(info, null, 2)); return 0; }
   console.log(running ? `CactusPOS is running${info.business ? ` for ${info.business}` : ''}.` : info.portBusyWithOtherProgram ? `Port ${config.port} is used by another program.` : 'CactusPOS is not running.');
   console.log(`  This computer:   ${info.thisComputer}`);
+  if (info.friendlyUrl) console.log(`  Local name:      ${info.friendlyUrl}`);
+  for (const problem of info.lanProblems) console.log(`  Local network:   ${problem}`);
   for (const url of info.otherDevices) console.log(`  Phones, tablets: ${url}/kitchen   ${url}/pos   ${url}/pickup`);
   if (!info.otherDevices.length) console.log('  Phones, tablets: this computer is not connected to a network');
   console.log(`  Sales database:  ${info.database}`);
@@ -277,10 +285,21 @@ async function status(config, json) {
 /** For the Start menu entry "Connect a tablet or phone": the addresses, in a window. */
 async function addresses(config) {
   const h = await health(config.port);
-  const text = addressesText({ urls: lanUrls(networkInterfaces(), config.port), running: h.reached && isCactusHealth(h.body) });
+  const running = h.reached && isCactusHealth(h.body);
+  const lan = readLanStatus();
+  const friendlyUrl = running && lan?.advertised ? `http://${lan.hostname}${(lan.aliasPort ?? config.port) === 80 ? '' : `:${lan.aliasPort ?? config.port}`}` : null;
+  const text = addressesText({ urls: lanUrls(networkInterfaces(), config.port), running, friendlyUrl, problems: running ? lan?.problems ?? [] : [] });
   console.log(text);
   await showMessage(text, false);
   return 0;
+}
+
+function readLanStatus() {
+  try {
+    const lan = JSON.parse(readFileSync(paths.lan, 'utf8'));
+    const state = readState();
+    return state?.pid === lan.pid && typeof lan.hostname === 'string' && typeof lan.advertised === 'boolean' && Array.isArray(lan.problems) ? lan : null;
+  } catch { return null; }
 }
 
 function configure(args) {
@@ -361,6 +380,8 @@ const HELP = `CactusPOS launcher
   --addresses        what to type on a tablet or phone to reach the till
   --restore [FILE]   put a backup back: the newest one, or FILE; asks first (--yes skips the question)
   --configure        write settings: --port N, --seed NAME, --screen NAME, --kiosk; --if-new keeps an existing file
+  --hostname NAME    local name (default cactus.local); --lan-port N changes its HTTP port (0 disables alias)
+  --no-lan           disable the optional local name and HTTP alias
   --gui              also show problems in a message window (the shortcuts use this)
 Settings file: ${paths.config}
 Standard settings: ${JSON.stringify(DEFAULTS)}`;

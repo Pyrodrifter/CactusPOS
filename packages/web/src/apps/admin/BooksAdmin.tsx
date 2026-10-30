@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, getSession } from '../../lib/api';
+import { apiPath } from '../../lib/clientMode';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
 import { toast } from '../../ui/touch';
@@ -58,7 +59,7 @@ export function BooksAdmin() {
 
   const download = async (kind: 'days' | 'journal') => {
     try {
-      const res = await fetch(`/api/books/${kind}.csv?from=${from}&to=${to}`, { headers: { 'x-token': getSession()?.token ?? '' } });
+      const res = await fetch(apiPath(`/books/${kind}.csv?from=${from}&to=${to}`), { headers: { 'x-token': getSession()?.token ?? '' } });
       if (!res.ok) throw new ApiError(res.status, c.downloadFailed);
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement('a');

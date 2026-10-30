@@ -7,13 +7,13 @@ const T = {
     x: 'X REPORT (not closed)', z: 'Z REPORT', day: 'Day', printed: 'Printed', closed: 'Closed', sales: 'SALES', gross: 'Total incl. ABB', net: 'Net',
     orders: 'Orders sold', receipts: 'Receipts', earlier: 'Refunds of earlier days', corrections: 'Corrected orders', tax: 'ABB', over: 'over', exempt: 'Exempt', outside: 'Outside scope', tenders: 'PAYMENTS', cash: 'Cash', card: 'Card',
     tips: 'Tips', refunds: 'REFUNDS (voided after payment)', unpaid: 'Unpaid open orders', voided: 'Voided before payment', drawer: 'CASH DRAWER',
-    expected: 'Expected from sales', counted: 'Counted', diff: 'Over / short', items: 'ITEMS SOLD', none: 'No sales',
+    expected: 'Expected from sales', counted: 'Counted (sales cash only)', countedDrawer: 'Counted (whole drawer)', cashIn: 'Cash in incl. opening float', cashOut: 'Cash out', drawerExpected: 'Expected in drawer', cashEntries: 'CASH ENTRIES', reversal: 'Reversal', diff: 'Over / short', items: 'ITEMS SOLD', none: 'No sales',
   },
   nl: {
     x: 'X-RAPPORT (niet afgesloten)', z: 'Z-RAPPORT', day: 'Dag', printed: 'Afgedrukt', closed: 'Afgesloten', sales: 'OMZET', gross: 'Totaal incl. ABB', net: 'Netto',
     orders: 'Verkochte bestellingen', receipts: 'Bonnen', earlier: 'Terugbetaald van eerdere dagen', corrections: 'Gecorrigeerde bestellingen', tax: 'ABB', over: 'over', exempt: 'Vrijgesteld', outside: 'Buiten toepassing', tenders: 'BETALINGEN', cash: 'Contant', card: 'Pin',
     tips: 'Fooien', refunds: 'TERUGBETAALD (geannuleerd na betaling)', unpaid: 'Open onbetaalde bestellingen', voided: 'Geannuleerd voor betaling', drawer: 'KASSALADE',
-    expected: 'Verwacht uit verkoop', counted: 'Geteld', diff: 'Verschil', items: 'VERKOCHTE ITEMS', none: 'Geen verkoop',
+    expected: 'Verwacht uit verkoop', counted: 'Geteld (alleen verkoop)', countedDrawer: 'Geteld (hele lade)', cashIn: 'Kas in incl. startgeld', cashOut: 'Kas uit', drawerExpected: 'Verwacht in lade', cashEntries: 'KASBOEKINGEN', reversal: 'Tegenboeking', diff: 'Verschil', items: 'VERKOCHTE ITEMS', none: 'Geen verkoop',
   },
 } as const;
 
@@ -56,9 +56,21 @@ export function buildDayReport(input: DayReport | ZReport, b: Business, lang: Re
   if (r.orders.unpaid) out.push({ t: 'row', left: `${t.unpaid} (${r.orders.unpaid})`, right: m(r.orders.unpaidCents) });
   if (r.orders.voidedUnpaid) out.push({ t: 'row', left: t.voided, right: String(r.orders.voidedUnpaid) });
   out.push({ t: 'rule' }, { t: 'text', text: t.drawer, bold: true }, { t: 'row', left: t.expected, right: m(r.cashExpectedCents) });
+  if (r.drawer) {
+    out.push({ t: 'row', left: t.cashIn, right: `+${m(r.drawer.cashInCents)}` },
+      { t: 'row', left: t.cashOut, right: `-${m(r.drawer.cashOutCents)}` },
+      { t: 'row', left: t.drawerExpected, right: m(r.drawer.expectedCents), bold: true });
+  }
   if (z && z.countedCashCents !== null && z.cashDifferenceCents !== null) {
-    out.push({ t: 'row', left: t.counted, right: m(z.countedCashCents) });
+    out.push({ t: 'row', left: z.cashCountBasis === 'drawer' ? t.countedDrawer : t.counted, right: m(z.countedCashCents) });
     out.push({ t: 'row', left: t.diff, right: `${z.cashDifferenceCents > 0 ? '+' : ''}${m(z.cashDifferenceCents)}`, bold: true });
+  }
+  if (r.drawer?.movements.length) {
+    out.push({ t: 'rule' }, { t: 'text', text: t.cashEntries, bold: true });
+    for (const movement of r.drawer.movements) {
+      out.push({ t: 'row', left: `${movement.direction === 'in' ? '+' : '-'}${m(movement.amountCents)}`, right: when(movement.at) },
+        { t: 'text', text: `${movement.reason} · ${movement.staffName}${movement.reverses ? ` · ${t.reversal}` : ''}` });
+    }
   }
   out.push({ t: 'rule' }, { t: 'text', text: t.items, bold: true });
   if (!r.items.length) out.push({ t: 'text', text: t.none });

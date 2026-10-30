@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_RECEIPT_TEMPLATE, ReceiptTemplate, TemplateState, type Business, type DesignCode, type DesignMessage, type DocumentDesign, type Lettering, type ReceiptLogo, type TextStyle } from '@cactus/shared';
 import { api, getSession } from '../../../lib/api';
+import { apiPath } from '../../../lib/clientMode';
 import { useLang } from '../../../i18n';
 import { Icon } from '../../../ui/Icon';
 import { toast } from '../../../ui/touch';
@@ -20,7 +21,10 @@ const copy = {
     nameChanged: 'The business name changed since this was drawn, so the receipt prints the name in printer letters. Choose a font to draw the new name.',
     size: 'Size', sizes: { small: 'Small', normal: 'Normal', tall: 'Tall', wide: 'Wide', large: 'Large', huge: 'Extra large' }, bold: 'Bold', underline: 'Underline', inverse: 'White on black',
     order: 'The order', number: 'Order number', item: 'Item text', phone: 'Show phone number', modifiers: 'Show modifiers', notes: 'Show notes',
-    protected: 'Business details, order number, receipt number, date, amounts and tax always stay on receipts. Kitchen modifiers and notes always stay visible.',
+    protected: 'Receipt number, amounts, tax and sale-status markers stay visible. Kitchen order numbers, modifiers and notes stay visible.',
+    headerLayout: 'Header layout', logoName: 'Logo + name', logoOnly: 'Logo only', nameOnly: 'Name only', nameHint: 'Turn off the separate name when your logo already contains it. Hidden content stays saved.',
+    visibility: { showBusinessName: 'Show business name', showLogo: 'Show logo', showAddress: 'Show address', showPhone: 'Show phone number', showTitle: 'Show top line', showSubtitle: 'Show subtitle', showOrderNumber: 'Show order number', showDateTime: 'Show date / time', showTabName: 'Show tab name', showModifiers: 'Show modifiers', showNotes: 'Show notes', showPaymentDetails: 'Show payment details', showPaymentReference: 'Show card reference', showFooter: 'Show closing line', showClosingImage: 'Show closing picture', showMessages: 'Show custom lines', showCodes: 'Show QR codes' },
+    payment: 'Payment details', printLine: 'Print this line', printCode: 'Print this QR code',
     messages: 'Your own lines', add: 'Add a line', message: 'Line', words: 'Words', where: 'Where', above: 'Above the items', below: 'Below the total', up: 'Move up', down: 'Move down', remove: 'Remove',
     tokens: 'Use {{business}}, {{order}} or {{receipt}} for automatic text.',
     codes: 'QR codes', codesHint: 'A guest points a phone camera at the code. A WiFi code joins your network; a link code opens your website or Instagram. Whatever you enter here is printed on receipts that guests take with them.',
@@ -45,7 +49,10 @@ const copy = {
     nameChanged: 'De bedrijfsnaam is veranderd sinds dit is getekend, dus de bon drukt de naam in printerletters af. Kies een lettertype om de nieuwe naam te tekenen.',
     size: 'Grootte', sizes: { small: 'Klein', normal: 'Normaal', tall: 'Hoog', wide: 'Breed', large: 'Groot', huge: 'Extra groot' }, bold: 'Vet', underline: 'Onderstreept', inverse: 'Wit op zwart',
     order: 'De bestelling', number: 'Bestelnummer', item: 'Artikeltekst', phone: 'Telefoon tonen', modifiers: 'Opties tonen', notes: 'Opmerkingen tonen',
-    protected: 'Bedrijf, bestelnummer, bonnummer, datum, bedragen en belasting blijven altijd op de kassabon staan. Keukenopties en opmerkingen blijven altijd zichtbaar.',
+    protected: 'Bonnummer, bedragen, belasting en verkoopstatus blijven zichtbaar. Op keukenbonnen blijven bestelnummer, opties en opmerkingen zichtbaar.',
+    headerLayout: 'Indeling van de kop', logoName: 'Logo + naam', logoOnly: 'Alleen logo', nameOnly: 'Alleen naam', nameHint: 'Zet de losse naam uit als die al in het logo staat. Verborgen inhoud blijft bewaard.',
+    visibility: { showBusinessName: 'Bedrijfsnaam tonen', showLogo: 'Logo tonen', showAddress: 'Adres tonen', showPhone: 'Telefoon tonen', showTitle: 'Bovenste regel tonen', showSubtitle: 'Ondertitel tonen', showOrderNumber: 'Bestelnummer tonen', showDateTime: 'Datum / tijd tonen', showTabName: 'Rekeningnaam tonen', showModifiers: 'Opties tonen', showNotes: 'Opmerkingen tonen', showPaymentDetails: 'Betaalgegevens tonen', showPaymentReference: 'Pinreferentie tonen', showFooter: 'Slotregel tonen', showClosingImage: 'Slotplaatje tonen', showMessages: 'Eigen regels tonen', showCodes: 'QR-codes tonen' },
+    payment: 'Betaalgegevens', printLine: 'Deze regel afdrukken', printCode: 'Deze QR-code afdrukken',
     messages: 'Je eigen regels', add: 'Regel toevoegen', message: 'Regel', words: 'Woorden', where: 'Waar', above: 'Boven de artikelen', below: 'Onder het totaal', up: 'Omhoog', down: 'Omlaag', remove: 'Verwijderen',
     tokens: 'Gebruik {{business}}, {{order}} of {{receipt}} voor automatisch ingevulde tekst.',
     codes: 'QR-codes', codesHint: 'Een gast richt de camera van een telefoon op de code. Een wificode verbindt met je netwerk; een linkcode opent je website of Instagram. Wat je hier invult, staat op bonnen die gasten meenemen.',
@@ -163,7 +170,7 @@ export function ReceiptEditor() {
     const controller = new AbortController();
     setPreviewBusy(true); setPreviewError('');
     const timer = setTimeout(() => {
-      void fetch('/api/admin/receipt-templates/preview', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': getSession()?.token ?? '' }, body: JSON.stringify({ template, kind }), signal: controller.signal })
+      void fetch(apiPath('/admin/receipt-templates/preview'), { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': getSession()?.token ?? '' }, body: JSON.stringify({ template, kind }), signal: controller.signal })
         .then(async (res) => { if (!res.ok) throw new Error(c.previewFail); return res.text(); })
         .then((value) => { if (!controller.signal.aborted) setHtml(value); })
         .catch((e: unknown) => { if (!controller.signal.aborted) setPreviewError(e instanceof Error ? e.message : String(e)); })
@@ -196,6 +203,7 @@ export function ReceiptEditor() {
   if (!saved) return <div className="receipt-editor"><p role="status">{error || c.loading}</p>{error && <button onClick={() => void load()}>{c.retry}</button>}</div>;
 
   const usualName: TextStyle = kind === 'kitchen' ? { ...PLAIN, bold: true } : { ...PLAIN, size: 'large', bold: true };
+  const visibilitySwitch = (key: keyof Copy['visibility']) => <button key={key} className="re-visibility-switch" data-setting={key} role="switch" aria-checked={design[key] !== false} onClick={() => patch({ [key]: design[key] === false })}><span>{c.visibility[key]}</span><Icon name={design[key] !== false ? 'check' : 'minus'} /></button>;
   return <section className={`receipt-editor mobile-${mobile}`}>
     <header className="re-heading"><div><p className="re-eyebrow"><Icon name="receipt" />{c.version} {saved.current.version} <span className={dirty ? 're-unsaved' : ''}>{dirty ? c.draft : c.saved}</span></p><h1>{c.title}</h1><p>{c.intro}</p></div><button className="primary re-publish" disabled={busy || !dirty} onClick={() => void publish()}><Icon name="check" />{busy ? c.publishing : c.publish}</button></header>
     {error && <p className="error" role="alert">{error}</p>}
@@ -211,15 +219,22 @@ export function ReceiptEditor() {
         </div></section>
 
         <section className="re-card"><h2><Icon name="leaf" />{c.header}</h2>
+          <div className="re-header-layout" role="group" aria-label={c.headerLayout}>
+            <button disabled={!design.logo} aria-pressed={design.showLogo && design.showBusinessName} onClick={() => patch({ showLogo: true, showBusinessName: true })}>{c.logoName}</button>
+            <button className="re-logo-only" disabled={!design.logo} aria-pressed={design.showLogo && !design.showBusinessName} onClick={() => patch({ showLogo: true, showBusinessName: false })}>{c.logoOnly}</button>
+            <button aria-pressed={!design.showLogo && design.showBusinessName} onClick={() => patch({ showLogo: false, showBusinessName: true })}>{c.nameOnly}</button>
+          </div>
+          <p className="re-hint">{c.nameHint}</p>
+          <div className="re-toggles">{(['showLogo', 'showBusinessName', ...(kind === 'receipt' ? ['showAddress', 'showPhone'] as const : []), 'showTitle', 'showSubtitle'] as const).map(visibilitySwitch)}</div>
           <PictureBox c={c} value={design.logo} upload={c.logo} remove={c.removeLogo} hint={c.logoHint} onChange={(logo) => patch({ logo })} onError={setError} />
-          <div className="re-field"><span className="re-field-label">{c.name}</span>
+          {design.showBusinessName && <div className="re-field"><span className="re-field-label">{c.name}</span>
             <Segmented label={c.name} value={design.nameArt ? 'art' : 'printer'} options={[['printer', c.printerLetters], ['art', c.lettering]]}
               onChange={(mode) => patch({ nameArt: mode === 'art' ? drawLettering(businessName, firstFont(), 'l', false, dots) : null })} />
             {design.nameArt
               ? <>{design.nameArt.text.trim().toLowerCase() !== businessName.trim().toLowerCase() && <p className="notice" role="status">{c.nameChanged}</p>}
                 <LetteringBox c={c} nl={nl} value={design.nameArt} words={businessName} dots={dots} onChange={(nameArt) => patch({ nameArt })} /></>
               : <StyleBar c={c} value={design.nameStyle ?? usualName} onChange={(nameStyle) => patch({ nameStyle })} />}
-          </div>
+          </div>}
           <div className="re-field"><label>{c.titleLabel}<input value={design.title} maxLength={80} onChange={(e) => patch({ title: e.target.value })} /></label>
             {design.title && <StyleBar c={c} value={design.titleStyle ?? { ...PLAIN, bold: true }} onChange={(titleStyle) => patch({ titleStyle })} />}</div>
           <div className="re-field"><label>{c.subtitle}<input value={design.subtitle} maxLength={160} onChange={(e) => patch({ subtitle: e.target.value })} /></label>
@@ -227,7 +242,8 @@ export function ReceiptEditor() {
           <small>{c.tokens}</small>
         </section>
 
-        <section className="re-card"><h2><Icon name="edit" />{c.messages}</h2>{design.messages.map((entry, index) => <div className="re-message" key={index}>
+        <section className="re-card"><h2><Icon name="edit" />{c.messages}</h2>{visibilitySwitch('showMessages')}{design.messages.map((entry, index) => <div className={`re-message${entry.enabled === false ? ' re-entry-off' : ''}`} key={index}>
+          <button className="re-entry-toggle" role="switch" aria-checked={entry.enabled !== false} onClick={() => message(index, { enabled: entry.enabled === false })}><span>{c.printLine}</span><Icon name={entry.enabled !== false ? 'check' : 'minus'} /></button>
           <div className="re-message-head"><strong>{c.message} {index + 1}</strong>
             <Segmented label={`${c.message} ${index + 1}`} value={entry.art ? 'art' : 'printer'} options={[['printer', c.printerLetters], ['art', c.lettering]]}
               onChange={(mode) => message(index, { art: mode === 'art' ? drawLettering(entry.text || c.message, firstFont(), 'm', false, dots) : null, ...(mode === 'art' && !entry.text ? { text: c.message } : {}) })} /></div>
@@ -247,7 +263,9 @@ export function ReceiptEditor() {
         </div>)}<button disabled={design.messages.length >= 6} onClick={() => patch({ messages: [...design.messages, { text: '', bold: false, align: 'center', position: 'bottom' }] })}><Icon name="plus" />{c.add}</button></section>
 
         <section className="re-card"><h2><Icon name="wifi" />{c.codes}</h2><p className="re-hint">{c.codesHint}</p>
-          {design.codes.map((code, index) => <div className="re-message re-code" key={index}>
+          {visibilitySwitch('showCodes')}
+          {design.codes.map((code, index) => <div className={`re-message re-code${code.enabled === false ? ' re-entry-off' : ''}`} key={index}>
+            <button className="re-entry-toggle" role="switch" aria-checked={code.enabled !== false} onClick={() => setCode(index, { enabled: code.enabled === false })}><span>{c.printCode}</span><Icon name={code.enabled !== false ? 'check' : 'minus'} /></button>
             <div className="re-message-head"><strong>{code.kind === 'wifi' ? c.wifiCode : c.linkCode}</strong><button aria-label={`${c.remove}: ${code.kind === 'wifi' ? c.wifiCode : c.linkCode}`} onClick={() => patch({ codes: design.codes.filter((_, i) => i !== index) })}><Icon name="trash" /></button></div>
             {code.kind === 'wifi' ? <>
               <label>{c.ssid}<input value={code.ssid} maxLength={32} autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => setCode(index, { ssid: e.target.value })} /></label>
@@ -268,9 +286,12 @@ export function ReceiptEditor() {
           <label>{c.number}<select value={design.numberSize} onChange={(e) => patch({ numberSize: e.target.value as DocumentDesign['numberSize'] })}><option value="normal">{c.normal}</option><option value="large">{c.large}</option><option value="huge">{c.huge}</option></select></label>
           <label>{c.item}<select value={design.itemSize} onChange={(e) => patch({ itemSize: e.target.value as 'large' | 'normal' })}><option value="normal">{c.normal}</option><option value="large">{c.large}</option></select></label>
         </div>
-        {kind === 'receipt' && <div className="re-toggles">{(['showPhone', 'showModifiers', 'showNotes'] as const).map((key, i) => <button key={key} role="switch" aria-checked={design[key]} onClick={() => patch({ [key]: !design[key] })}><span>{[c.phone, c.modifiers, c.notes][i]}</span><Icon name={design[key] ? 'check' : 'minus'} /></button>)}</div>}<p className="re-hint">{c.protected}</p></section>
+        <div className="re-toggles">{(kind === 'receipt' ? ['showOrderNumber', 'showDateTime', 'showTabName', 'showModifiers', 'showNotes'] as const : ['showDateTime', 'showTabName'] as const).map(visibilitySwitch)}</div><p className="re-hint">{c.protected}</p></section>
+
+        {kind === 'receipt' && <section className="re-card"><h2><Icon name="cash" />{c.payment}</h2><div className="re-toggles">{(['showPaymentDetails', 'showPaymentReference'] as const).map(visibilitySwitch)}</div></section>}
 
         <section className="re-card"><h2><Icon name="check" />{c.ending}</h2>
+          <div className="re-toggles">{(['showFooter', 'showClosingImage'] as const).map(visibilitySwitch)}</div>
           <div className="re-field"><label>{c.footer}<textarea rows={3} value={design.footer} maxLength={400} onChange={(e) => patch({ footer: e.target.value })} /></label>
             <StyleBar c={c} value={design.footerStyle ?? PLAIN} onChange={(footerStyle) => patch({ footerStyle })} /></div>
           <div className="re-field"><span className="re-field-label">{c.closing}</span>

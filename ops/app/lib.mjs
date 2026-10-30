@@ -6,6 +6,9 @@ export const SCREENS = Object.freeze({ pos: '/pos', kitchen: '/kitchen', pickup:
 
 export const DEFAULTS = Object.freeze({
   port: 3000,          // tablets bookmark this, so it never moves on its own
+  lanEnabled: true,
+  hostname: 'cactus.local',
+  lanPort: 80,         // optional friendly HTTP alias; 0 disables it
   seed: '',            // menu loaded into an EMPTY database: a file name from seed/ without .json; '' = the sample menu
   screen: 'pos',       // what the app window shows
   kiosk: false,        // true = full screen without a title bar (leave with Alt+F4)
@@ -42,11 +45,16 @@ export function normalizeConfig(raw = {}, overrides = {}) {
   const port = Number(merged.port);
   if (Number.isInteger(port) && port >= 1 && port <= 65535) config.port = port;
   else problems.push(`port must be a whole number from 1 to 65535 (got ${JSON.stringify(merged.port)})`);
+  const lanPort = Number(merged.lanPort);
+  if (Number.isInteger(lanPort) && lanPort >= 0 && lanPort <= 65535) config.lanPort = lanPort;
+  else problems.push('lanPort must be a whole number from 0 to 65535');
+  if (typeof merged.hostname === 'string' && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/.test(merged.hostname)) config.hostname = merged.hostname;
+  else problems.push('hostname must be one lowercase name ending in .local, such as cactus.local');
   if (typeof merged.seed === 'string' && /^[a-z0-9][a-z0-9-]*$|^$/.test(merged.seed)) config.seed = merged.seed;
   else problems.push('seed must be a file name from seed/ without .json (small letters, digits and dashes)');
   if (Object.hasOwn(SCREENS, merged.screen)) config.screen = merged.screen;
   else problems.push(`screen must be one of ${Object.keys(SCREENS).join(', ')}`);
-  for (const key of ['kiosk', 'silentPrint']) {
+  for (const key of ['kiosk', 'silentPrint', 'lanEnabled']) {
     if (typeof merged[key] === 'boolean') config[key] = merged[key];
     else problems.push(`${key} must be true or false`);
   }
@@ -69,6 +77,9 @@ export function parseArgs(argv) {
     if (Object.hasOwn(commands, a)) out.command = commands[a];
     else if (a === '--screen') { const v = value(); if (v !== undefined) out.overrides.screen = v; }
     else if (a === '--port') { const v = value(); if (v !== undefined) out.overrides.port = Number(v); }
+    else if (a === '--hostname') { const v = value(); if (v !== undefined) out.overrides.hostname = v; }
+    else if (a === '--lan-port') { const v = value(); if (v !== undefined) out.overrides.lanPort = Number(v); }
+    else if (a === '--no-lan') out.overrides.lanEnabled = false;
     else if (a === '--seed') { const v = value(); if (v !== undefined) out.overrides.seed = v; }
     else if (a === '--kiosk') out.overrides.kiosk = true;
     else if (a === '--window') out.overrides.kiosk = false;
@@ -154,7 +165,7 @@ export function lanUrls(interfaces, port) {
  * What to type on a tablet or phone to reach the till, in words for the person at the till.
  * Shown in a window by the Start menu entry "Connect a tablet or phone".
  */
-export function addressesText({ urls, running }) {
+export function addressesText({ urls, running, friendlyUrl, problems = [] }) {
   if (!urls.length) {
     return [
       'This computer is not connected to a network, so a tablet or phone cannot reach the till yet.',
@@ -163,6 +174,8 @@ export function addressesText({ urls, running }) {
     ].join('\n');
   }
   const lines = ['To use a tablet or phone with the till:', '', '1. Connect it to the same WiFi as this computer.', '2. Open its web browser and type this address:', ''];
+  if (friendlyUrl) lines.push(`     Kitchen screen:   ${friendlyUrl}/kitchen`, `     Taking orders:    ${friendlyUrl}/pos`, `     Pickup board:     ${friendlyUrl}/pickup`, '', 'If the name does not open on this network, use an IP address below:', '');
+  for (const problem of problems) lines.push(problem, '');
   for (const [i, url] of urls.entries()) {
     if (urls.length > 1) lines.push(i === 0 ? 'Try this one first:' : 'If that does not open, try:');
     lines.push(`     Kitchen screen:   ${url}/kitchen`, `     Taking orders:    ${url}/pos`, `     Pickup board:     ${url}/pickup`, '');

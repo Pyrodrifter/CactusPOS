@@ -51,6 +51,22 @@ describe('calm and busy service', () => {
 });
 
 describe('receipt template lifecycle', () => {
+  it('persists visibility per version and leaves old orders in their original layout', () => {
+    const old = svc.createOrder(orderBody, staff);
+    const paidOld = svc.pay(old.id, { method: 'cash', tipCents: 0 }, staff);
+    const before = renderText(buildReceipt(paidOld, svc.business(), { design: templates.get(0).template.receipt }));
+    const template = structuredClone(DEFAULT_RECEIPT_TEMPLATE);
+    template.receipt.logo = { width: 8, height: 1, hex: 'aa' };
+    template.receipt.showBusinessName = false; template.receipt.showFooter = false; template.receipt.showPaymentDetails = false;
+    templates.save(template, 0, staff.id);
+    const saved = templates.get(1).template.receipt;
+    expect(saved).toMatchObject({ showBusinessName: false, showLogo: true, showFooter: false, showPaymentDetails: false });
+    const fresh = svc.createOrder(orderBody, staff);
+    const blocks = buildReceipt(fresh, svc.business(), { design: templates.get(fresh.templateVersion).template.receipt });
+    expect(blocks.some((b) => b.t === 'raster')).toBe(true);
+    expect(renderText(blocks)).not.toContain(svc.business().name);
+    expect(renderText(buildReceipt(paidOld, svc.business(), { design: templates.get(paidOld.templateVersion).template.receipt }))).toBe(before);
+  });
   it('publishes immutable versions, detects stale edits and retains original print content', () => {
     const one = structuredClone(DEFAULT_RECEIPT_TEMPLATE); one.receipt.footer = 'FIRST {{order}}';
     templates.save(one, 0, staff.id);

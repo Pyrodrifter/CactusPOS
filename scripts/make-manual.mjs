@@ -5,6 +5,7 @@
 //                                                   dist/manual/CactusPOS-Handleiding-Nederlands.pdf
 //   node scripts/make-manual.mjs --out <folder>  -> the same two files in that folder (make-redist uses this)
 //   node scripts/make-manual.mjs --shots         -> first take the pictures in docs/manual/img again
+//   node scripts/make-manual.mjs --shots-only    -> retake pictures without regenerating release PDFs
 //
 // --shots builds nothing itself: run `npm run build` first. It starts a throwaway till (temporary data, the Cactus
 // Blue menu, port 3061), runs docs/manual/shots.mjs against it once per language and stops it again. Retake the
@@ -104,7 +105,8 @@ async function printPdf(source, target) {
   }
 }
 
-if (args.includes('--shots')) await takePictures();
+if (args.includes('--shots') || args.includes('--shots-only')) await takePictures();
+if (args.includes('--shots-only')) process.exit(0);
 
 mkdirSync(out, { recursive: true });
 for (const manual of MANUALS) {

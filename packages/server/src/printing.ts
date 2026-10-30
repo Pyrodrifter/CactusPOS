@@ -25,9 +25,9 @@ export type PrinterSettings = z.infer<typeof PrinterSettings>;
 
 export class Printing {
   readonly queue: PrintQueue;
-  constructor(private db: DB, private business: () => Business, makeTransport?: (s: PrinterSettings) => Transport | null) {
+  constructor(private db: DB, private business: () => Business, makeTransport?: (s: PrinterSettings) => Transport | null, private disabled = false) {
     this.queue = new PrintQueue();
-    this.makeTransport = makeTransport ?? ((s) => (s.enabled && s.host ? new NetworkTransport(s.host, s.port) : null));
+    this.makeTransport = disabled ? () => null : makeTransport ?? ((s) => (s.enabled && s.host ? new NetworkTransport(s.host, s.port) : null));
     this.queue.setTransport(this.makeTransport(this.settings()));
   }
   private makeTransport: (s: PrinterSettings) => Transport | null;
@@ -38,7 +38,7 @@ export class Printing {
     this.queue.setTransport(this.makeTransport(s));
     return s;
   }
-  get active(): boolean { const s = this.settings(); return s.enabled && !!s.host; }
+  get active(): boolean { const s = this.settings(); return !this.disabled && s.enabled && !!s.host; }
 
   private print(label: string, blocks: Block[]): PrintJob {
     const s = this.settings();

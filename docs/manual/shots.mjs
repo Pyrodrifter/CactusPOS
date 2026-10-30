@@ -139,7 +139,7 @@ export default async function (page) {
     await page.click(`.admin-tabs button[data-tab="${tab}"]`);
     await page.wait(700);
   };
-  for (const tab of ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'backups']) {
+  for (const tab of ['reports', 'opening', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'backups']) {
     await admin(tab);
     await shot(`admin-${tab}`);
   }

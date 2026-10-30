@@ -127,6 +127,7 @@
 
 <h2>De bon</h2>
 <p><kbd>Beheer</kbd> › <kbd>Bonontwerp</kbd>. Kies een stijl, voeg uw logo toe, een bedankje, of een QR-code voor uw wifi of website. Het voorbeeld rechts laat de bon zien terwijl u hem aanpast. Tik op <kbd>Ontwerp publiceren</kbd> om hem in gebruik te nemen.</p>
+<p>Staat de bedrijfsnaam al in uw logo, kies dan <kbd>Alleen logo</kbd> onder <b>Bovenkant van de bon</b>, of zet <b>Bedrijfsnaam tonen</b> uit. Losse schakelaars bepalen logo, adres/telefoon, bovenste regel/ondertitel, bestelnummer, datum/tijd, rekeningnaam, betaalgegevens/referentie, slotregel/plaatje, eigen regels en QR-codes. Elke eigen regel en QR-code heeft ook een eigen afdrukschakelaar. Verborgen inhoud blijft bewaard en kan weer aan. Kassabon en keukenbon hebben aparte instellingen. Publiceer zodra het voorbeeld goed is; bestaande bestellingen houden hun oorspronkelijke ontwerp.</p>
 <figure><img src="img/nl-admin-receipts.png" alt="De pagina Bonontwerp"></figure>
 
 <h2>De bonprinter</h2>
@@ -142,6 +143,14 @@
 <section>
 <h1 id="sell">5. Een bestelling opnemen en afrekenen</h1>
 <p>Start de kassa met het pictogram <b>CactusPOS</b> op het bureaublad en log in met uw pincode. U bent op het scherm <b>Bestellen</b>: links het menu, rechts de bestelling.</p>
+
+<h2>Voor het openen, en oefenen met de kassa</h2>
+<p>De eigenaar kan onder <kbd>Beheer</kbd> › <kbd>Klaar om te openen</kbd> de server, keukenverbinding, netwerkprinter, recente reservekopie, bedrijfsgegevens/CRIB, belastingcontrole en voorbeeldpincodes controleren. Tik na een wijziging op <kbd>Opnieuw controleren</kbd>. Een bereikbare printer heeft nog steeds papier en een echte afdruktest nodig.</p>
+<figure><img src="img/nl-admin-opening.png" alt="De controlelijst Klaar om te openen"></figure>
+<p>Kies voor proefbestellingen <kbd>Schermopties</kbd> › <kbd>Oefenmodus</kbd> en bevestig. De gele balk <b>OEFENMODUS</b> moet zichtbaar blijven. Oefenen heeft een aparte database en bonteller; echte printers, kassalade, boekhoudexporten/boekingen en externe reservekopieën staan uit. De eerste start kopieert het huidige menu en de instellingen; latere echte wijzigingen worden niet opnieuw gekopieerd. Open op een ander apparaat <code>/practice/kitchen</code> of <code>/practice/pos</code>. Gebruik Android-app 0.2.0 of nieuwer. Sluit af met <kbd>Naar de echte kassa</kbd> en bevestig; controleer voor echte verkopen dat de gele balk weg is.</p>
+
+<h2>Als de app tijdens een bestelling sluit</h2>
+<p>De onvoltooide bestelling wordt op dit apparaat bewaard voor de ingelogde medewerker. Bij heropenen komt deze terug; controleer de huidige prijzen voor u verstuurt. Kies na een onderbroken verzending <kbd>Bevestiging controleren</kbd> of <kbd>Dezelfde verzending herhalen</kbd>. De oorspronkelijke aanvraag wordt hergebruikt, zodat een verloren antwoord geen tweede bestelling maakt. Controleer de teruggevonden bestelling voordat u verdergaat. <b>Al betaald</b> betekent dat u niets opnieuw in rekening brengt. Is betaling niet bevestigd, controleer dan eerst de losse betaalautomaat. Een waarschuwing over browseropslag betekent dat dit apparaat het concept niet kan bewaren.</p>
 
 <ol class="steps">
   <li><b>Tik aan wat de gast wil.</b> Tik op een categorie om minder tegelijk te zien, of typ in <b>Zoek in het hele menu</b>.</li>
@@ -243,8 +252,8 @@
 
 <ol class="steps">
   <li><b>Verbind de tablet met dezelfde wifi als de laptop.</b> Geen gastnetwerk: gastnetwerken houden apparaten uit elkaar.</li>
-  <li><b>Op de laptop</b>: open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Connect a tablet or phone</kbd>. Een venster toont de adressen die u gebruikt, bijvoorbeeld:<br><code>http://192.168.1.20:3000/kitchen</code></li>
-  <li><b>Op de tablet</b>: open de webbrowser (Chrome of Safari) en typ dat adres precies over, met de punten en de dubbele punt.</li>
+  <li><b>Op de laptop</b>: open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Connect a tablet or phone</kbd>. Met lokale herkenning gebruikt u <code>http://cactus.local/kitchen</code>. Het venster toont ook een IP-adres als alternatief, bijvoorbeeld <code>http://192.168.1.20:3000/kitchen</code>.</li>
+  <li><b>Op de tablet</b>: open de webbrowser (Chrome of Safari) en typ het adres. Werkt de lokale naam niet, gebruik dan het IP-adres. In de Android-app CactusPOS bewaart u het adres en het gekozen scherm onder <b>Connection</b>.</li>
   <li>Log in met uw pincode.</li>
   <li><b>Houd het bij de hand:</b> kies in het menu van de browser <i>Toevoegen aan startscherm</i> (op een iPad: <i>Zet op beginscherm</i>). De tablet heeft dan een pictogram dat het keukenscherm direct opent.</li>
   <li><b>Zet hem vast op de keuken:</b> open <b>Schermopties</b> (de knop met de schuifjes) en zet <kbd>Dit scherm vastzetten op de keuken</kbd> aan. De tablet opent dan altijd op de keuken, en Bestellen, Beheer en de balk bovenaan zijn weg, zodat niemand per ongeluk wegtikt. Om los te maken tikt u linksboven in de keuken op de knop met de schuifjes en zet u het weer uit.</li>
@@ -274,13 +283,16 @@
 
 <ol class="steps">
   <li><b>Rond eerst de open bestellingen af.</b> De pagina waarschuwt als er nog bestellingen niet zijn betaald. Reken ze af, of annuleer ze.</li>
+  <li><b>Controleer verkopen voor het afsluiten.</b> Zoek de verkoop in de bonnenlijst op deze pagina en tik op <kbd>Corrigeren</kbd> om artikelen, aantallen of betaalwijze te herstellen. Vul een reden in. De eerste bon blijft bewaard en er komt een gekoppelde vervangende verkoop. Controleer zelf eventuele terugbetaling of bijbetaling op het pinapparaat.</li>
+  <li><b>Controleer Kassalade.</b> Boek elke ochtend het aanwezige geld met <kbd>Kas in</kbd> en reden <i>Startgeld</i>. Boek bijstorten en opnames met <kbd>Kas in</kbd> / <kbd>Kas uit</kbd>, bedrag en reden. <kbd>Boeking herstellen</kbd> maakt een gelijke tegenboeking als een boeking fout was. Elke boeking bewaart de medewerker; kasboekingen veranderen de lade, geen omzet of ABB. <kbd>Lade openen</kbd> verschijnt alleen bij een ingestelde geschikte printer/kassalade.</li>
   <li>Tik op <kbd>Dag afsluiten</kbd>.</li>
-  <li><b>Tel het contante geld</b> in de la, zonder het wisselgeld waarmee u de dag begon, en typ het bedrag. De kassa toont wat hij verwachtte en het verschil. U mag het leeg laten als u niet hebt geteld.</li>
+  <li><b>Tel al het geld</b> in de lade, <b>inclusief startgeld</b>, en typ het bedrag. Verwacht geld is contante verkoop plus Kas in min Kas uit. Boek eerst het startgeld. U mag de telling leeg laten als u niet hebt geteld.</li>
   <li>Tik nog een keer op <kbd>Dag afsluiten</kbd>. De dag wordt bewaard als een genummerd <b>Z-rapport</b>.</li>
   <li>Met <kbd>Afdrukken</kbd> drukt u het dagrapport af, als u het op papier wilt.</li>
 </ol>
 <figure class="medium"><img src="img/nl-close-day.png" alt="De dag afsluiten"></figure>
 <p>U kunt na het afsluiten gewoon blijven verkopen. Verandert er daarna iets, dan zegt de pagina dat; tik op <kbd>Opnieuw afsluiten</kbd> om de nieuwe cijfers te bewaren.</p>
+<p>Wijzigen verkopen of kasboekingen tijdens het tellen, dan wordt afsluiten geweigerd en worden de cijfers vernieuwd. Controleer en tel opnieuw. Bij een onderbroken kasboeking kiest u <kbd>Bevestiging controleren</kbd> of <kbd>Dezelfde boeking herhalen</kbd>; verplaats het geld niet opnieuw. Afgesloten rapporten bewaren hun oorspronkelijke kasboekingen en telwijze.</p>
 
 <h2>Voor de boekhouder</h2>
 <p><kbd>Beheer</kbd> › <kbd>Boekhouding</kbd>. Kies de datums en download <b>Dagomzet (CSV)</b>: één regel per afgesloten dag met omzet, ABB per tarief, contant, pin en fooien. Elke boekhouder en elk rekenbladprogramma kan dat bestand openen.</p>

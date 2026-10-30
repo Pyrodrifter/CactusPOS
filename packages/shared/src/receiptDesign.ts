@@ -43,6 +43,7 @@ export const Lettering = z.object({
 export type Lettering = z.infer<typeof Lettering>;
 
 export const DesignMessage = z.object({
+  enabled: z.boolean().optional(),
   text: printable(240), bold: z.boolean(), align: z.enum(['left', 'center', 'right']),
   size: TextSize.optional(), underline: z.boolean().optional(), inverse: z.boolean().optional(),
   /** Above the items (under the header) or below the totals. Absent means below, as before this existed. */
@@ -58,6 +59,7 @@ export type DesignMessage = z.infer<typeof DesignMessage>;
  * a picture. Whatever is entered here ends up on receipts handed to guests: a WiFi password included.
  */
 export const DesignCode = z.object({
+  enabled: z.boolean().optional(),
   kind: z.enum(['wifi', 'link']),
   /** link: what the code holds. */
   value: printable(300).default(''),
@@ -84,6 +86,21 @@ export const DocumentDesign = z.object({
   showPhone: z.boolean().default(true),
   showModifiers: z.boolean().default(true),
   showNotes: z.boolean().default(true),
+  /** Visibility controls: absent in older designs means the original layout. Hidden content is retained. */
+  showBusinessName: z.boolean().default(true),
+  showLogo: z.boolean().default(true),
+  showAddress: z.boolean().default(true),
+  showTitle: z.boolean().default(true),
+  showSubtitle: z.boolean().default(true),
+  showOrderNumber: z.boolean().default(true),
+  showDateTime: z.boolean().default(true),
+  showTabName: z.boolean().default(true),
+  showPaymentDetails: z.boolean().default(true),
+  showPaymentReference: z.boolean().default(true),
+  showFooter: z.boolean().default(true),
+  showClosingImage: z.boolean().default(true),
+  showMessages: z.boolean().default(true),
+  showCodes: z.boolean().default(true),
   // Both renderers use these same text blocks; no executable markup or printer commands.
   messages: z.array(DesignMessage).max(6).default([]),
   /**

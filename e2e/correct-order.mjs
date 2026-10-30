@@ -32,7 +32,7 @@ export default async function (page) {
   await page.click('.pos-correct-found button');
   assert.match(await text('.pos-correct-money'), /Collect \$1\.50 more/);
   await page.click('.pos-correct .pos-payment-method button:nth-child(2)');
-  assert.match(await text('.pos-correct-money'), /Charge \$1\.50 more on the card machine/);
+  assert.match(await text('.pos-correct-money'), /Payment method becomes card.*Verify actual cash and card transactions/);
   assert.match(await text('.pos-correct-sum'), /Was\$20\.00Becomes\$21\.50/);
   assert.equal(await page.eval("document.querySelector('.pos-correct .actions .primary').disabled"), true, 'A reason is required');
   await page.click({ text: 'Wrong item' });

@@ -53,7 +53,7 @@ export function TabList({ onAdd, onPay }: { onAdd: (tab: Order) => void; onPay: 
     <div className="tab-list-view">
       {!online && <p className="banner" role="status">{c.offline}</p>}
       {tabs.length === 0 ? (
-        <div className="tab-empty"><Icon name="receipt" size={44} /><h2>{c.empty}</h2><p>{c.emptyHint}</p></div>
+        <div className="tab-empty"><Icon name="tabs" size={44} /><h2>{c.empty}</h2><p>{c.emptyHint}</p></div>
       ) : (
         <ul className="tab-list">
           {tabs.map((o) => {
