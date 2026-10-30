@@ -314,7 +314,7 @@ export function Kitchen() {
   const undoneStatus = undo ? t(undo.to === 'ready' ? 'st.ready' : 'st.collected') : '';
 
   return (
-    <div ref={root} className={`kitchen dark${live.length === 0 ? ' kitchen-idle' : ''}${quick ? ' kitchen-quick' : ''}`}>
+    <div ref={root} className={`kitchen${live.length === 0 ? ' kitchen-idle' : ''}${quick ? ' kitchen-quick' : ''}`}>
       <div className={`kitchen-top${undo ? ' kitchen-top-undo' : ''}`}>
         <header className="kitchen-heading">
           {/* Locked to the kitchen there is no top bar, so Screen tools (and the way out of the lock) is here. */}

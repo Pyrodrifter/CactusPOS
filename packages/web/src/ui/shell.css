@@ -118,3 +118,5 @@
 .kitchen-settings .auto-collect-choices button { min-height: var(--tap-lg); font-size: 16px; font-weight: 700; }
 /* Locked to the kitchen: the workspace is the whole screen. */
 .shell.kitchen-locked { background: #101f29; }
+:root[data-theme=light] .shell.kitchen-locked { background: #eef3f4; }
+.sunlight.kitchen-locked { background: #fff; }

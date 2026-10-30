@@ -139,7 +139,7 @@ From the app audit of master at 36f2e8d: [handoffs/2026-10-10-claude-app-audit.m
 | REL030rc3 | ops | Owner request: release candidate 0.3.0-rc.3 = rc.2 (never published) + RCP10, KIT01, KIT02, TAX03, UX18. Notes in docs/releases/v0.3.0-rc.3.md. Tag `v0.3.0-rc.3` and GitHub pre-release only when the owner says so | REL030rc2, UX18 | review | claude · 2026-10-30 | `npm run package` passes its release and installer drills; setup, zip, manuals, verification files and SHA256SUMS in dist/redist |
 | UX19 | web-admin | Owner request: Admin menu looked off. Side menu is one rounded panel that fits all pages at 1180x820; chosen page matches the theme's selected colour (green dark, teal light), as side menu and as row; quieter dark divider | UX18 | review | claude · 2026-10-30 | No overflow or small targets at five sizes in both themes; 302 tests and 10 browser checks pass. Built after rc.3, so not in that setup |
 | REL030rc4 | ops | Owner request: test build 0.3.0-rc.4 = rc.3 (never published) + UX19. Notes in docs/releases/v0.3.0-rc.4.md. Owner tests it first; tag and pre-release only when the owner says so | UX19 | review | claude · 2026-10-30 | `npm run package` passes its release and installer drills |
-| UX20 | web-screens | Owner request: the kitchen screen has a light mode that follows the theme in Screen tools | UX19 | doing | claude · 2026-10-30 | |
+| UX20 | web-screens | Owner request: the kitchen screen has a light mode that follows the theme in Screen tools | UX19 | review | claude · 2026-10-30 | Kitchen follows the theme; dark colours unchanged; no overflow or small targets at tablet and phone size in both themes and flows |
 
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06
