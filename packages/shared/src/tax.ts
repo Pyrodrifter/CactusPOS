@@ -150,7 +150,6 @@ export function computeTotals(lines: readonly TaxableLine[], cats: readonly TaxC
  */
 export const BONAIRE_DEFAULT_TAX: TaxCategory[] = [
   { id: 'service_6', name: 'ABB 6%', kind: 'taxed', rates: [{ validFrom: '2011-01-01', bps: 600 }], unverified: true },
-  { id: 'goods_8', name: 'ABB 8%', kind: 'taxed', rates: [{ validFrom: '2011-01-01', bps: 800 }], unverified: true },
   { id: 'exempt', name: 'Exempt', kind: 'exempt', rates: [], reason: 'Specify legal ground', unverified: true },
   { id: 'outside_scope', name: 'Outside scope', kind: 'outside_scope', rates: [], reason: 'Resale of imported goods', unverified: true },
 ];

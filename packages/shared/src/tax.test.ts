@@ -113,7 +113,8 @@ describe('receipt totals', () => {
         { taxCategoryId: 'exempt', grossCents: 300 },
         { taxCategoryId: 'outside_scope', grossCents: 200 },
       ],
-      BONAIRE_DEFAULT_TAX, D);
+      // The engine still handles a second rate; 8% is no longer a default category (TAX03), so it is added here.
+      [...BONAIRE_DEFAULT_TAX, { id: 'goods_8', name: 'ABB 8%', kind: 'taxed', rates: [{ validFrom: '2011-01-01', bps: 800 }] }], D);
     expect(t.totalCents).toBe(2600);
     expect(t.taxCents).toBe(128);
     expect(t.netCents).toBe(2472);
@@ -184,8 +185,8 @@ describe('effective dates', () => {
     expect(() => computeTotals([{ taxCategoryId: 'service_6', grossCents: 100 }], BONAIRE_DEFAULT_TAX, '1999-01-01')).toThrow(/no rate/);
   });
   it('exempt and outside-scope are always 0', () => {
-    expect(rateAt(BONAIRE_DEFAULT_TAX[2]!, '1999-01-01')).toBe(0);
-    expect(rateAt(BONAIRE_DEFAULT_TAX[3]!, D)).toBe(0);
+    expect(rateAt(BONAIRE_DEFAULT_TAX[1]!, '1999-01-01')).toBe(0);
+    expect(rateAt(BONAIRE_DEFAULT_TAX[2]!, D)).toBe(0);
   });
   it('rejects duplicate start dates and impossible dates', () => {
     expect(() => rateAt({ ...cat, rates: [{ validFrom: '2011-01-01', bps: 600 }, { validFrom: '2011-01-01', bps: 700 }] }, D)).toThrow(/two rates/);
@@ -212,7 +213,7 @@ describe('ABB switched off for the whole business', () => {
     const cats = effectiveTaxCategories(BONAIRE_DEFAULT_TAX, off);
     expect(cats.map((c) => c.id)).toEqual(BONAIRE_DEFAULT_TAX.map((c) => c.id));
     for (const c of cats) expect(TaxCategorySchema.safeParse(c).success).toBe(true);
-    const t = computeTotals([{ taxCategoryId: 'service_6', grossCents: 1975 }, { taxCategoryId: 'goods_8', grossCents: 275 }], cats, D);
+    const t = computeTotals([{ taxCategoryId: 'service_6', grossCents: 1975 }, { taxCategoryId: 'exempt', grossCents: 275 }], cats, D);
     expect(t).toMatchObject({ totalCents: 2250, taxCents: 0, netCents: 2250 });
     expect(t.breakdown.every((r) => r.kind === 'exempt' && r.bps === 0)).toBe(true);
     expect(cats[0]).toMatchObject({ name: 'ABB 6% (exempt)', reason: 'Food truck exemption' });

@@ -42,6 +42,8 @@ receipt-template compatibility and persisted database format stay the same.
 | `DELETE /api/admin/menu/items/:id` | Past orders keep their own snapshot |
 | `GET` / `PUT /api/admin/business` | `BusinessSchema` |
 | `PUT /api/admin/tax/:id` | `TaxCategorySchema`. Change a rate by adding a `validFrom` row, never by editing one |
+| `POST /api/admin/tax/:id/apply-to-menu` | Owner (TAX03). Every menu item gets this tax category, in one step; the menu editor no longer picks tax per item. Audit `tax.applied`; broadcasts a menu change. `{ items }` = how many changed |
+| `DELETE /api/admin/tax/:id` | Owner (TAX03). Removes a category no menu item uses and no order was ever sold under; `409` otherwise. Audit `tax.deleted` |
 | `GET /api/admin/tax` | Owner. `{ categories, exemption }`: the categories as set up (not the exempt view `/api/menu` gives while ABB is off) and the ABB switch |
 | `PUT /api/admin/tax-exemption` | Owner. `TaxExemption` `{ charged, reason }`; `reason` required when `charged` is false. Audit `tax.exemption`; broadcasts a menu change |
 | `GET /api/admin/staff` | `StaffRow[]` (PINs are never returned) |
