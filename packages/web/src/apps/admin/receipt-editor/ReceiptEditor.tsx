@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_RECEIPT_TEMPLATE, ReceiptTemplate, TemplateState, type Business, type DesignCode, type DesignMessage, type DocumentDesign, type Lettering, type ReceiptLogo, type TextStyle } from '@cactus/shared';
 import { api, getSession } from '../../../lib/api';
+import { apiPath } from '../../../lib/clientMode';
 import { useLang } from '../../../i18n';
 import { Icon } from '../../../ui/Icon';
 import { toast } from '../../../ui/touch';
@@ -163,7 +164,7 @@ export function ReceiptEditor() {
     const controller = new AbortController();
     setPreviewBusy(true); setPreviewError('');
     const timer = setTimeout(() => {
-      void fetch('/api/admin/receipt-templates/preview', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': getSession()?.token ?? '' }, body: JSON.stringify({ template, kind }), signal: controller.signal })
+      void fetch(apiPath('/admin/receipt-templates/preview'), { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': getSession()?.token ?? '' }, body: JSON.stringify({ template, kind }), signal: controller.signal })
         .then(async (res) => { if (!res.ok) throw new Error(c.previewFail); return res.text(); })
         .then((value) => { if (!controller.signal.aborted) setHtml(value); })
         .catch((e: unknown) => { if (!controller.signal.aborted) setPreviewError(e instanceof Error ? e.message : String(e)); })

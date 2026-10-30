@@ -133,14 +133,14 @@ export default async function (page) {
   await shot('pickup');
 
   // --- Admin
-  const tabs = ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books', 'backups'];
+  const tabs = ['reports', 'opening', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'books', 'backups'];
   const admin = async (tab) => {
     await go('/admin');
     await page.wait(400);
     await page.click(`.admin-tabs button:nth-child(${tabs.indexOf(tab) + 1})`);
     await page.wait(700);
   };
-  for (const tab of ['reports', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'backups']) {
+  for (const tab of ['reports', 'opening', 'menu', 'receipts', 'business', 'staff', 'tax', 'printer', 'backups']) {
     await admin(tab);
     await shot(`admin-${tab}`);
   }

@@ -6,6 +6,9 @@ Self-hosted point of sale for Cactus Blue (Bonaire). Start with [AGENTS.md](AGEN
 For the November 1 tryout and November 2 deployment, follow [the deployment checklist](ops/deployment.md).
 It covers practice versus live data, the truck acceptance drill, backups and the fallback plan.
 
+The working tree also includes [local cactus.local discovery and an Android APK client](ops/mobile-clients.md).
+Build it with `npm run android:build`; the existing Windows 0.2.1 installer predates these server changes.
+
 The laptop in the truck runs the server and shows the till in its own window, like an installed program. Tablets
 and phones on the same WiFi open the kitchen and ordering screens in their browser.
 

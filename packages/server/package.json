@@ -17,6 +17,7 @@
     "@cactus/receipt": "*",
     "@cactus/printer": "*",
     "@cactus/books-bridge": "*",
+    "multicast-dns": "^7.2.5",
     "tsx": "^4.19.0"
   }
 }

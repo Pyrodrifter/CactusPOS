@@ -143,6 +143,14 @@
 <h1 id="sell">5. Taking an order and getting paid</h1>
 <p>Start the till with the <b>CactusPOS</b> icon on the Desktop and sign in with your PIN. You are on the <b>Order</b> screen: the menu on the left, the order on the right.</p>
 
+<h2>Before opening, and learning the till</h2>
+<p>The owner can open <kbd>Admin</kbd> › <kbd>Ready to open</kbd> to check the server, kitchen connection, network printer, recent backup copy, business/CRIB, tax verification and example PINs. Tap <kbd>Check again</kbd> after fixing a warning. A reachable printer still needs paper and a real print test.</p>
+<figure><img src="img/en-admin-opening.png" alt="The Ready to open checklist"></figure>
+<p>For sample orders, choose <kbd>Screen tools</kbd> › <kbd>Practice mode</kbd> and confirm. The yellow <b>PRACTICE MODE</b> banner must stay visible. Practice uses a separate database and receipt counter; real printers, the cash drawer, bookkeeping exports/posting and external backup copies are off. The first start copies the current menu and setup; later live changes are not copied again. On another device open <code>/practice/kitchen</code> or <code>/practice/pos</code>. Use Android app 0.2.0 or newer. Finish practicing with <kbd>Return to live till</kbd> and confirm; make sure the yellow banner is gone before real sales.</p>
+
+<h2>If the app closes during an order</h2>
+<p>The unfinished cart is saved on this device for the signed-in staff member. Reopening it restores the cart; check the current prices before sending. After an interrupted send, use <kbd>Check confirmation</kbd> or <kbd>Retry original send</kbd>. The original request is reused so a lost reply does not create another order. Review the recovered order before continuing. <b>Already paid</b> means do not charge again. If payment is not confirmed, check the separate card terminal before recording it. A browser-storage warning means this device cannot keep a draft.</p>
+
 <ol class="steps">
   <li><b>Tap what the guest wants.</b> Tap a category to see less at once, or type in <b>Find anything on the menu</b>.</li>
   <li><b>Choose the options</b> when the till asks (extras, without tomato, which drink) and tap <kbd>Add to order</kbd>.
@@ -241,8 +249,8 @@
 
 <ol class="steps">
   <li><b>Connect the tablet to the same WiFi as the laptop.</b> Not a guest network: guest networks keep devices apart.</li>
-  <li><b>On the laptop</b>, open the Start menu, then <b>CactusPOS</b>, then <kbd>Connect a tablet or phone</kbd>. A window shows the addresses to use, for example:<br><code>http://192.168.1.20:3000/kitchen</code></li>
-  <li><b>On the tablet</b>, open the web browser (Chrome or Safari) and type that address exactly, with the dots and the colon.</li>
+  <li><b>On the laptop</b>, open the Start menu, then <b>CactusPOS</b>, then <kbd>Connect a tablet or phone</kbd>. With local discovery available, use <code>http://cactus.local/kitchen</code>. The window also shows an IP fallback, for example <code>http://192.168.1.20:3000/kitchen</code>.</li>
+  <li><b>On the tablet</b>, open the web browser (Chrome or Safari) and type the address. If the local name does not open, use the IP fallback. The Android CactusPOS app can also save the address and chosen screen under <b>Connection</b>.</li>
   <li>Sign in with your PIN.</li>
   <li><b>Keep it handy:</b> in the browser's menu choose <i>Add to Home screen</i>. The tablet then has an icon that opens the kitchen screen directly.</li>
 </ol>

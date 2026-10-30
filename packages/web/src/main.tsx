@@ -13,16 +13,18 @@ import { Kitchen } from './apps/kitchen/Kitchen';
 import { Pickup } from './apps/pickup/Pickup';
 import { Admin } from './apps/admin/Admin';
 import { MenuBoard } from './apps/order/MenuBoard';
+import { appBase, isPractice, androidPracticeSupported } from './lib/clientMode';
+import { PracticeBanner } from './ui/PracticeMode';
 
 function Shell({ session }: { session: Session }) {
   return (
-    <PosDraftProvider><AppShell session={session}>
-        <Routes>
+    <PosDraftProvider session={session}><AppShell session={session}>
+        {isPractice() && !androidPracticeSupported() ? <p className="notice">Update the Android app to use practice mode safely. / Werk de Android-app bij om veilig te oefenen.</p> : <Routes>
           <Route path="/pos" element={<Pos />} />
           <Route path="/kitchen" element={<Kitchen />} />
           {session.staff.role === 'owner' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/pos" replace />} />
-        </Routes>
+        </Routes>}
     </AppShell></PosDraftProvider>
   );
 }
@@ -30,10 +32,11 @@ function Shell({ session }: { session: Session }) {
 function App() {
   const [session, setS] = useState<Session | null>(getSession());
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={appBase() || undefined}>
       <div className="app-frame">
         <Toasts />
         <PwaStatus />
+        <PracticeBanner />
         <Routes>
           <Route path="/pickup" element={<Pickup />} />
           <Route path="/menu-board" element={session ? <MenuBoard session={session} /> : <Navigate to="/login?next=menu-board" replace />} />

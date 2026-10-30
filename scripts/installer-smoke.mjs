@@ -19,7 +19,7 @@ const home = join(work, 'isolated data');
 const shortcuts = join(work, 'isolated shortcuts');
 const node = join(program, 'runtime/node/node.exe');
 const launcher = join(program, 'ops/app/launch.mjs');
-const env = { ...process.env, CACTUS_HOME: home };
+const env = { ...process.env, CACTUS_HOME: home, CACTUS_DISABLE_LAN: '1' };
 delete env.CACTUS_DB;
 delete env.CACTUS_SEED;
 const exec = promisify(execFile);

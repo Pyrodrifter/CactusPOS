@@ -10,6 +10,8 @@ import { Logo } from './Logo';
 import { Sheet, toast } from './touch';
 import './shell.css';
 import './theme.css';
+import { appPath } from '../lib/clientMode';
+import { PracticeControl } from './PracticeMode';
 
 const copy = {
   en: {
@@ -97,7 +99,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
           <NavLink to="/pos"><Icon name="cart" /><span>{t('nav.order')}</span></NavLink>
           <NavLink to="/kitchen"><Icon name="kitchen" /><span>{t('nav.kitchen')}</span></NavLink>
           {session.staff.role === 'owner' && <NavLink to="/admin"><Icon name="settings" /><span>{t('nav.admin')}</span></NavLink>}
-          <a href="/pickup" target="_blank" rel="noreferrer" aria-label={c.pickup}><Icon name="pickup" /><span>{t('nav.pickup')}</span><Icon name="external" size={14} className="nav-external" /></a>
+          <a href={appPath('/pickup')} target="_blank" rel="noreferrer" aria-label={c.pickup}><Icon name="pickup" /><span>{t('nav.pickup')}</span><Icon name="external" size={14} className="nav-external" /></a>
         </nav>
         <div className="topbar-tools">
           <span className={`shell-connection ${connection}`} role="status"><i /><span>{connection === 'online' ? c.connected : connection === 'offline' ? c.offline : c.checking}</span></span>
@@ -108,7 +110,8 @@ export function AppShell({ session, children }: { session: Session; children: Re
     </div>
     {tools && <div className="screen-tools"><Sheet title={c.tools} onClose={closeTools}>
       <div className="screen-tools-scroll">
-      <a className="screen-option" href="/menu-board" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}><Icon name="monitor" /><span><strong>{lang === 'nl' ? 'Digitaal menubord' : 'Digital menu board'}</strong><small>{lang === 'nl' ? 'Open het menu op een scherm voor je klanten.' : 'Open the menu on a display for your customers.'}</small></span><Icon name="external" /></a>
+      <a className="screen-option" href={appPath('/menu-board')} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}><Icon name="monitor" /><span><strong>{lang === 'nl' ? 'Digitaal menubord' : 'Digital menu board'}</strong><small>{lang === 'nl' ? 'Open het menu op een scherm voor je klanten.' : 'Open the menu on a display for your customers.'}</small></span><Icon name="external" /></a>
+      <PracticeControl />
       <div className="screen-tools-intro"><span className="screen-tool-emblem"><Icon name="sun" size={28} /></span><div><h3>{c.device}</h3><p>{c.deviceHint}</p></div></div>
       <fieldset className="theme-picker"><legend>{c.appearance}</legend><div>{(['light', 'dark', 'system'] as const).map((value) => <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon name={value === 'dark' ? 'moon' : value === 'light' ? 'sun' : 'monitor'} /><span>{c[value]}</span></button>)}</div><p>{c.themeHint}</p></fieldset>
       <button className="screen-option" role="switch" aria-checked={sunlight && !dark} onClick={() => { if (dark) setTheme('light'); setSunlight(dark || !sunlight); }}><Icon name="sun" /><span><strong>{c.sunlight}</strong><small>{c.sunlightHint}</small></span><i className="touch-switch" /></button>
@@ -118,7 +121,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
       <div className="screen-language"><span><Icon name="language" />{c.language}</span><div><button aria-pressed={lang === 'en'} className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>English</button><button aria-pressed={lang === 'nl'} className={lang === 'nl' ? 'on' : ''} onClick={() => setLang('nl')}>Nederlands</button></div></div>
       <div className="screen-account"><span className="staff-avatar">{session.staff.name.slice(0, 1).toUpperCase()}</span><span><small>{c.signedIn}</small><strong>{session.staff.name}</strong></span><button className="ghost" disabled={signingOut} onClick={() => {
         setSigningOut(true);
-        void api('/logout', { body: {} }).catch(() => {}).finally(() => { setSession(null); location.assign('/login'); });
+        void api('/logout', { body: {} }).catch(() => {}).finally(() => { setSession(null); location.assign(appPath('/login')); });
       }}><Icon name="logout" />{c.signout}</button></div>
       </div>
       <button className="primary screen-tools-done" onClick={closeTools}>{c.done}<Icon name="arrow-right" /></button>

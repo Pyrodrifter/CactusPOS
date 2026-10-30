@@ -67,6 +67,7 @@ export default async function (page) {
     })()`);
     assert.ok(confirm, `Payment confirm unreachable at ${width}`);
     await page.click('.pos-payment .actions .ghost');
+    await page.click('.pos-clear-order'); // Each viewport starts with its own cart; reload now restores drafts.
   }
   await page.size(1180, 820);
   await page.goto('/pos');

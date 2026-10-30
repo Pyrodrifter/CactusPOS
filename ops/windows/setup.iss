@@ -255,7 +255,7 @@ begin
   end;
   WizardForm.StatusLabel.Caption := CustomMessage('StatusFirewall');
   MsgBox(CustomMessage('FirewallAsk'), mbInformation, MB_OK);
-  if (not ShellExec('runas', PowerShell, '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\ops\windows\firewall.ps1') + '" -Port ' + Port, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+  if (not ShellExec('runas', PowerShell, '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\ops\windows\firewall.ps1') + '" -Port ' + Port + ' -LanPort ' + GetIniString('result', 'lanPort', '80', ResultFile), '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
     Log('Firewall rule not made (declined, or code ' + IntToStr(Code) + ').');
     MsgBox(CustomMessage('FirewallDeclined'), mbInformation, MB_OK);

@@ -292,3 +292,9 @@
 .admin-pin-reminder span { flex: 1 1 260px; }
 .admin-pin-reminder button { flex: none; }
 .admin .form.books b, .admin .form.books .reports-rows small { overflow-wrap: anywhere; }
+.opening-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.opening-heading h2 { margin: 0; }
+.opening-item { align-items: flex-start; }
+.opening-item > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.opening-item p { margin: 4px 0; }
+.opening-check .practice-control { margin-top: 20px; }

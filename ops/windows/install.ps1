@@ -187,8 +187,8 @@ if ($NoAutostart) {
 # Looking needs no administrator rights; changing does. 'needed' = no active rule lets this port in.
 $firewall = 'needed'
 try {
-  $rule = Get-NetFirewallRule -DisplayName 'CactusPOS' -ErrorAction SilentlyContinue
-  if ($rule -and (($rule | Get-NetFirewallPortFilter).LocalPort -contains "$($config.port)") -and ($rule.Enabled -eq 'True')) { $firewall = 'ok' }
+  & (Join-Path $PSScriptRoot 'firewall.ps1') -Check -Port $config.port -LanPort $config.lanPort
+  if ($LASTEXITCODE -eq 0) { $firewall = 'ok' }
 } catch { }
 if (-not $SkipFirewall) {
   Step 'Windows Firewall (so phones and tablets can reach the till)'
@@ -199,7 +199,7 @@ if (-not $SkipFirewall) {
     try {
       $fw = Join-Path $PSScriptRoot 'firewall.ps1'
       $p = Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
-        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$fw`"", '-Port', "$($config.port)")
+        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$fw`"", '-Port', "$($config.port)", '-LanPort', "$($config.lanPort)")
       if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
       $firewall = 'ok'
       Write-Host "  Allowed: devices on the same network may connect to port $($config.port)."
@@ -230,6 +230,6 @@ Write-Host '  A new database starts with the example PINs 1234 (owner) and 1111 
 Write-Host '  Change them before real use: sign in as owner, Admin, Staff.' -ForegroundColor Yellow
 if ($ResultFile) {
   # Read by the setup program with the Windows INI functions, so plain ASCII.
-  Set-Content -Path $ResultFile -Encoding ASCII -Value @('[result]', "port=$($config.port)", "firewall=$firewall", "home=$($status.home)")
+  Set-Content -Path $ResultFile -Encoding ASCII -Value @('[result]', "port=$($config.port)", "lanPort=$($config.lanPort)", "firewall=$firewall", "home=$($status.home)")
 }
 exit 0

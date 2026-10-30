@@ -8,6 +8,9 @@ export default async function (page) {
   const countOrders = () => page.eval("fetch('/api/orders?scope=today', {headers:{'x-token': JSON.parse(localStorage.getItem('cactus.session')).token}}).then(r=>r.json()).then(x=>x.length)");
   // "Pay later" opens a sheet for an optional tab name; its main button sends the order to the kitchen.
   const sendLater = async () => {
+    if (await page.eval("!!document.querySelector('.draft-retry')")) {
+      await page.click('.draft-retry'); await page.click('.draft-reviewed'); return;
+    }
     await page.click('.cart .actions > .pos-later-btn');
     assert.equal(await page.eval("!!document.querySelector('.pos-later')"), true, 'Pay later sheet opens');
     await page.click('.pos-later .actions .primary');

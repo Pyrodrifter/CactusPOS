@@ -1,14 +1,14 @@
 import type { Order, Session } from '@cactus/shared';
 import { printHtml } from './print';
+import { apiPath, appPath, sessionKey } from './clientMode';
 
 export type { Session };
-const KEY = 'cactus.session';
 
 export function getSession(): Session | null {
-  try { return JSON.parse(localStorage.getItem(KEY) ?? 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(sessionKey()) ?? 'null'); } catch { return null; }
 }
-export function setSession(s: Session | null): void {
-  try { if (s) localStorage.setItem(KEY, JSON.stringify(s)); else localStorage.removeItem(KEY); } catch { /* private mode */ }
+export function setSession(s: Session | null, mode?: 'live' | 'practice'): void {
+  try { if (s) localStorage.setItem(sessionKey(mode), JSON.stringify(s)); else localStorage.removeItem(sessionKey(mode)); } catch { /* private mode */ }
 }
 
 export class ApiError extends Error {
@@ -38,7 +38,7 @@ export async function send(url: string, init: RequestInit, timeoutMs = REQUEST_T
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown; requestId?: string } = {}): Promise<T> {
   const token = getSession()?.token;
-  const { res, text } = await send(`/api${path}`, {
+  const { res, text } = await send(apiPath(path), {
     method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
     // Only name a content type when there is a body: the server refuses "application/json" with nothing in it,
     // which made every DELETE (menu item, category) fail.
@@ -47,7 +47,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   });
   let data: { error?: string } | null = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* not JSON (a proxy's error page): fall back to the status text */ }
-  if (res.status === 401 && path !== '/login') { setSession(null); location.assign('/login'); }
+  if (res.status === 401 && path !== '/login') { setSession(null); location.assign(appPath('/login')); }
   if (!res.ok) throw new ApiError(res.status, data?.error ?? res.statusText);
   return data as T;
 }
@@ -73,7 +73,7 @@ export async function serverPrints(): Promise<boolean> {
 /** Print the server-rendered receipt with the browser's print dialog, inside this page (see `printHtml`). */
 export async function browserPrintReceipt(order: Order, copy = false): Promise<void> {
   const token = getSession()?.token ?? '';
-  const { res, text } = await send(`/api/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`, { headers: { 'x-token': token } });
+  const { res, text } = await send(apiPath(`/orders/${order.id}/receipt${copy ? '?copy=1' : ''}`), { headers: { 'x-token': token } });
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   await printHtml(text);
 }

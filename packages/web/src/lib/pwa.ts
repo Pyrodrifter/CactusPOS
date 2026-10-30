@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { apiPath } from './clientMode';
 
 type Connection = 'checking' | 'online' | 'offline';
 interface PwaState {
@@ -42,7 +43,7 @@ export async function checkServer(): Promise<void> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 4000);
   try {
-    const response = await fetch('/api/health', {
+    const response = await fetch(apiPath('/health'), {
       cache: 'no-store', credentials: 'omit', signal: controller.signal,
     });
     const body: unknown = response.ok ? await response.json() : null;

@@ -33,7 +33,7 @@ async function freePort() {
 }
 async function launch(home, ...options) {
   insideWork(home);
-  const env = { ...process.env, CACTUS_HOME: home };
+  const env = { ...process.env, CACTUS_HOME: home, CACTUS_DISABLE_LAN: '1' };
   delete env.CACTUS_DB;
   delete env.CACTUS_SEED;
   const result = await exec(node, [join(program, 'ops/app/launch.mjs'), ...options], {

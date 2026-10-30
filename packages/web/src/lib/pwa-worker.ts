@@ -90,7 +90,7 @@ export function installPwaWorker(scope: PwaWorkerScope, config: PwaWorkerConfig)
     const url = new URL(request.url);
     // Check this before navigation: typing /api/... into the address bar is still API traffic.
     if (request.method !== 'GET' || url.origin !== scope.location.origin
-      || /^\/(api|ws)(\/|$)/i.test(url.pathname)
+      || /^\/(api|ws|practice\/ws)(\/|$)/i.test(url.pathname)
       || request.headers.has('authorization') || request.headers.has('range')) return;
 
     if (request.mode === 'navigate') {

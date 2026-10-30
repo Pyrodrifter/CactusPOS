@@ -6,6 +6,7 @@ import { buildApp } from './app.js';
 import { seedSample } from './seedData.js';
 import { applyProfile } from './seedProfile.js';
 import { chooseDb, prepareDb } from './dataHome.js';
+import { startLocalNetwork } from './localNetwork.js';
 
 // One database however the till is started; CACTUS_DB names another file (development, tests).
 const choice = chooseDb(process.env, process.platform, homedir(), process.cwd());
@@ -45,8 +46,15 @@ if (!db.prepare('SELECT 1 FROM tax_categories LIMIT 1').get()) {
   console.log(`Empty database: loaded ${profile ? `seed/${profile}.json` : 'SAMPLE menu'}. Default PINs: owner 1234, staff 1111 — change them in Admin.`);
 }
 const backupDir = join(dirname(dbPath), 'backups');
-const { app, backups } = buildApp(db, { backupDir });
+const { app, backups } = buildApp(db, { backupDir, practiceDbPath: join(dirname(dbPath), 'practice', 'practice.sqlite') });
+let localNetwork: Awaited<ReturnType<typeof startLocalNetwork>> | undefined;
+app.addHook('onClose', async () => { await localNetwork?.stop(); });
 await app.listen({ port, host: '0.0.0.0' });
+if (process.env.CACTUS_LAN_SETTINGS) {
+  try {
+    localNetwork = await startLocalNetwork(JSON.parse(process.env.CACTUS_LAN_SETTINGS), port, process.env.CACTUS_LAN_STATUS_FILE);
+  } catch (error) { console.warn(`Friendly LAN address unavailable; the till still works on port ${port}:`, String(error)); }
+}
 backups.start();
 const ips = Object.values(networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n!.address);
 console.log(`CactusPOS running. DB: ${dbPath}`);

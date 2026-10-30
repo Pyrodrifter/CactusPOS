@@ -124,6 +124,7 @@ describe('production service worker executed in its own scope', () => {
   it.each([
     ['/api/orders', {}, false], ['/api/orders', {}, true], ['/api', {}, true],
     ['/ws', {}, false], ['/ws/events', {}, true],
+    ['/api/practice/orders', {}, true], ['/practice/ws', {}, true],
     ['/api/payments', { method: 'POST', body: 'cash' }, false],
     ['/pos', { method: 'POST', body: 'sale' }, true],
     ['/assets/app-123.js', { method: 'HEAD' }, false],

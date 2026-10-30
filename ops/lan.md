@@ -6,7 +6,8 @@ interface address and regenerate the leaf certificate when the address changes.
 Guest WiFi/client isolation and VPN adapters can prevent devices reaching each
 other.
 
-This is a development launcher. The production service/install flow is T26.
+The HTTPS procedure below is a development launcher. Installed HTTP `cactus.local` discovery and Android/iOS
+clients are covered in [Mobile clients](mobile-clients.md); that does not imply HTTPS certificate provisioning.
 
 ## One-time tools
 

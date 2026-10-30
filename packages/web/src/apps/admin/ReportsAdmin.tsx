@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMoney, parseMoney, type DayReport, type ZReport } from '@cactus/shared';
 import { api, getSession, serverPrints } from '../../lib/api';
+import { apiPath } from '../../lib/clientMode';
 import { printHtml } from '../../lib/print';
 import { useLang } from '../../i18n';
 import { Icon } from '../../ui/Icon';
@@ -92,7 +93,7 @@ export function ReportsAdmin() {
       return;
     }
     try {
-      const res = await fetch(`/api/reports/day/print.html?date=${r.businessDate}`, { headers: { 'x-token': getSession()?.token ?? '' } });
+      const res = await fetch(apiPath(`/reports/day/print.html?date=${r.businessDate}`), { headers: { 'x-token': getSession()?.token ?? '' } });
       if (!res.ok) throw new Error(res.statusText);
       await printHtml(await res.text());
     } catch (e) { toast(errText(e), 'error'); }

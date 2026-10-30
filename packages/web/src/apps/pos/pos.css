@@ -332,3 +332,7 @@
 .pos-correct-sum span { color: var(--muted); font-size: 14px; }
 .pos-correct-sum b { font-size: 22px; font-variant-numeric: tabular-nums; }
 .pos-correct-money { margin: 0; font-weight: 600; }
+.draft-recovery { padding: 14px; margin: 10px 0; border: 2px solid #b97813; border-radius: 14px; }
+.draft-recovery .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.draft-restored { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.practice-sheet-label { display: block; padding: 8px 16px; background: #ffdf78; color: #352600; text-align: center; }

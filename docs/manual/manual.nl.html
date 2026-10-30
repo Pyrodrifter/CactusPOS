@@ -143,6 +143,14 @@
 <h1 id="sell">5. Een bestelling opnemen en afrekenen</h1>
 <p>Start de kassa met het pictogram <b>CactusPOS</b> op het bureaublad en log in met uw pincode. U bent op het scherm <b>Bestellen</b>: links het menu, rechts de bestelling.</p>
 
+<h2>Voor het openen, en oefenen met de kassa</h2>
+<p>De eigenaar kan onder <kbd>Beheer</kbd> › <kbd>Klaar om te openen</kbd> de server, keukenverbinding, netwerkprinter, recente reservekopie, bedrijfsgegevens/CRIB, belastingcontrole en voorbeeldpincodes controleren. Tik na een wijziging op <kbd>Opnieuw controleren</kbd>. Een bereikbare printer heeft nog steeds papier en een echte afdruktest nodig.</p>
+<figure><img src="img/nl-admin-opening.png" alt="De controlelijst Klaar om te openen"></figure>
+<p>Kies voor proefbestellingen <kbd>Schermopties</kbd> › <kbd>Oefenmodus</kbd> en bevestig. De gele balk <b>OEFENMODUS</b> moet zichtbaar blijven. Oefenen heeft een aparte database en bonteller; echte printers, kassalade, boekhoudexporten/boekingen en externe reservekopieën staan uit. De eerste start kopieert het huidige menu en de instellingen; latere echte wijzigingen worden niet opnieuw gekopieerd. Open op een ander apparaat <code>/practice/kitchen</code> of <code>/practice/pos</code>. Gebruik Android-app 0.2.0 of nieuwer. Sluit af met <kbd>Naar de echte kassa</kbd> en bevestig; controleer voor echte verkopen dat de gele balk weg is.</p>
+
+<h2>Als de app tijdens een bestelling sluit</h2>
+<p>De onvoltooide bestelling wordt op dit apparaat bewaard voor de ingelogde medewerker. Bij heropenen komt deze terug; controleer de huidige prijzen voor u verstuurt. Kies na een onderbroken verzending <kbd>Bevestiging controleren</kbd> of <kbd>Dezelfde verzending herhalen</kbd>. De oorspronkelijke aanvraag wordt hergebruikt, zodat een verloren antwoord geen tweede bestelling maakt. Controleer de teruggevonden bestelling voordat u verdergaat. <b>Al betaald</b> betekent dat u niets opnieuw in rekening brengt. Is betaling niet bevestigd, controleer dan eerst de losse betaalautomaat. Een waarschuwing over browseropslag betekent dat dit apparaat het concept niet kan bewaren.</p>
+
 <ol class="steps">
   <li><b>Tik aan wat de gast wil.</b> Tik op een categorie om minder tegelijk te zien, of typ in <b>Zoek in het hele menu</b>.</li>
   <li><b>Kies de opties</b> als de kassa erom vraagt (extra's, zonder tomaat, welk drankje) en tik op <kbd>Toevoegen</kbd>.
@@ -241,8 +249,8 @@
 
 <ol class="steps">
   <li><b>Verbind de tablet met dezelfde wifi als de laptop.</b> Geen gastnetwerk: gastnetwerken houden apparaten uit elkaar.</li>
-  <li><b>Op de laptop</b>: open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Connect a tablet or phone</kbd>. Een venster toont de adressen die u gebruikt, bijvoorbeeld:<br><code>http://192.168.1.20:3000/kitchen</code></li>
-  <li><b>Op de tablet</b>: open de webbrowser (Chrome of Safari) en typ dat adres precies over, met de punten en de dubbele punt.</li>
+  <li><b>Op de laptop</b>: open het menu Start, dan <b>CactusPOS</b>, dan <kbd>Connect a tablet or phone</kbd>. Met lokale herkenning gebruikt u <code>http://cactus.local/kitchen</code>. Het venster toont ook een IP-adres als alternatief, bijvoorbeeld <code>http://192.168.1.20:3000/kitchen</code>.</li>
+  <li><b>Op de tablet</b>: open de webbrowser (Chrome of Safari) en typ het adres. Werkt de lokale naam niet, gebruik dan het IP-adres. In de Android-app CactusPOS bewaart u het adres en het gekozen scherm onder <b>Connection</b>.</li>
   <li>Log in met uw pincode.</li>
   <li><b>Houd het bij de hand:</b> kies in het menu van de browser <i>Toevoegen aan startscherm</i> (op een iPad: <i>Zet op beginscherm</i>). De tablet heeft dan een pictogram dat het keukenscherm direct opent.</li>
 </ol>

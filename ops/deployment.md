@@ -8,6 +8,11 @@ Confirmed by the owner on October 29: **Surface Pro 7** is the till laptop; the 
 Business details, CRIB and tax configuration will be entered in the POS during setup. Each company uses its
 own installation/data and configures its own details; Cactus Blue is the first customer and a seed profile.
 
+**Working-tree additions:** REL05/REL06 add `cactus.local`, Android 0.2.0, isolated practice, saved carts and
+the opening checklist. The owner authorized committing/pushing these on October 30; they are **not in the earlier Windows 0.2.1 installer**. The
+owner has postponed the next Windows release build. The instructions below for these additions apply to
+the current source and its future Windows build; use a separate Windows account for practice on the old installer.
+
 ## Surface Pro 7 preparation
 
 - Use the existing Windows x64 installer. Microsoft lists Windows 11 support for
@@ -28,10 +33,13 @@ own installation/data and configures its own details; Cactus Blue is the first c
   receipt printer model/connection once chosen. Automatic printing currently supports network ESC/POS (TCP); a Windows
   printer uses the explicit Receipt button and browser printing. Direct USB/Bluetooth transports are pending
   T14b. Verify the actual connection before promising automatic receipts.
-- [ ] Decide whether Sunday is practice or real sales. For practice, use a **separate Windows account** on the
-  laptop, install the same setup there, and leave all practice records in that account. CactusPOS has no training
-  switch. On Monday install/open it under the designated live Windows account. Do not delete test orders or
-  restore an empty database over any real sales. If Sunday records real sales, retain that database on Monday.
+- [ ] Decide whether Sunday is practice or real sales. In the updated app, choose **Screen tools → Practice mode**
+  (also under **Admin → Ready to open**). Every practice device must show the yellow **PRACTICE MODE** banner;
+  open `/practice/kitchen` on its kitchen device. Practice has its own database, sessions, receipt numbers and
+  local backups. The first launch copies menu/staff/business/tax/receipt setup; later live setup changes are
+  not recopied. Real printers, cash drawer, bookkeeping posting/CSV and external backup copies are disabled.
+  Do physical printer, external backup/restore and report-export drills in a separate Windows practice account.
+  Never delete test orders or restore an empty database over real sales.
 - [ ] During setup, enter the company's name, CRIB, contact details, timezone and branding in **Admin → Business**.
   Set the applicable rates/effective dates and verification flags in **Admin → Tax**, then assign each menu item's
   category in **Admin → Menu**. Check prices and a receipt before real sales. The owner will fill these in later
@@ -63,7 +71,8 @@ own installation/data and configures its own details; Cactus Blue is the first c
 
 ## Sunday acceptance drill (30–45 minutes)
 
-Use the practice Windows account for sample sales. If using the live account, record only genuine transactions.
+Use the updated app's **Practice mode** for sample sales. Use Android **0.2.0 or newer** for practice; the older
+APK cannot remember practice mode safely and is blocked from it. Keep genuine transactions in the live till.
 
 - [ ] Each operator rings a burger with modifiers, a drink, a quantity change and an open-price Lion Fish item.
   Confirm the total and receipt prices against the approved menu.
@@ -80,8 +89,11 @@ Use the practice Windows account for sample sales. If using the live account, re
 - [ ] Briefly disconnect one tablet's WiFi, reconnect and verify it catches up without duplicate orders.
 - [ ] Stop/reopen CactusPOS, then reboot the laptop and sign in to Windows. The till must start, the same orders
   must remain, and the kitchen must reconnect. Autostart is **at Windows sign-in**, not before sign-in.
-- [ ] Close the practice day: counted cash excludes the opening float. Check cash/card/tips/refunds and export
-  the report. Verify the new backup is copied to the USB stick.
+- [ ] Reload with an unfinished cart and confirm it is restored. After an interrupted send/payment, use
+  **Check confirmation** or **Retry original send**, then review the recovered order. An **Already paid** order
+  must never be charged again. The separate card terminal may have charged even if the POS has no payment.
+- [ ] Close the practice day: counted cash excludes the opening float. Check cash/card/tips/refunds. In-app
+  practice intentionally blocks exports/external copies; test those from the separate Windows practice account.
 - [ ] On a spare Windows account/computer, restore the USB backup using Start menu → CactusPOS → **Restore a
   backup**. Check order count, last receipt and report totals. Do not run a restore over a till taking sales.
 
@@ -93,6 +105,9 @@ the repository. An unresolved checkout, total, kitchen, print or recovery failur
 - [ ] Open the designated live account and confirm it shows the expected records (fresh for practice-only
   Sunday, or including all real Sunday sales). Verify menu, confirmed tax/business details and staff PINs.
 - [ ] Check laptop power/sleep, WiFi, kitchen connection, printer paper and USB backup location.
+- [ ] Choose **Return to live till**, confirm it, and check the yellow practice banner is gone on each sales
+  and kitchen screen. Under **Admin → Ready to open**, refresh the server/kitchen/printer/backup/business/tax/PIN
+  checks. A reachable printer only confirms its network socket, not paper, cutter or readable printing.
 - [ ] Record the opening float separately; agree who handles corrections and calls for fallback.
 - [ ] Run alongside the old till until the operators accept the flow. Ensure each real payment is charged
   once; agree which system is the accounting source during the parallel run.
