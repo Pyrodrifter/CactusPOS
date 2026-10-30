@@ -108,6 +108,11 @@ From the app audit of master at 36f2e8d: [handoffs/2026-10-10-claude-app-audit.m
 | A08 | qa | Repair `e2e/ux08-checkout.mjs` (fails since the Pay later sheet) and run the browser checks from one command (with T15) | - | review | claude · 2026-10-10 | Both ux08 scenarios pass on master from one command |
 | A09 | ops | `scripts/shot.mjs` leaves a headless Edge and a temp profile behind after every run on Windows | - | review | claude · 2026-10-10 | No `msedge.exe` on a `cactus-shot-` profile and no such folder remains after a run |
 
+## Owner requests 2026-10-30 (claude)
+| ID | Lane | Task | Deps | Status | Owner | Done when |
+|---|---|---|---|---|---|---|
+| TAX01 | shared / web-admin / qa | Owner request: Tax tab usable by any Bonaire business (new categories from presets, rename, legal ground, tax check), typing menu prices without ABB, sanity check of the 6% included setup; PyroBookKeeper left out | - | review | claude · 2026-10-30 | Categories can be added and named; check panel flags missing/unverified rates; ex-ABB entry stores the inclusive price exactly; checks and e2e pass; handoff 2026-10-30-claude-TAX01.md |
+
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06
 - **Wave 2:** T03, T04, T05, T13

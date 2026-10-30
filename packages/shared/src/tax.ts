@@ -70,6 +70,16 @@ export function taxInGross(gross: Cents, bps: number): Cents {
   return roundDiv(assertCents(gross, 'gross') * assertBps(bps), 10000 + bps);
 }
 
+/**
+ * Tax-inclusive price for a price typed without ABB, for the menu editor only: what is stored and
+ * charged is always the inclusive price (consumer prices exclusive of ABB are not allowed on Bonaire).
+ * Exact inverse of taxInGross: taxInGross(grossFromNet(n, bps), bps) === grossFromNet(n, bps) - n.
+ */
+export function grossFromNet(net: Cents, bps: number): Cents {
+  const n = assertCents(net, 'net');
+  return assertCents(n + roundDiv(n * assertBps(bps), 10000), 'gross');
+}
+
 export interface TaxableLine {
   taxCategoryId: string;
   /** Line total incl. tax, incl. modifiers (unit price x quantity). */

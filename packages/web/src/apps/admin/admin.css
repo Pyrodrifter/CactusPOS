@@ -148,6 +148,10 @@
 .admin .tag.warn { background: #fff0d8; color: #805112; }
 .admin .tag.good { background: #e6f3e6; color: #24613f; }
 .admin .warn-text { color: #8a5718; line-height: 1.5; }
+.admin .tax-check { border: 1px solid var(--admin-line); border-radius: 20px; padding: 16px 18px; margin: 0 0 18px; line-height: 1.5; }
+.admin .tax-check h3 { margin: 0 0 8px; }
+.admin .tax-check p { margin: 6px 0 0; }
+.admin .tax-check svg { vertical-align: -3px; }
 
 /* ---- dialogs: heading and actions stay put, the middle scrolls ---- */
 .admin .admin-dialog { padding: 0; border: 0; border-radius: 26px; width: min(540px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); overflow: hidden; color: var(--admin-ink); background: #fff; box-shadow: 0 20px 90px #123b4b4a; }

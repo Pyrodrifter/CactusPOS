@@ -29,6 +29,8 @@ const copy = {
     role: 'Role', activeHint: 'Switch off to stop this person from signing in.',
     staffHint: 'Tap a person to change their name, PIN or access.',
     verified: 'Verified',
+    exAbb: 'Type prices without ABB', withoutAbb: ' (without ABB)', priceEx: 'Price (without ABB)', exAbbHint: 'The till adds the ABB; the menu and the receipt show the price with ABB.',
+    customerPays: (price: string, tax: string, rate: string) => `Customer pays ${price}, of which ${tax} ABB (${rate})`,
   },
   nl: {
     title: 'Maak het eigen', intro: 'Je menu, team en instellingen op één plek.',
@@ -58,6 +60,8 @@ const copy = {
     role: 'Rol', activeHint: 'Zet uit om te voorkomen dat deze persoon kan inloggen.',
     staffHint: 'Tik op een persoon om naam, pincode of toegang te wijzigen.',
     verified: 'Gecontroleerd',
+    exAbb: 'Prijzen zonder ABB invoeren', withoutAbb: ' (zonder ABB)', priceEx: 'Prijs (zonder ABB)', exAbbHint: 'De kassa telt de ABB erbij op; het menu en de bon tonen de prijs met ABB.',
+    customerPays: (price: string, tax: string, rate: string) => `Klant betaalt ${price}, waarvan ${tax} ABB (${rate})`,
   },
 } as const;
 

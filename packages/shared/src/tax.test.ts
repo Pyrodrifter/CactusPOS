@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BONAIRE_DEFAULT_TAX, computeTotals, rateAt, taxInGross, TaxCategorySchema, type TaxCategory } from './tax.js';
+import { BONAIRE_DEFAULT_TAX, computeTotals, grossFromNet, rateAt, taxInGross, TaxCategorySchema, type TaxCategory } from './tax.js';
 import { assertCents, formatMoney, MAX_CENTS, parseMoney, roundDiv, sumCents } from './money.js';
 
 const D = '2026-10-07';
@@ -80,6 +80,19 @@ describe('ABB contained in an inclusive price', () => {
       const gross = net + roundDiv(net * 600, 10000);
       expect(gross - taxInGross(gross, 600)).toBe(net);
     }
+  });
+  it('a price typed without ABB becomes the inclusive price, and the receipt gives the same ABB back', () => {
+    expect(grossFromNet(1500, 600)).toBe(1590);  // 15.00 + 0.90
+    expect(grossFromNet(1000, 800)).toBe(1080);
+    expect(grossFromNet(275, 600)).toBe(292);    // 2.75 + 0.165, tie rounds up
+    expect(grossFromNet(1234, 0)).toBe(1234);
+    for (const bps of [0, 600, 700, 800]) {
+      for (let net = 0; net <= 20000; net++) {
+        const gross = grossFromNet(net, bps);
+        expect(taxInGross(gross, bps)).toBe(gross - net);
+      }
+    }
+    expect(() => grossFromNet(100.5, 600)).toThrow();
   });
   it('rejects bad rates and amounts instead of producing NaN', () => {
     expect(() => taxInGross(NaN, 600)).toThrow();

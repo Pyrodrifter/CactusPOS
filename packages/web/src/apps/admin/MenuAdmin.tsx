@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { formatMoney, parseMoney, type MenuItem, type MenuResponse, type ModifierGroup } from '@cactus/shared';
+import { formatMoney, grossFromNet, parseMoney, taxInGross, type MenuItem, type MenuResponse, type ModifierGroup } from '@cactus/shared';
 import { api } from '../../lib/api';
 import { useLang } from '../../i18n';
 import { errText, newId } from './Admin';
@@ -7,9 +7,28 @@ import { Icon } from '../../ui/Icon';
 import { AdminDialog } from './AdminDialog';
 import { AdminSwitch, ConfirmDialog, NameDialog, ScrollRow } from './controls';
 import { useAdminCopy } from './copy';
+import { pct, rateToday } from './TaxAdmin';
 
 type Menu = MenuResponse;
 const dollars = (c: number) => (c / 100).toFixed(2);
+
+/**
+ * Prices are always stored and charged with ABB in them. "Without ABB" only changes what the owner types:
+ * the field shows the price minus its ABB, and the typed amount gets the ABB added on save.
+ */
+const EX_ABB_KEY = 'cactus.admin.pricesWithoutAbb';
+const readExAbb = () => { try { return localStorage.getItem(EX_ABB_KEY) === '1'; } catch { return false; } };
+const shownPrice = (cents: number, ex: boolean, bps: number) => dollars(ex ? cents - taxInGross(cents, bps) : cents);
+/**
+ * Stored (inclusive) cents for a field, or null when it is not an amount. An untouched field keeps its stored
+ * price exactly: not every inclusive price is reachable from a whole-cent net, so converting back could move it a cent.
+ */
+const storedPrice = (text: string, ex: boolean, bps: number, original?: number): number | null => {
+  const cents = parseMoney(text);
+  if (cents === null || !ex) return cents;
+  if (original !== undefined && text === shownPrice(original, true, bps)) return original;
+  return grossFromNet(cents, bps);
+};
 
 export function MenuAdmin() {
   const { t } = useLang();
@@ -158,13 +177,28 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
   const { t } = useLang();
   const copy = useAdminCopy();
   const [d, setD] = useState<MenuItem>(item);
-  const [price, setPrice] = useState(isNew ? '' : dollars(item.priceCents));
+  const tax = menu.taxCategories.find((x) => x.id === d.taxCategoryId);
+  const bps = (tax && rateToday(tax)) ?? 0;
+  const [ex, setEx] = useState(readExAbb);
+  const originalDeltas = Object.fromEntries(item.modifierGroups.flatMap((g) => g.options.map((o) => [o.id, o.priceDeltaCents])));
+  const original = isNew ? undefined : item.priceCents;
+  const [price, setPrice] = useState(() => (original === undefined ? '' : shownPrice(original, ex, bps)));
   const [deltas, setDeltas] = useState<Record<string, string>>(
-    Object.fromEntries(item.modifierGroups.flatMap((g) => g.options.map((o) => [o.id, dollars(o.priceDeltaCents)]))));
+    () => Object.fromEntries(Object.entries(originalDeltas).map(([id, c]) => [id, shownPrice(c, ex, bps)])));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const tax = menu.taxCategories.find((x) => x.id === d.taxCategoryId);
+  const toCents = (text: string, orig?: number) => storedPrice(text, ex, bps, orig);
+  const priceCents = d.openPrice ? null : toCents(price, original);
+
+  /** Flip how prices are typed; every field is rewritten so the price the customer pays stays the same. */
+  const switchEx = (next: boolean) => {
+    const flip = (text: string, orig?: number) => { const c = toCents(text, orig); return c === null ? text : shownPrice(c, next, bps); };
+    setPrice(flip(price, original));
+    setDeltas(Object.fromEntries(Object.entries(deltas).map(([id, text]) => [id, flip(text, originalDeltas[id])])));
+    setEx(next);
+    try { localStorage.setItem(EX_ABB_KEY, next ? '1' : '0'); } catch { /* only a convenience */ }
+  };
 
   const setGroup = (gid: string, patch: Partial<ModifierGroup>) =>
     setD((x) => ({ ...x, modifierGroups: x.modifierGroups.map((g) => (g.id === gid ? { ...g, ...patch } : g)) }));
@@ -172,14 +206,14 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
   const save = async () => {
     if (busy) return;
     setErr('');
-    const cents = parseMoney(price);
+    const cents = priceCents;
     if (!d.name.trim()) return setErr(t('admin.needName'));
     if (cents === null && !d.openPrice) return setErr(t('admin.badPrice'));
     const groups: ModifierGroup[] = [];
     for (const g of d.modifierGroups) {
       const options = [];
       for (const o of g.options) {
-        const dc = parseMoney(deltas[o.id] || '0');
+        const dc = toCents(deltas[o.id] || '0', originalDeltas[o.id]);
         if (dc === null || !o.name.trim()) return setErr(t('admin.badOption'));
         options.push({ ...o, name: o.name.trim(), priceDeltaCents: dc });
       }
@@ -197,7 +231,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
       </>}>
         <label>{t('admin.name')}<input value={d.name} autoFocus onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
         <div className="two">
-          <label>{t('admin.price')}<input inputMode="decimal" value={d.openPrice ? '' : price} disabled={d.openPrice} placeholder={d.openPrice ? t('pos.market') : '0.00'} onChange={(e) => setPrice(e.target.value)} /></label>
+          <label>{ex ? copy.priceEx : t('admin.price')}<input inputMode="decimal" value={d.openPrice ? '' : price} disabled={d.openPrice} placeholder={d.openPrice ? t('pos.market') : '0.00'} onChange={(e) => setPrice(e.target.value)} /></label>
           <label>{t('admin.category')}
             <select value={d.categoryId} onChange={(e) => setD({ ...d, categoryId: e.target.value })}>
               {menu.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -217,6 +251,8 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
             </select>
           </label>
         </div>
+        {priceCents !== null && <small className="muted">{copy.customerPays(formatMoney(priceCents), formatMoney(taxInGross(priceCents, bps)), pct(bps))}</small>}
+        <AdminSwitch on={ex} onChange={switchEx} label={copy.exAbb} hint={copy.exAbbHint} />
         <AdminSwitch on={d.openPrice} onChange={(openPrice) => setD({ ...d, openPrice })} label={t('admin.openPrice')} />
         <label>{t('admin.description')}<input value={d.description ?? ''} onChange={(e) => setD({ ...d, description: e.target.value })} /></label>
         {tax?.unverified && <small className="warn-text">{t('admin.taxUnverified')}</small>}
@@ -238,7 +274,7 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
             {g.options.map((o) => (
               <div key={o.id} className="opt-row">
                 <label>{copy.optionName}<input value={o.name} placeholder={t('admin.optName')} onChange={(e) => setGroup(g.id, { options: g.options.map((x) => (x.id === o.id ? { ...x, name: e.target.value } : x)) })} /></label>
-                <label>{copy.optionPrice}<input inputMode="decimal" value={deltas[o.id] ?? ''} placeholder="+0.00" onChange={(e) => setDeltas({ ...deltas, [o.id]: e.target.value })} /></label>
+                <label>{copy.optionPrice}{ex && copy.withoutAbb}<input inputMode="decimal" value={deltas[o.id] ?? ''} placeholder="+0.00" onChange={(e) => setDeltas({ ...deltas, [o.id]: e.target.value })} /></label>
                 <button type="button" className="ghost danger" aria-label={`${t('admin.delete')}: ${o.name || copy.optionName}`} onClick={() => setGroup(g.id, { options: g.options.filter((x) => x.id !== o.id) })}><Icon name="trash" /></button>
               </div>
             ))}
