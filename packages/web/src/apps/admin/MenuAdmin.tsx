@@ -18,6 +18,13 @@ const dollars = (c: number) => (c / 100).toFixed(2);
  */
 const EX_ABB_KEY = 'cactus.admin.pricesWithoutAbb';
 const readExAbb = () => { try { return localStorage.getItem(EX_ABB_KEY) === '1'; } catch { return false; } };
+/** The tax category a new item gets: the one the menu already uses most (set for the whole menu in Admin > Tax). */
+const menuTax = (menu: MenuResponse) => {
+  const count = new Map<string, number>();
+  for (const i of menu.items) count.set(i.taxCategoryId, (count.get(i.taxCategoryId) ?? 0) + 1);
+  const most = [...count].sort((a, b) => b[1] - a[1])[0]?.[0];
+  return most ?? menu.taxCategories.find((x) => x.kind === 'taxed')?.id ?? menu.taxCategories[0]?.id ?? '';
+};
 const shownPrice = (cents: number, ex: boolean, bps: number) => dollars(ex ? cents - taxInGross(cents, bps) : cents);
 /**
  * Stored (inclusive) cents for a field, or null when it is not an amount. An untouched field keeps its stored
@@ -98,7 +105,7 @@ export function MenuAdmin() {
 
   const blank = (): MenuItem => ({
     id: newId('item'), categoryId: cat, name: '', priceCents: 0,
-    taxCategoryId: menu.taxCategories.find((x) => x.kind === 'taxed')?.id ?? menu.taxCategories[0]?.id ?? '',
+    taxCategoryId: menuTax(menu),
     station: 'kitchen', available: true, modifierGroups: [], openPrice: false,
   });
 
@@ -239,11 +246,8 @@ function ItemEditor({ item, menu, isNew, onSave, onDelete, onClose }: {
           </label>
         </div>
         <div className="two">
-          <label>{t('admin.taxCat')}
-            <select value={d.taxCategoryId} onChange={(e) => setD({ ...d, taxCategoryId: e.target.value })}>
-              {menu.taxCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
+          {/* Tax is set once for the whole menu in Admin > Tax (TAX03); here it is only shown. */}
+          <div className="menu-tax-readonly"><span className="admin-field-label">{t('admin.taxCat')}</span><strong>{tax?.name ?? '—'}</strong><small className="muted">{copy.taxSetInTax}</small></div>
           <label>{t('admin.station')}
             <select value={d.station} onChange={(e) => setD({ ...d, station: e.target.value })}>
               <option value="kitchen">{t('nav.kitchen')}</option>

@@ -358,3 +358,7 @@
 .day-sales-review label { display: grid; gap: 8px; }
 .day-sales-review input { width: 100%; }
 .cash-drawer, .day-sales-review { margin-bottom: 20px; }
+
+/* Menu item: the tax category is shown, not chosen (it is set for the whole menu under Tax). */
+.admin .menu-tax-readonly, .admin-dialog .menu-tax-readonly { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.menu-tax-readonly strong { display: flex; align-items: center; min-height: 60px; padding: 0 14px; border: 1px dashed var(--line, #c9d3dc); border-radius: 12px; font-size: 17px; }

@@ -93,6 +93,31 @@ export class AdminService {
       return cat;
     });
   }
+  /** Tax is set once for the whole menu (TAX03): every item gets this category. Sales already made keep theirs. */
+  applyTaxToMenu(id: string, by: Staff): { items: number } {
+    return tx(this.db, () => {
+      if (!this.db.prepare('SELECT 1 FROM tax_categories WHERE id = ?').get(id)) throw new HttpError(404, 'Unknown tax category');
+      const items = this.pos.menu().items.filter((i) => i.taxCategoryId !== id);
+      const write = this.db.prepare('UPDATE menu_items SET data = ? WHERE id = ?');
+      for (const i of items) write.run(JSON.stringify({ ...i, taxCategoryId: id }), i.id);
+      this.log('tax.applied', { id, items: items.length }, by);
+      return { items: items.length };
+    });
+  }
+  /** A category nothing was ever sold under and no item uses; anything else stays for the records. */
+  taxInUse(id: string): boolean {
+    return this.pos.menu().items.some((i) => i.taxCategoryId === id)
+      || !!this.db.prepare('SELECT 1 FROM orders WHERE data LIKE ? LIMIT 1').get(`%"taxCategoryId":"${id}"%`);
+  }
+  deleteTax(id: string, by: Staff): void {
+    tx(this.db, () => {
+      if (!this.db.prepare('SELECT 1 FROM tax_categories WHERE id = ?').get(id)) throw new HttpError(404, 'Unknown tax category');
+      if (this.taxInUse(id)) throw new HttpError(409, 'This category is used by the menu or by earlier sales, so it stays');
+      this.db.prepare('DELETE FROM tax_categories WHERE id = ?').run(id);
+      this.log('tax.deleted', { id }, by);
+    });
+  }
+
   /** Applies to sales from now on; orders already made keep the ABB they were sold with. */
   setTaxExemption(ex: TaxExemption, by: Staff): TaxExemption {
     const clean = { charged: ex.charged, reason: ex.reason.trim() };

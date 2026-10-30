@@ -6,6 +6,7 @@ import { errText, newId } from './Admin';
 import { Icon } from '../../ui/Icon';
 import { AdminDialog } from './AdminDialog';
 import { AdminSwitch } from './controls';
+import { toast } from '../../ui/touch';
 import { useAdminCopy } from './copy';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -25,7 +26,6 @@ const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
  */
 const PRESETS = [
   { id: 'service_6', kind: 'taxed', bps: 600 },
-  { id: 'goods_8', kind: 'taxed', bps: 800 },
   { id: 'insurance_7', kind: 'taxed', bps: 700 },
   { id: 'zero_rated', kind: 'taxed', bps: 0 },
   { id: 'exempt', kind: 'exempt', bps: 0 },
@@ -40,11 +40,13 @@ const COPY = {
     noRate: (name: string) => `${name} has no rate for today. Items in it cannot be sold until you add one.`,
     unverifiedUsed: (n: number) => `${n} tax ${n === 1 ? 'category is' : 'categories are'} used on the menu but not verified with the accountant yet.`,
     allGood: 'Every category used on the menu has a rate for today and is verified.',
-    items: (n: number) => (n === 1 ? '1 menu item' : `${n} menu items`), noItems: 'No menu items',
+    items: (n: number) => (n === 1 ? '1 menu item' : `${n} menu items`), noItems: 'No menu items', allItems: 'The whole menu',
+    applyAll: 'Use for the whole menu', applied: (n: number) => `${n} menu ${n === 1 ? 'item' : 'items'} changed.`, remove: 'Remove',
+    oneRate: 'Tax is set here for the whole menu, not per item.',
     addCategory: 'New tax category', editCategory: 'Change category', startFrom: 'Start from',
     kind: 'Kind', taxed: 'Taxed (ABB)', ground: 'Legal ground', groundHint: 'Write down why no ABB applies; the Belastingdienst can ask for it.',
     needName: 'Give the category a name', needGround: 'Write down the legal ground', already: 'already set up',
-    preset: { service_6: 'Services 6%', goods_8: 'Goods from a producer, imports 8%', insurance_7: 'Insurance 7%', zero_rated: 'Zero-rated 0% (export)', exempt: 'Exempt', outside_scope: 'Outside scope' } satisfies Record<Preset['id'], string>,
+    preset: { service_6: 'Services 6%', insurance_7: 'Insurance 7%', zero_rated: 'Zero-rated 0% (export)', exempt: 'Exempt', outside_scope: 'Outside scope' } satisfies Record<Preset['id'], string>,
     charge: 'Charge ABB', chargeOn: 'Sales are taxed by the categories below.', chargeOff: (reason: string) => `Off: every new sale is recorded as exempt (${reason}). Earlier sales keep their ABB.`,
     offTitle: 'Switch ABB off', offIntro: 'Only for a business that is allowed to sell without ABB. Check it with the accountant or the Belastingdienst first. Prices stay the same; from now on they hold no ABB.',
     offReason: 'Why no ABB is charged', offExample: 'e.g. food truck (trukipan) arrangement', offCheck: 'ABB is switched off, so no sale gets ABB. Prices on the menu are what the customer pays.',
@@ -56,11 +58,13 @@ const COPY = {
     noRate: (name: string) => `${name} heeft geen tarief voor vandaag. Items hierin kunnen pas verkocht worden als u er een toevoegt.`,
     unverifiedUsed: (n: number) => `${n} ${n === 1 ? 'belastingcategorie wordt' : 'belastingcategorieën worden'} op het menu gebruikt maar ${n === 1 ? 'is' : 'zijn'} nog niet gecontroleerd met de boekhouder.`,
     allGood: 'Elke categorie op het menu heeft een tarief voor vandaag en is gecontroleerd.',
-    items: (n: number) => (n === 1 ? '1 menu-item' : `${n} menu-items`), noItems: 'Geen menu-items',
+    items: (n: number) => (n === 1 ? '1 menu-item' : `${n} menu-items`), noItems: 'Geen menu-items', allItems: 'Het hele menu',
+    applyAll: 'Voor het hele menu gebruiken', applied: (n: number) => `${n} menu-${n === 1 ? 'item' : 'items'} aangepast.`, remove: 'Verwijderen',
+    oneRate: 'De belasting stel je hier in voor het hele menu, niet per item.',
     addCategory: 'Nieuwe belastingcategorie', editCategory: 'Categorie wijzigen', startFrom: 'Begin met',
     kind: 'Soort', taxed: 'Belast (ABB)', ground: 'Wettelijke grond', groundHint: 'Schrijf op waarom er geen ABB geldt; de Belastingdienst kan erom vragen.',
     needName: 'Geef de categorie een naam', needGround: 'Vul de wettelijke grond in', already: 'al ingesteld',
-    preset: { service_6: 'Diensten 6%', goods_8: 'Goederen van een producent, invoer 8%', insurance_7: 'Verzekeringen 7%', zero_rated: 'Nultarief 0% (export)', exempt: 'Vrijgesteld', outside_scope: 'Buiten toepassing' } satisfies Record<Preset['id'], string>,
+    preset: { service_6: 'Diensten 6%', insurance_7: 'Verzekeringen 7%', zero_rated: 'Nultarief 0% (export)', exempt: 'Vrijgesteld', outside_scope: 'Buiten toepassing' } satisfies Record<Preset['id'], string>,
     charge: 'ABB rekenen', chargeOn: 'Verkopen worden belast volgens de categorieën hieronder.', chargeOff: (reason: string) => `Uit: elke nieuwe verkoop wordt als vrijgesteld vastgelegd (${reason}). Eerdere verkopen houden hun ABB.`,
     offTitle: 'ABB uitzetten', offIntro: 'Alleen voor een bedrijf dat zonder ABB mag verkopen. Controleer dit eerst met de boekhouder of de Belastingdienst. De prijzen blijven gelijk; vanaf nu zit er geen ABB in.',
     offReason: 'Waarom er geen ABB wordt gerekend', offExample: 'bijv. regeling voor foodtrucks (trukipan)', offCheck: 'ABB staat uit, dus geen enkele verkoop krijgt ABB. De prijzen op het menu zijn wat de klant betaalt.',
@@ -95,6 +99,18 @@ export function TaxAdmin() {
   const cats = setup?.categories ?? [];
   const charged = setup?.exemption.charged ?? true;
   const used = (id: string) => menu?.items.filter((i) => i.taxCategoryId === id).length ?? 0;
+
+  const total = menu?.items.length ?? 0;
+  const act = async (path: string, method: 'POST' | 'DELETE') => {
+    if (busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const r = await api<{ items?: number }>(path, { method });
+      if (typeof r.items === 'number') toast(c.applied(r.items));
+      await load();
+    } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
+  };
 
   const save = async (cat: TaxCategory) => {
     if (busy) return false;
@@ -155,7 +171,7 @@ export function TaxAdmin() {
 
   return (
     <div>
-      {charged && <p className="notice info">{c.intro}</p>}
+      {charged && <p className="notice info">{c.intro} {c.oneRate}</p>}
       {err && !adding && !draft && switching === null && <div className="error" role="alert">{err}</div>}
       {setup && (
         <div className="tax-switch">
@@ -188,12 +204,14 @@ export function TaxAdmin() {
                   {x.kind === 'taxed'
                     ? `${t('admin.now')}: ${now === null ? '—' : pct(now)} · ${[...x.rates].sort((a, b) => a.validFrom.localeCompare(b.validFrom)).map((r) => `${pct(r.bps)} ${t('admin.from')} ${r.validFrom}`).join(' · ')}`
                     : `${x.kind === 'exempt' ? t('admin.exempt') : t('admin.outside')} — ${x.reason ?? ''}`}
-                  {` · ${n ? c.items(n) : c.noItems}`}
+                  {` · ${n && n === total ? c.allItems : n ? c.items(n) : c.noItems}`}
                 </small>
               </div>
               <div className="row-actions">
                 <button type="button" className="ghost" disabled={busy} onClick={() => { setErr(''); setDraft({ cat: x, isNew: false, pct: '', from: today() }); }}><Icon name="edit" />{t('admin.edit')}</button>
+                {total > 0 && n < total && <button type="button" className="primary" disabled={busy} onClick={() => void act(`/admin/tax/${x.id}/apply-to-menu`, 'POST')}><Icon name="check" />{c.applyAll}</button>}
                 {x.kind === 'taxed' && <button type="button" disabled={busy} onClick={() => { setErr(''); setAdding({ cat: x, pct: '', from: today() }); }}><Icon name="plus" />{t('admin.newRate')}</button>}
+                {n === 0 && <button type="button" className="ghost" disabled={busy} onClick={() => void act(`/admin/tax/${x.id}`, 'DELETE')}><Icon name="trash" />{c.remove}</button>}
                 <button type="button" className={x.unverified ? 'primary' : 'ghost'} disabled={busy} onClick={() => void save({ ...x, unverified: !x.unverified })}>
                   <Icon name={x.unverified ? 'check' : 'warning'} />
                   {x.unverified ? t('admin.markVerified') : t('admin.markUnverified')}

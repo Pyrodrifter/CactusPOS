@@ -64,6 +64,11 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   const templates = new ReceiptTemplates(db);
   const app = Fastify({ logger: false });
   const admin = new AdminService(db, svc, svc.auth);
+  // The 8% category was a default until TAX03. A till that never used it loses it once; one that did keeps it.
+  if (!getKv<boolean>(db, 'tax.goods8-cleared', false)) {
+    if (db.prepare("SELECT 1 FROM tax_categories WHERE id = 'goods_8'").get() && !admin.taxInUse('goods_8')) db.prepare("DELETE FROM tax_categories WHERE id = 'goods_8'").run();
+    setKv(db, 'tax.goods8-cleared', true);
+  }
   const throttle = new LoginThrottle();
   const printing = new Printing(db, () => svc.business(), opts.printerTransport, practiceMode);
   app.addHook('onClose', async () => printing.queue.stop());
@@ -485,6 +490,8 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     menuChanged();
     return cat;
   });
+  app.post('/api/admin/tax/:id/apply-to-menu', async (req) => { const result = admin.applyTaxToMenu(idOf(req), ownerOf(req)); menuChanged(); return result; });
+  app.delete('/api/admin/tax/:id', async (req) => { admin.deleteTax(idOf(req), ownerOf(req)); menuChanged(); return ok; });
   app.get('/api/admin/tax', async (req) => { ownerOf(req); return svc.taxSetup(); });
   app.put('/api/admin/tax-exemption', async (req) => {
     const by = ownerOf(req);
