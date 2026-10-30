@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CentsZ, IsoDateTime, PaymentMethod, PriceZ } from './domain.js';
 import { IsoDate, TaxBreakdownRow } from './tax.js';
+import { DrawerSummary } from './cash.js';
 
 /**
  * Day report: the money that moved on one business date.
@@ -53,6 +54,8 @@ export const DayReport = z.object({
   corrections: z.object({ count: z.number().int().positive(), removedCents: PriceZ, addedCents: PriceZ }).optional(),
   /** Cash this day's trading put in the drawer: cash taken for sales less cash handed back. Excludes any float. */
   cashExpectedCents: CentsZ,
+  /** Physical drawer cash: sales plus recorded opening float/top-ups less withdrawals. */
+  drawer: DrawerSummary.optional(),
   receipts: z.object({ first: z.number().int().positive().nullable(), last: z.number().int().positive().nullable(), count: z.number().int().nonnegative() }),
   items: z.array(z.object({ name: z.string(), qty: z.number().int().positive(), grossCents: PriceZ })),
   /** Sales per hour of the day they were paid, in the business time zone. */
@@ -64,6 +67,10 @@ export const CloseDayBody = z.object({
   date: IsoDate,
   /** Cash counted in the drawer, excluding the float. Optional; gives the over/short figure. */
   countedCashCents: PriceZ.optional(),
+  /** Older clients omit this and count sales cash only. New settlement screens count the entire drawer. */
+  cashCountBasis: z.enum(['sales', 'drawer']).optional(),
+  /** Refuse a settlement when sales/cash movements changed since the owner reviewed them. */
+  expectedRevision: z.string().length(64).optional(),
   note: z.string().max(300).optional(),
 });
 export type CloseDayBodyT = z.infer<typeof CloseDayBody>;
@@ -75,6 +82,8 @@ export const ZReport = z.object({
   closedAt: IsoDateTime,
   closedBy: z.string(),
   countedCashCents: PriceZ.nullable(),
+  cashCountBasis: z.enum(['sales', 'drawer']).optional(),
+  revision: z.string().length(64).optional(),
   /** Counted minus expected: positive is over, negative is short. Null when cash was not counted. */
   cashDifferenceCents: CentsZ.nullable(),
   note: z.string().optional(),
