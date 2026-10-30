@@ -279,13 +279,16 @@
 
 <ol class="steps">
   <li><b>Finish the open orders first.</b> The page warns when orders are still unpaid. Take the payment, or void them.</li>
+  <li><b>Review sales before settlement.</b> In the receipt list on this page, find the sale and tap <kbd>Correct</kbd> to fix items, quantities or payment method. Enter a reason. The original receipt stays on record and a linked replacement is created. Check any card-terminal refund or extra charge yourself.</li>
+  <li><b>Check Cash drawer.</b> Record the money present each morning with <kbd>Cash in</kbd> and reason <i>Opening float</i>. Record other top-ups and withdrawals with <kbd>Cash in</kbd> / <kbd>Cash out</kbd>, amount and reason. <kbd>Reverse entry</kbd> adds an equal opposite entry when a record was wrong. Cash entries show who recorded them; they change the drawer balance, not sales or ABB. <kbd>Open drawer</kbd> is available only with a configured compatible printer/drawer.</li>
   <li>Tap <kbd>Close the day</kbd>.</li>
-  <li><b>Count the cash</b> in the drawer, without the change you started the day with, and type the amount. The till shows what it expected and the difference. You may leave it empty if you did not count.</li>
+  <li><b>Count all cash</b> physically in the drawer, <b>including the opening float</b>, and type the amount. Expected cash is cash sales plus cash-in minus cash-out. Record the opening float first so it is included. You may leave the count empty if you did not count.</li>
   <li>Tap <kbd>Close day</kbd>. The day is stored as a numbered <b>Z report</b>.</li>
   <li><kbd>Print</kbd> prints the day report, if you want it on paper.</li>
 </ol>
 <figure class="medium"><img src="img/en-close-day.png" alt="Closing the day"></figure>
 <p>You can keep selling after closing. If something changes afterwards, the page says so; tap <kbd>Close again</kbd> to store the new figures.</p>
+<p>If sales or cash entries change while you count, closing is refused and the figures refresh. Review and recount before closing again. When a cash-entry reply is interrupted, use <kbd>Check confirmation</kbd> or <kbd>Retry original entry</kbd>; do not move the physical cash again. Closed reports keep their original cash journal and count basis.</p>
 
 <h2>For the accountant</h2>
 <p><kbd>Admin</kbd> › <kbd>Bookkeeping</kbd>. Choose the dates and download <b>Daily sales (CSV)</b>: one line per closed day with sales, ABB per rate, cash, card and tips. Any accountant and any spreadsheet program can open that file.</p>

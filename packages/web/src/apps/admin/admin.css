@@ -298,3 +298,15 @@
 .opening-item > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .opening-item p { margin: 4px 0; }
 .opening-check .practice-control { margin-top: 20px; }
+.cash-drawer-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.cash-drawer .actions, .day-sales-list .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cash-drawer p, .day-sales-review p { overflow-wrap: anywhere; }
+.cash-journal summary { min-height: 48px; padding: 12px; cursor: pointer; }
+.cash-journal ul, .day-sales-list { list-style: none; padding: 0; }
+.cash-journal li, .day-sales-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.cash-journal li > div:first-child, .day-sales-list li > div:first-child { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.cash-journal small, .day-sales-list small { display: block; color: var(--muted); }
+.day-sales-list { max-height: 520px; overflow-y: auto; }
+.day-sales-review label { display: grid; gap: 8px; }
+.day-sales-review input { width: 100%; }
+.cash-drawer, .day-sales-review { margin-bottom: 20px; }

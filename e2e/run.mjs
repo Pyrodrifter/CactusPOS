@@ -12,7 +12,7 @@ import { join, resolve } from 'node:path';
 const PORT = 3082; // the checks that write orders refuse any other address
 const root = resolve(import.meta.dirname, '..');
 // Checks that only look come first; the ones that place orders follow.
-const order = ['ux08-touch.mjs', 'ux08-checkout.mjs', 'audit-fixes.mjs', 'correct-order.mjs', 'sunday-ready.mjs', 'receipt-editor.mjs'];
+const order = ['ux08-touch.mjs', 'ux08-checkout.mjs', 'audit-fixes.mjs', 'correct-order.mjs', 'sunday-ready.mjs', 'receipt-editor.mjs', 'cash-settlement.mjs'];
 const wanted = process.argv.slice(2);
 const checks = readdirSync(import.meta.dirname).filter((f) => f.endsWith('.mjs') && f !== 'run.mjs')
   .sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b))

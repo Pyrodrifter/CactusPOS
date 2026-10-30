@@ -12,7 +12,7 @@ import {
 import { AdminService } from './admin.js';
 import { LoginThrottle } from './auth.js';
 import { PrinterSettings, Printing } from './printing.js';
-import { Reports } from './reports.js';
+import { Reports, reportRevision } from './reports.js';
 import { Books, BooksSettings, ExportQuery } from './books.js';
 import { buildDayReport, renderHtml } from '@cactus/receipt';
 import type { Transport } from '@cactus/printer';
@@ -24,6 +24,7 @@ import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplate
 import { getKv, openDb, setKv, type DB } from './db.js';
 import { seedPractice } from './practice.js';
 import { openingChecks } from './readiness.js';
+import { CashMovementBody } from '@cactus/shared';
 
 interface ClientSocket { send(data: string): void; close(code?: number, reason?: string): void; ping(): void; terminate(): void; on(event: string, listener: () => void): unknown }
 interface SocketQuery { token?: string; room?: string; screen?: string }
@@ -354,10 +355,21 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   });
 
   /* ----- day reports: owner only ----- */
+  app.get('/api/cash/movements', async (req) => { ownerOf(req); return reports.cash.list(ReportQuery.parse(req.query).date ?? svc.businessDate()); });
+  app.get('/api/cash/movements/request/:id', async (req) => { ownerOf(req); return { movement: reports.cash.request(RequestId.parse((req.params as { id: string }).id)) }; });
+  app.post('/api/cash/movements', async (req, reply) => {
+    const by = ownerOf(req), body = CashMovementBody.parse(req.body), key = requestIdOf(req);
+    if (!key) throw new HttpError(400, 'An Idempotency-Key is required for a cash entry');
+    const entry = reports.cash.add(body, by, key);
+    backups.runIfChanged();
+    return reply.code(201).send(entry);
+  });
+  app.get('/api/reports/day/orders', async (req) => { ownerOf(req); return reports.orders(ReportQuery.parse(req.query).date ?? svc.businessDate()); });
   app.get('/api/reports/day', async (req) => {
     ownerOf(req);
     const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
-    return { report: reports.day(date), closed: reports.latestFor(date), today: svc.businessDate() };
+    const report = reports.day(date), closed = reports.latestFor(date), revision = reportRevision(report);
+    return { report, closed, today: svc.businessDate(), revision, changedSinceClose: !!closed && reportRevision(closed.report) !== revision };
   });
   app.post('/api/reports/day/close', async (req, reply) => {
     const z = reports.close(CloseDayBody.parse(req.body), ownerOf(req));

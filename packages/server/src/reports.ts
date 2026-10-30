@@ -2,6 +2,15 @@ import { sumCents, type CloseDayBodyT, type DayReport, type Order, type TaxBreak
 import { tx, type DB } from './db.js';
 import { HttpError, type PosService } from './service.js';
 import type { Staff } from './auth.js';
+import { createHash } from 'node:crypto';
+import { CashJournal } from './cash.js';
+
+export function reportRevision(report: DayReport): string {
+  const figures = Object.fromEntries(Object.entries(report).filter(([key]) => key !== 'generatedAt' && key !== 'drawer'));
+  // Empty new-format drawer summaries are equivalent to legacy reports without one.
+  const normalized = { ...figures, drawer: report.drawer ?? { cashInCents: 0, cashOutCents: 0, expectedCents: report.cashExpectedCents, movements: [] } };
+  return createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+}
 
 type Method = 'cash' | 'card';
 const METHODS: Method[] = ['cash', 'card'];
@@ -15,7 +24,13 @@ interface Row { data: string; paid_date: string | null; void_date: string | null
  * yesterday and paid today is today's sale, in today's drawer.
  */
 export class Reports {
-  constructor(private db: DB, private pos: PosService) {}
+  readonly cash: CashJournal;
+  constructor(private db: DB, private pos: PosService) { this.cash = new CashJournal(db, pos, () => this.day().cashExpectedCents); }
+
+  orders(date: string): Order[] {
+    return (this.db.prepare('SELECT data,paid_date,void_date FROM orders WHERE paid_date=? OR void_date=? OR (business_date=? AND paid_date IS NULL) ORDER BY receipt_number DESC, created_at DESC')
+      .all(date, date, date) as unknown as Row[]).map((row) => ({ ...(JSON.parse(row.data) as Order), paidDate: row.paid_date ?? undefined, voidDate: row.void_date ?? undefined }));
+  }
 
   private select(where: string, date: string): Order[] {
     return (this.db.prepare(`SELECT data, paid_date, void_date FROM orders WHERE ${where} ORDER BY receipt_number, created_at`).all(date) as unknown as Row[])
@@ -95,6 +110,7 @@ export class Reports {
       ...(corrected.length ? { corrections: { count: corrected.length, removedCents: sumCents(corrected.map((o) => o.totalCents)), addedCents: sumCents(paidToday.filter((o) => o.corrects).map((o) => o.totalCents)) } } : {}),
       // Cash in for sales, less cash handed back: both sides are already in the cash tender line.
       cashExpectedCents: tenders.find((t) => t.method === 'cash')!.amountCents,
+      drawer: this.cash.summary(date, tenders.find((t) => t.method === 'cash')!.amountCents),
       receipts: { first: numbers[0] ?? null, last: numbers[numbers.length - 1] ?? null, count: numbers.length },
       items: [...items.values()].sort((a, b) => b.grossCents - a.grossCents || a.name.localeCompare(b.name)),
       hours: [...hours.values()].sort((a, b) => a.hour - b.hour),
@@ -109,11 +125,16 @@ export class Reports {
     if (body.date > this.pos.businessDate()) throw new HttpError(400, 'That day has not happened yet');
     return tx(this.db, () => {
       const report = this.day(body.date);
+      const revision = reportRevision(report);
+      if (body.expectedRevision && body.expectedRevision !== revision) throw new HttpError(409, 'Sales or cash entries changed. Review the refreshed figures and count before closing.');
       const counted = body.countedCashCents ?? null;
+      const basis = body.cashCountBasis ?? 'sales';
+      const expected = basis === 'drawer' ? report.drawer!.expectedCents : report.cashExpectedCents;
       const number = ((this.db.prepare('SELECT MAX(number) AS n FROM z_reports').get() as { n: number | null }).n ?? 0) + 1;
       const z: ZReport = {
         number, businessDate: body.date, closedAt: report.generatedAt, closedBy: by.id,
-        countedCashCents: counted, cashDifferenceCents: counted === null ? null : counted - report.cashExpectedCents,
+        countedCashCents: counted, cashCountBasis: basis, revision,
+        cashDifferenceCents: counted === null ? null : sumCents([counted, -expected]),
         note: body.note, report,
       };
       this.db.prepare('INSERT INTO z_reports(number, business_date, closed_at, closed_by, data) VALUES (?,?,?,?,?)').run(number, body.date, z.closedAt, by.id, JSON.stringify(z));

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatMoney, parseMoney, type DayReport, type ZReport } from '@cactus/shared';
-import { api, getSession, serverPrints } from '../../lib/api';
+import { formatMoney, parseMoney, type DayReview, type ZReport } from '@cactus/shared';
+import { api, ApiError, getSession, serverPrints } from '../../lib/api';
 import { apiPath } from '../../lib/clientMode';
 import { printHtml } from '../../lib/print';
 import { useLang } from '../../i18n';
@@ -8,17 +8,19 @@ import { Icon } from '../../ui/Icon';
 import { toast } from '../../ui/touch';
 import { errText } from './Admin';
 import { AdminDialog } from './AdminDialog';
+import { CashDrawerPanel } from './CashDrawerPanel';
+import { DaySalesReview } from './DaySalesReview';
 
 const copy = {
   en: {
     day: 'Day', today: 'Today', sales: 'Sales', inclAbb: 'incl. ABB', orders: 'Orders', abb: 'ABB to declare', net: 'net', cashDrawer: 'Cash from sales',
-    excludesFloat: 'excluding the float', payments: 'Payments', cash: 'Cash', card: 'Card', tips: 'Tips', refunds: 'Refunded', taxTitle: 'ABB by rate',
+    excludesFloat: 'includes recorded opening cash and movements', payments: 'Payments', cash: 'Cash', card: 'Card', tips: 'Tips', refunds: 'Refunded', taxTitle: 'ABB by rate',
     over: 'over', exempt: 'Exempt', outside: 'Outside scope', byHour: 'Sales by hour', topItems: 'Items sold', none: 'No sales yet on this day.',
     unpaidWarn: (n: number, amount: string) => `${n} order${n === 1 ? ' is' : 's are'} still unpaid (${amount}). Take payment or void ${n === 1 ? 'it' : 'them'} before closing.`,
     closeDay: 'Close the day', closeAgain: 'Close again', print: 'Print', closedAs: (n: number, time: string) => `Closed as Z report #${n} at ${time}.`,
-    changedSince: 'Sales changed after it was closed. Close again to record the new figures.',
+    changedSince: 'Sales or cash entries changed after closing. Review and close again to record the new figures.',
     closeTitle: 'Close the day', closeIntro: 'This stores today’s figures as a numbered Z report for the bookkeeping. Sales can continue afterwards; close again if anything changes.',
-    counted: 'Cash counted in the drawer (without the float)', countedHint: 'Leave empty if you did not count.', note: 'Note (optional)',
+    counted: 'All cash counted in the drawer (including opening float)', countedHint: 'Record opening cash and all cash-in/out first. Leave empty if you did not count.', note: 'Note (optional)',
     expected: 'Expected', difference: 'Over / short', confirmClose: 'Close day', cancel: 'Cancel', badAmount: 'Enter an amount like 152.50',
     earlier: (n: number, amount: string) => `Includes ${n} refund${n === 1 ? '' : 's'} of sales from an earlier day (${amount}). That money left the drawer today, so it is taken off today's sales, ABB and cash.`,
     corrections: (n: number, net: string) => `${n} paid order${n === 1 ? ' was' : 's were'} corrected on this day (${net} in all). The originals are kept as void; the corrected sales are the ones that count.`,
@@ -26,13 +28,13 @@ const copy = {
   },
   nl: {
     day: 'Dag', today: 'Vandaag', sales: 'Omzet', inclAbb: 'incl. ABB', orders: 'Bestellingen', abb: 'Af te dragen ABB', net: 'netto', cashDrawer: 'Contant uit verkoop',
-    excludesFloat: 'exclusief wisselgeld', payments: 'Betalingen', cash: 'Contant', card: 'Pin', tips: 'Fooien', refunds: 'Terugbetaald', taxTitle: 'ABB per tarief',
+    excludesFloat: 'inclusief geboekt startgeld en kasboekingen', payments: 'Betalingen', cash: 'Contant', card: 'Pin', tips: 'Fooien', refunds: 'Terugbetaald', taxTitle: 'ABB per tarief',
     over: 'over', exempt: 'Vrijgesteld', outside: 'Buiten toepassing', byHour: 'Omzet per uur', topItems: 'Verkochte items', none: 'Nog geen verkoop op deze dag.',
     unpaidWarn: (n: number, amount: string) => `${n} bestelling${n === 1 ? ' is' : 'en zijn'} nog niet betaald (${amount}). Reken af of annuleer voordat u afsluit.`,
     closeDay: 'Dag afsluiten', closeAgain: 'Opnieuw afsluiten', print: 'Afdrukken', closedAs: (n: number, time: string) => `Afgesloten als Z-rapport #${n} om ${time}.`,
-    changedSince: 'De omzet is gewijzigd na het afsluiten. Sluit opnieuw af om de nieuwe cijfers vast te leggen.',
+    changedSince: 'Verkopen of kasboekingen zijn gewijzigd na afsluiten. Controleer en sluit opnieuw af om de nieuwe cijfers vast te leggen.',
     closeTitle: 'Dag afsluiten', closeIntro: 'Hiermee worden de cijfers van vandaag vastgelegd als genummerd Z-rapport voor de boekhouding. Verkopen kan daarna gewoon; sluit opnieuw af als er iets verandert.',
-    counted: 'Contant geteld in de lade (zonder wisselgeld)', countedHint: 'Leeg laten als u niet heeft geteld.', note: 'Opmerking (optioneel)',
+    counted: 'Al het geld geteld in de lade (inclusief startgeld)', countedHint: 'Boek eerst startgeld en alle kasboekingen. Leeg laten als u niet heeft geteld.', note: 'Opmerking (optioneel)',
     expected: 'Verwacht', difference: 'Verschil', confirmClose: 'Dag afsluiten', cancel: 'Annuleren', badAmount: 'Vul een bedrag in zoals 152,50',
     earlier: (n: number, amount: string) => `Inclusief ${n} terugbetaling${n === 1 ? '' : 'en'} van verkopen van een eerdere dag (${amount}). Dat geld ging vandaag uit de lade en is dus van de omzet, ABB en kas van vandaag afgetrokken.`,
     corrections: (n: number, net: string) => `${n} betaalde bestelling${n === 1 ? ' is' : 'en zijn'} op deze dag gecorrigeerd (${net} in totaal). De originelen blijven bewaard als geannuleerd; de gecorrigeerde verkopen tellen mee.`,
@@ -40,7 +42,7 @@ const copy = {
   },
 };
 
-interface DayView { report: DayReport; closed: ZReport | null; today: string }
+type DayView = DayReview;
 const pct = (bps: number) => `${(bps / 100).toFixed(bps % 100 ? 2 : 0)}%`;
 
 export function ReportsAdmin() {
@@ -73,7 +75,8 @@ export function ReportsAdmin() {
   if (!view) return <p className={err ? 'error' : 'muted center'} role="status">{err || c.loading}</p>;
   const { report: r, closed } = view;
   const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
-  const changed = !!closed && (closed.report.sales.grossCents !== r.sales.grossCents || closed.report.orders.sold !== r.orders.sold || closed.report.orders.refunded !== r.orders.refunded);
+  const changed = view.changedSinceClose;
+  const expectedCash = r.drawer?.expectedCents ?? r.cashExpectedCents;
   const peak = Math.max(1, ...r.hours.map((h) => h.grossCents));
   const countedCents = counted.trim() ? parseMoney(counted) : undefined;
 
@@ -81,11 +84,14 @@ export function ReportsAdmin() {
     if (countedCents === null) return setErr(c.badAmount);
     setBusy(true); setErr('');
     try {
-      const z = await api<ZReport>('/reports/day/close', { body: { date: r.businessDate, countedCashCents: countedCents, note: note.trim() || undefined } });
+      const z = await api<ZReport>('/reports/day/close', { body: { date: r.businessDate, countedCashCents: countedCents, cashCountBasis: 'drawer', expectedRevision: view.revision, note: note.trim() || undefined } });
       toast(c.closedToast(z.number));
       setClosing(false); setCounted(''); setNote('');
       await load(r.businessDate);
-    } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) { setClosing(false); await load(r.businessDate); }
+      setErr(errText(e));
+    } finally { setBusy(false); }
   };
   const print = async () => {
     if (await serverPrints()) {
@@ -107,6 +113,7 @@ export function ReportsAdmin() {
         </label>
         {date !== view.today && <button type="button" className="ghost" onClick={() => setDate(view.today)}>{c.today}</button>}
         <span className="spacer" />
+        <button type="button" className="reports-refresh" onClick={() => void load(date)}><Icon name="refresh" />{lang === 'nl' ? 'Vernieuwen' : 'Refresh'}</button>
         <button type="button" className="reports-print" onClick={() => void print()}><Icon name="printer" />{c.print}</button>
         <button type="button" className="primary reports-close" onClick={() => { setErr(''); setClosing(true); }}><Icon name="lock" />{closed ? c.closeAgain : c.closeDay}</button>
       </div>
@@ -121,8 +128,11 @@ export function ReportsAdmin() {
         <div className="reports-stat main"><span>{c.sales}</span><b>{money(r.sales.grossCents)}</b><small>{c.inclAbb}</small></div>
         <div className="reports-stat"><span>{c.orders}</span><b>{r.orders.sold}</b><small>{r.receipts.first !== null ? `${c.receipts} #${r.receipts.first}–#${r.receipts.last}` : '—'}</small></div>
         <div className="reports-stat"><span>{c.abb}</span><b>{money(r.sales.taxCents)}</b><small>{money(r.sales.netCents)} {c.net}</small></div>
-        <div className="reports-stat"><span>{c.cashDrawer}</span><b>{money(r.cashExpectedCents)}</b><small>{c.excludesFloat}</small></div>
+        <div className="reports-stat"><span>{lang === 'nl' ? 'Verwacht in lade' : 'Expected in drawer'}</span><b>{money(expectedCash)}</b><small>{c.excludesFloat}</small></div>
       </div>
+
+      <CashDrawerPanel report={r} today={view.today} onChanged={() => load(r.businessDate)} />
+      <DaySalesReview date={r.businessDate} today={view.today} revision={view.revision} onChanged={() => load(r.businessDate)} />
 
       {r.orders.sold === 0 && r.orders.refunded === 0 ? <p className="muted center">{c.none}</p> : (
         <div className="reports-grid">
@@ -176,7 +186,7 @@ export function ReportsAdmin() {
                   <span className="admin-row-lead num" aria-hidden="true">Z{z.number}</span>
                   <span className="admin-row-text">
                     <b>{z.businessDate}</b>
-                    <small>{z.report.orders.sold} {c.sold} · {c.cash} {money(z.report.cashExpectedCents)}{z.cashDifferenceCents !== null && ` · ${c.difference} ${z.cashDifferenceCents > 0 ? '+' : ''}${money(z.cashDifferenceCents)}`}</small>
+                    <small>{z.report.orders.sold} {c.sold} · {c.cash} {money(z.cashCountBasis === 'drawer' ? z.report.drawer?.expectedCents ?? z.report.cashExpectedCents : z.report.cashExpectedCents)}{z.cashDifferenceCents !== null && ` · ${c.difference} ${z.cashDifferenceCents > 0 ? '+' : ''}${money(z.cashDifferenceCents)}`}</small>
                   </span>
                   <b className="admin-row-price">{money(z.report.sales.grossCents)}</b>
                   <Icon name="arrow-right" className="admin-row-go" />
@@ -199,8 +209,8 @@ export function ReportsAdmin() {
             <small>{c.countedHint}</small>
           </label>
           <ul className="reports-rows reports-count">
-            <li><span>{c.expected}</span><b>{money(r.cashExpectedCents)}</b></li>
-            {typeof countedCents === 'number' && <li className={countedCents - r.cashExpectedCents < 0 ? 'neg' : ''}><span>{c.difference}</span><b>{countedCents - r.cashExpectedCents > 0 ? '+' : ''}{money(countedCents - r.cashExpectedCents)}</b></li>}
+            <li><span>{c.expected}</span><b>{money(expectedCash)}</b></li>
+            {typeof countedCents === 'number' && <li className={countedCents - expectedCash < 0 ? 'neg' : ''}><span>{c.difference}</span><b>{countedCents - expectedCash > 0 ? '+' : ''}{money(countedCents - expectedCash)}</b></li>}
           </ul>
           <label>{c.note}<input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} /></label>
         </AdminDialog>

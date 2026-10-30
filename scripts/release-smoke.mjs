@@ -135,6 +135,14 @@ try {
   assert.equal(day.report.receipts.count, 32);
   check('Kitchen ready/collect updates pickup; daily sales, cash and card tips reconcile');
 
+  const cashKey = randomUUID();
+  const float = await call('POST', '/cash/movements', { direction: 'in', amountCents: 10000, reason: 'Opening float' }, cashKey);
+  await call('POST', '/cash/movements', { direction: 'out', amountCents: 2500, reason: 'Cash to bank' }, randomUUID());
+  assert.equal((await call('POST', '/cash/movements', { direction: 'in', amountCents: 10000, reason: 'Opening float' }, cashKey)).id, float.id);
+  const cashEntries = await call('GET', '/cash/movements');
+  assert.equal(cashEntries.length, 2);
+  assert.equal((await call('GET', '/reports/day')).report.drawer.expectedCents, 16 * item.priceCents + 7500);
+
   const secondary = join(work, 'external backup');
   mkdirSync(secondary);
   await call('PUT', '/admin/backups/settings', { folder: secondary });
@@ -159,6 +167,8 @@ try {
   await login();
   assert.deepEqual(await call('GET', '/orders?scope=today'), before);
   assert.equal(await receipt(), html);
+  assert.deepEqual(await call('GET', '/cash/movements'), cashEntries);
+  assert.equal((await call('GET', `/cash/movements/request/${cashKey}`)).movement.id, float.id);
   const retry = sales[0];
   assert.equal((await call('POST', '/orders', retry.body, retry.createKey)).id, first.id);
   assert.equal((await call('POST', `/orders/${first.id}/pay`, retry.payment, retry.payKey)).receiptNumber, first.receiptNumber);
@@ -172,6 +182,7 @@ try {
   await launch(homes[1], '--server-only');
   await login();
   assert.deepEqual(await call('GET', '/orders?scope=today'), before);
+  assert.deepEqual(await call('GET', '/cash/movements'), cashEntries);
   assert.equal(await receipt(), html);
   // Avoid the printer double during closing; restored printer settings are checked separately.
   assert.equal((await call('GET', '/admin/printer')).host, '127.0.0.1');
@@ -179,9 +190,12 @@ try {
   const extra = await call('POST', '/orders', retry.body, randomUUID());
   const extraPaid = await call('POST', `/orders/${extra.id}/pay`, { method: 'cash', tenderedCents: extra.totalCents, expectedTotalCents: extra.totalCents }, randomUUID());
   assert.equal(extraPaid.receiptNumber, 33);
-  const closed = await call('POST', '/reports/day/close', { date: day.today, countedCashCents: 17 * item.priceCents });
+  const reviewed = await call('GET', '/reports/day');
+  const closed = await call('POST', '/reports/day/close', { date: day.today, countedCashCents: 17 * item.priceCents + 7500, cashCountBasis: 'drawer', expectedRevision: reviewed.revision });
   assert.equal(closed.cashDifferenceCents, 0);
   assert.equal(closed.report.sales.grossCents, 33 * item.priceCents);
+  assert.equal(closed.report.drawer.movements.length, 2);
+  check('Cash journal and retry identity survive restart/restore; float and cash-out reconcile in whole-drawer settlement');
   assert.equal((await call('GET', '/admin/backups')).last.orders, 33);
   check('External backup restores into fresh data folder; receipts continue at 33 and day close balances');
   report.passed = true;

@@ -65,7 +65,7 @@ export type DayReport = z.infer<typeof DayReport>;
 
 export const CloseDayBody = z.object({
   date: IsoDate,
-  /** Cash counted in the drawer, excluding the float. Optional; gives the over/short figure. */
+  /** Cash counted under cashCountBasis (legacy default: sales cash excluding float). Optional. */
   countedCashCents: PriceZ.optional(),
   /** Older clients omit this and count sales cash only. New settlement screens count the entire drawer. */
   cashCountBasis: z.enum(['sales', 'drawer']).optional(),

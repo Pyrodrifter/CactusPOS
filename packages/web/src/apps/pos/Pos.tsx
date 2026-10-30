@@ -519,13 +519,13 @@ function PaySheet({ total, onPay, onCancel }: {
  * payment method. The server keeps the original on record as void and makes a replacement sale with its own
  * receipt number; this sheet only says what to give back or collect.
  */
-function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: Menu; onDone: () => void; onCancel: () => void }) {
+export function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: Menu; onDone: () => void; onCancel: () => void }) {
   const { t, lang } = useLang();
   const c = copy[lang];
   const ui = lang === 'nl' ? {
     eyebrow: 'Bon', title: 'Bestelling corrigeren', addItem: 'Iets toevoegen', search: 'Zoek op het menu', added: 'Toegevoegd', was: 'Was', now: 'Wordt',
     reason: 'Wat ging er mis?', reasons: ['Verkeerd artikel', 'Verkeerd aantal', 'Verkeerde betaalwijze'], save: 'Correctie opslaan', done: 'Gecorrigeerd',
-    same: 'Het totaal blijft gelijk.', moved: (m: string) => `Het totaal blijft gelijk. De betaling telt nu als ${m}.`,
+    same: 'Het totaal blijft gelijk.', moved: (m: string) => `De betaalwijze wordt ${m}. Controleer de werkelijke contante en pinbetalingen voordat u geld teruggeeft of bijvraagt.`,
     back: (a: string, card: boolean) => (card ? `Stort ${a} terug op het pinapparaat.` : `Geef ${a} terug uit de lade.`),
     more: (a: string, card: boolean) => (card ? `Reken ${a} extra af op het pinapparaat.` : `Vraag ${a} extra.`),
     keeps: 'De eerste bon blijft bewaard als geannuleerd. De gecorrigeerde verkoop krijgt een nieuw bonnummer.', empty: 'Er moet minstens één artikel overblijven. Annuleer de bestelling als alles weg moet.',
@@ -533,7 +533,7 @@ function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: M
   } : {
     eyebrow: 'Receipt', title: 'Correct order', addItem: 'Add something', search: 'Search the menu', added: 'Added', was: 'Was', now: 'Becomes',
     reason: 'What went wrong?', reasons: ['Wrong item', 'Wrong quantity', 'Wrong payment method'], save: 'Save correction', done: 'Corrected',
-    same: 'The total stays the same.', moved: (m: string) => `The total stays the same. The payment now counts as ${m}.`,
+    same: 'The total stays the same.', moved: (m: string) => `Payment method becomes ${m}. Verify actual cash and card transactions before making a refund or extra charge.`,
     back: (a: string, card: boolean) => (card ? `Refund ${a} on the card machine.` : `Give ${a} back from the drawer.`),
     more: (a: string, card: boolean) => (card ? `Charge ${a} more on the card machine.` : `Collect ${a} more.`),
     keeps: 'The first receipt stays on record as void. The corrected sale gets a new receipt number.', empty: 'At least one item has to stay. Void the order if everything has to go.',
@@ -565,8 +565,7 @@ function CorrectSheet({ order, menu, onDone, onCancel }: { order: Order; menu: M
     setAdded((list) => [...list, { key: `${item.id}|${Date.now()}|${list.length}`, item, qty: n, optionIds, priceCents }]);
     setQuery('');
   };
-  const money$ = diff === 0
-    ? (method !== paidBy ? ui.moved(method === 'card' ? ui.card : ui.cash) : ui.same)
+  const money$ = method !== paidBy ? ui.moved(method === 'card' ? ui.card : ui.cash) : diff === 0 ? ui.same
     : diff < 0 ? ui.back(money(-diff), method === 'card') : ui.more(money(diff), method === 'card');
   const save = async () => {
     if (busy) return;

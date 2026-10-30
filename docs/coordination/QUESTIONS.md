@@ -2,6 +2,13 @@
 
 Format: `- [ ] Qn (lane, date) question — default if unanswered`
 
+- [x] Q34 (server / web-admin, 2026-10-30) Drawer settlement count basis — **Owner confirmed:** count all
+  physical cash including opening float. REL08 records opening float/top-ups as cash-in, withdrawals as cash-out,
+  with reasons and staff; preserves corrections and cash history. Supersedes Q22's original no-cash-log default.
+- [ ] Q35 (books, 2026-10-30) Which bookkeeping accounts/categories should cash-in/out transfers use for each
+  company (float, bank deposits, supplier cash, etc.)? **Default:** journal them for drawer reconciliation and
+  include them in the printed Z report; keep them out of sales/ABB and automatic expense/transfer postings.
+
 - [ ] Q33 (ops / release, 2026-10-29) Owner targets Sunday November 1 for the tryout and Monday November 2 for deployment. **Laptop answered: Surface Pro 7.** Sunday practice versus genuine sales and the Windows account remain open. Keep sample orders in a separate Windows account, preserve all genuine sales, and complete [truck acceptance](../../ops/deployment.md) before live rollout. Printer details remain Q2; business/tax/CRIB are entered by each company in Admin during setup.
 
 - [ ] Q1 (shared, 2026-10-07) How should Cactus Blue's prepared food/drinks be taxed under ABB — service 6%, producent goods 8%, or mixed with exempt items? Is she registered for ABB and what is her CRIB number? — **Owner clarification 2026-10-29:** these will be entered later in the POS, per company; other companies will use the product too. Do not hardcode details or treat this as missing information for the developer. Actual classifications remain unconfirmed; leave verification flags unset until company setup. **Default:** configurable seed categories, flagged "UNVERIFIED".

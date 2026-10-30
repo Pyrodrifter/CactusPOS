@@ -92,7 +92,8 @@ APK cannot remember practice mode safely and is blocked from it. Keep genuine tr
 - [ ] Reload with an unfinished cart and confirm it is restored. After an interrupted send/payment, use
   **Check confirmation** or **Retry original send**, then review the recovered order. An **Already paid** order
   must never be charged again. The separate card terminal may have charged even if the POS has no payment.
-- [ ] Close the practice day: counted cash excludes the opening float. Check cash/card/tips/refunds. In-app
+- [ ] Record opening float with Cash in, exercise a cash-out and review/correct a paid sale from Admin → Today.
+  Close the practice day counting **all physical drawer cash including float**. Check cash/card/tips/refunds. In-app
   practice intentionally blocks exports/external copies; test those from the separate Windows practice account.
 - [ ] On a spare Windows account/computer, restore the USB backup using Start menu → CactusPOS → **Restore a
   backup**. Check order count, last receipt and report totals. Do not run a restore over a till taking sales.
@@ -111,7 +112,9 @@ the repository. An unresolved checkout, total, kitchen, print or recovery failur
 - [ ] Record the opening float separately; agree who handles corrections and calls for fallback.
 - [ ] Run alongside the old till until the operators accept the flow. Ensure each real payment is charged
   once; agree which system is the accounting source during the parallel run.
-- [ ] At close, count cash excluding float, close the day, export the report and verify the off-laptop backup.
+- [ ] At close, review/correct sales and cash entries, count **all drawer cash including float**, close the day,
+  export the sales report and verify the off-laptop backup. Cash transfers are recorded in the drawer journal;
+  automatic expense/transfer posting needs per-company accounting mappings (Q35).
 
 If checkout, kitchen or printing fails during service, continue with the old till. Keep CactusPOS sales records,
 take a backup when possible and record the last receipt number. Do not uninstall/reseed/reset the database to
