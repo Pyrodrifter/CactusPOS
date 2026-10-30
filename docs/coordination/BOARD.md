@@ -141,6 +141,7 @@ From the app audit of master at 36f2e8d: [handoffs/2026-10-10-claude-app-audit.m
 | REL030rc4 | ops | Owner request: test build 0.3.0-rc.4 = rc.3 (never published) + UX19. Notes in docs/releases/v0.3.0-rc.4.md. Owner tests it first; tag and pre-release only when the owner says so | UX19 | review | claude · 2026-10-30 | `npm run package` passes its release and installer drills |
 | UX20 | web-screens | Owner request: the kitchen screen has a light mode that follows the theme in Screen tools | UX19 | review | claude · 2026-10-30 | Kitchen follows the theme; dark colours unchanged; no overflow or small targets at tablet and phone size in both themes and flows |
 | UX21 | shared / web-admin / web-pos / web-screens / qa | Owner request: menu creator loses every ABB option and other fluff; simple allergy and diet marks per item; owner picks each category colour | UX20 | review | claude · 2026-10-30 | Item editor: name, price, category, market price, description, allergy and diet marks, options; no ABB or station fields. Marks show on the till and menu board; colour reaches the till; check and all 10 browser checks pass |
+| REL030rc5 | ops | Owner request: test build 0.3.0-rc.5 = rc.4 (never published) + UX20, UX21. Notes in docs/releases/v0.3.0-rc.5.md. Owner tests it first; tag and pre-release only when the owner says so | UX21 | review | claude · 2026-10-30 | `npm run package` passes its release and installer drills |
 
 ## Parallelization at a glance
 - **Wave 1 (parallel after T00):** T01, T02, T06
