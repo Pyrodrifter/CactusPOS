@@ -97,6 +97,8 @@ export const DocumentDesign = z.object({
   showTabName: z.boolean().default(true),
   showPaymentDetails: z.boolean().default(true),
   showPaymentReference: z.boolean().default(true),
+  /** The ABB lines under the total (prices include ABB, per-rate ABB, exempt/outside scope). The total itself stays. */
+  showTax: z.boolean().default(true),
   showFooter: z.boolean().default(true),
   showClosingImage: z.boolean().default(true),
   showMessages: z.boolean().default(true),
