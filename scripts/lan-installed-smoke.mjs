@@ -1,6 +1,6 @@
 // Exercises the installed launcher with isolated data, a unique .local name and real HTTP/WS/mDNS sockets.
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -65,6 +65,28 @@ try {
     assert.equal(status.friendlyUrl, `http://${hostname}:${alias}`);
     report.checks.push('Real multicast A and DNS-SD SRV responses and launcher friendly URL passed');
   } else report.checks.push('No eligible LAN interface on build computer: physical mDNS drill still required');
+  // `npm start` launches main.ts directly. It must load the same LAN defaults/config without launcher env.
+  socket.terminate(); dns?.destroy(); dns = undefined;
+  await launch('--stop');
+  const directEnv = { ...env, PORT: String(port), CACTUS_STRICT_PORT: '1' };
+  delete directEnv.CACTUS_LAN_SETTINGS; delete directEnv.CACTUS_LAN_STATUS_FILE;
+  const direct = spawn(process.execPath, ['--import', 'tsx', join(root, 'packages/server/src/main.ts')], { cwd: root, env: directEnv, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let directLog = '';
+  direct.stdout.on('data', (chunk) => { directLog += chunk; }); direct.stderr.on('data', (chunk) => { directLog += chunk; });
+  const exited = new Promise((done) => direct.once('exit', done));
+  try {
+    let directStatus;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (existsSync(join(home, 'lan.json'))) directStatus = JSON.parse(readFileSync(join(home, 'lan.json'), 'utf8'));
+      if (directStatus?.pid === direct.pid && directStatus.aliasPort === alias && (!state.addresses.length || directStatus.advertised)) break;
+      assert.equal(direct.exitCode, null, directLog); await pause(100);
+    }
+    assert.equal(directStatus?.pid, direct.pid, directLog);
+    assert.equal(directStatus.hostname, hostname); assert.equal(directStatus.aliasPort, alias);
+    if (state.addresses.length) assert.equal(directStatus.advertised, true, directLog);
+    assert.equal((await fetch(`${base}/api/health`).then((r) => r.json())).app, 'cactuspos');
+    report.checks.push('Direct production/npm-start server loads saved LAN config and serves the HTTP alias without launcher environment');
+  } finally { direct.kill(); await Promise.race([exited, pause(5000)]); }
   report.passed = true;
 } catch (error) { report.error = error.message; console.error(error); process.exitCode = 1; }
 finally {

@@ -11,7 +11,10 @@ and pushing REL05/REL06 to GitHub. The Windows release build remains deferred. *
 contain this new server feature.** Until the next Windows build, start the current source through the installed
 launcher (`node ops/app/launch.mjs --server-only`, with an intentional data home), or use the existing server's
 IP address in the APK. Development `npm run dev` retains its separate development database and does not
-advertise the installed name. Do not launch a second copy against a till taking sales.
+advertise the installed name. Standard production `npm start` also enables the friendly address and reads
+`hostname`, `lanPort` and `lanEnabled` from the installation's `config.json`. Explicit `CACTUS_DB` test/dev
+servers keep discovery off unless `CACTUS_LAN_SETTINGS` is supplied; `CACTUS_DISABLE_LAN=1` turns it off.
+Restart an already-running server after updating the source. Do not launch a second copy against a till taking sales.
 
 ## Friendly address on the Surface
 
