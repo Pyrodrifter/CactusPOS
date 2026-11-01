@@ -14,8 +14,8 @@ const copy = {
 const UNDO_MS = 8000;
 
 /**
- * The orders waiting at the window, above the menu, so the cashier can confirm a pickup without leaving the Order
- * screen. Takes no room while nothing is ready. An unpaid order can be handed over and stays on the Tabs list.
+ * The orders waiting at the window, right above the cart where the cashier already looks, so a pickup is confirmed
+ * without leaving the Order screen. Takes no room while nothing is ready. An unpaid order can be handed over and stays on the Tabs list.
  */
 export function ReadyStrip({ orders, online, onPay }: { orders: Order[]; online: boolean; onPay: (order: Order) => void }) {
   const { lang } = useLang();
@@ -50,7 +50,7 @@ export function ReadyStrip({ orders, online, onPay }: { orders: Order[]; online:
                 <small>{o.tabName ? `#${o.ticketNumber} · ` : ''}{o.lines.map((l) => `${l.qty}× ${l.name}`).join(', ')}</small>
                 {!o.paid && <small className="pos-ready-unpaid">{c.unpaid}</small>}
               </div>
-              {!o.paid && <button className="pos-ready-pay" onClick={() => onPay(o)}><Icon name="cash" />{c.pay}</button>}
+              {!o.paid && <button className="pos-ready-pay" aria-label={`${c.pay}: ${label}`} onClick={() => onPay(o)}><Icon name="cash" /><span>{c.pay}</span></button>}
               <button className="primary pos-ready-done" disabled={!online || busy === o.id} onClick={() => { haptic(15); void move(o.id, 'collected').then((ok) => { if (ok) setUndo({ id: o.id, label }); }); }}><Icon name="check" />{c.picked}</button>
             </li>
           );

@@ -54,6 +54,29 @@ export default async function (page) {
   assert.match(await text('.pos-ready'), /Mike/, 'The ready order shows on Order by name');
   assert.match(await text('.pos-ready'), /Not paid/, 'and says that it is not paid');
   await page.shot('tryout-ready-strip');
+  assert.ok(await has('.pos-side > .pos-ready + .cart'), 'Ready orders sit above the cart');
+  await page.click('.items .item:not(:disabled):nth-child(5)');
+  await page.wait(300);
+  if (await has('.pos-modifier')) { await page.click('.pos-modifier .actions .primary'); await page.wait(300); }
+  await page.shot('tryout-ready-with-cart');
+  assert.ok(await page.eval(`(() => { const list = document.querySelector('.cart ul'); return list.scrollHeight <= list.clientHeight + 1; })()`), 'One cart line fits under two ready orders');
+  await page.eval("document.documentElement.dataset.theme = 'light'");
+  await page.wait(150);
+  await page.shot('tryout-ready-light');
+  await page.eval("document.documentElement.dataset.theme = 'dark'");
+  for (const [w, h] of [[1180, 820], [1024, 700]]) {
+    await page.size(w, h);
+    await page.wait(250);
+    assert.ok(await page.eval(`(() => { const b = document.querySelector('.cart .pos-pay').getBoundingClientRect(); return b.height > 0 && b.bottom <= innerHeight; })()`), `Pay stays on screen with ready orders at ${w}x${h}`);
+  }
+  await page.shot('tryout-ready-short');
+  await page.size(390, 844);
+  await page.wait(250);
+  await page.shot('tryout-ready-phone');
+  await page.size(820, 1180);
+  await page.wait(250);
+  await page.shot('tryout-ready-portrait');
+  await page.size(1180, 820);
   await fits('Order with ready orders');
   await page.eval(`[...document.querySelectorAll('.pos-ready li')].find((li) => li.textContent.includes('Mike')).querySelector('.pos-ready-done').click()`);
   await page.wait(700);

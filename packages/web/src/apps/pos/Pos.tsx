@@ -112,7 +112,6 @@ export function Pos() {
   const [picking, setPicking] = useState<MenuItem | null>(null);
   const [paying, setPaying] = useState<{ order: Order } | { cartTotal: number } | null>(null);
   const [view, setView] = useState<'order' | 'tabs' | 'orders' | 'stock'>('order');
-  const [success, setSuccess] = useState('');
   const cartPanel = useRef<HTMLElement>(null);
   const { orders, online } = useOrders('today');
   const ui = lang === 'nl'
@@ -207,7 +206,7 @@ export function Pos() {
   const place = async (reportSuccess = false, tabName?: string): Promise<Order | null> => {
     if (placing.current || !cart.length) return null;
     setUndo(null);
-    placing.current = true; setSending(true); setSuccess('');
+    placing.current = true; setSending(true);
     setError('');
     try {
       const lines = cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents }));
@@ -227,11 +226,10 @@ export function Pos() {
       setCart([]); setNote(''); setPickupName('');
       if (tab) {
         const message = `${tabUi.addedTo} ${tab.label}`;
-        setSuccess(message); toast(message);
+        toast(message);
         setTab(null);
       } else if (reportSuccess) {
         const message = order.serviceMode === 'counter' ? (lang === 'nl' ? 'Bestelling opgeslagen' : 'Order saved') : c.sent;
-        setSuccess(`${message} · #${order.ticketNumber}`);
         toast(`${message} · #${order.ticketNumber}`);
       }
       return order;
@@ -259,11 +257,8 @@ export function Pos() {
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || (o.serviceMode !== 'counter' && o.status !== 'collected'))).length}</span></button>
         <button aria-pressed={view === 'stock'} className={view === 'stock' ? 'on pos-stock-tab' : 'pos-stock-tab'} onClick={() => setView('stock')}><Icon name="box" />{lang === 'nl' ? 'Voorraad' : 'Stock'}</button>
       </div>
-      {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
+      {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div><div className="pos-toolbar-service"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /></div></>}
       </div>
-      {success && <div className="pos-success" role="status"><Icon name="check" />{success}<button aria-label={c.close} onClick={() => setSuccess('')}><Icon name="close" /></button></div>}
-
-      {view === 'order' && <ReadyStrip orders={orders} online={online} onPay={(order) => setPaying({ order })} />}
 
       {view === 'order' ? (
         <div className="pos-grid">
@@ -272,7 +267,7 @@ export function Pos() {
               <button aria-pressed={!cat} className={!cat ? 'on pos-all' : 'pos-all'} onClick={() => { setCat(''); setQuery(''); }}><Icon name="grid" />{ui.all}</button>
               {menu.categories.map((c) => <button key={c.id} style={catStyle(menu.categories, c.id)} aria-pressed={c.id === cat} className={c.id === cat ? 'on' : ''} onClick={() => { setCat(c.id); setQuery(''); }}><i className="pos-cat-dot" />{c.name}</button>)}
             </div>
-            <div className="pos-menu-caption"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
+            <div className={`pos-menu-caption${search ? ' is-searching' : ''}`}><span className="pos-caption-service"><ServiceModeControl mode={serviceMode} disabled={sending || !!paying} /></span><span role="status">{items.length} {search ? ui.found : c.items}</span></div>
             <div className="items">
               {items.map((i) => (
                 <button key={i.id} className="item" style={catStyle(menu.categories, i.categoryId)} disabled={!i.available || sending || !!paying} onClick={() => tap(i)}>
@@ -287,6 +282,8 @@ export function Pos() {
             </div>
           </section>
 
+          <div className="pos-side">
+          <ReadyStrip orders={orders} online={online} onPay={(order) => setPaying({ order })} />
           <aside ref={cartPanel} className="cart">
             <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></span><button className="pos-clear-order" aria-label={ui.clear} disabled={!cart.length || sending || !!paying} onClick={() => { setUndo({ cart, note, pickupName }); setCart([]); setNote(''); setPickupName(''); }}><Icon name="trash" /></button></header>
             {tab && <div className="pos-tab-banner" role="status"><Icon name="staff" /><span>{tabUi.addingTo} <b>{tab.label}</b></span><button aria-label={tabUi.stop} disabled={sending} onClick={() => setTab(null)}><Icon name="close" /></button></div>}
@@ -327,12 +324,13 @@ export function Pos() {
               </>)}
             </div>
           </aside>
+          </div>
         </div>
       ) : view === 'stock' ? (
         <StockView orders={orders} menu={menu} />
       ) : view === 'tabs' ? (
         <TabList
-          onAdd={(order) => { setTab({ id: order.id, label: tabLabel(order, lang) }); setSuccess(''); setView('order'); }}
+          onAdd={(order) => { setTab({ id: order.id, label: tabLabel(order, lang) }); setView('order'); }}
           onPay={(order) => setPaying({ order })}
         />
       ) : (
