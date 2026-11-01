@@ -6,10 +6,10 @@ export const CartLine = z.object({ key: z.string().min(1).max(400), item: MenuIt
 export type CartLine = z.infer<typeof CartLine>;
 const PendingSend = z.object({ id: RequestId, kind: z.enum(['create', 'add']), orderId: z.string().optional(), body: z.string().max(100_000), intent: z.enum(['send', 'pay']) });
 export type PendingSend = z.infer<typeof PendingSend>;
-export const SavedDraft = z.object({ version: z.literal(1), cart: z.array(CartLine).max(100), note: z.string().max(300),
+export const SavedDraft = z.object({ version: z.literal(1), cart: z.array(CartLine).max(100), note: z.string().max(300), pickupName: z.string().max(40).default(''),
   tab: z.object({ id: z.string(), label: z.string() }).nullable(), pendingSend: PendingSend.nullable(), paymentOrderId: z.string().nullable() });
 export type SavedDraft = z.infer<typeof SavedDraft>;
-export const emptyDraft = (): SavedDraft => ({ version: 1, cart: [], note: '', tab: null, pendingSend: null, paymentOrderId: null });
+export const emptyDraft = (): SavedDraft => ({ version: 1, cart: [], note: '', pickupName: '', tab: null, pendingSend: null, paymentOrderId: null });
 export function draftKey(session: Session | null, origin: string, practice: boolean): string {
   return `cactus.draft.v1:${practice ? 'practice' : 'live'}:${session?.instanceId ?? origin}:${session?.staff.id ?? 'anonymous'}`;
 }

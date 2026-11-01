@@ -347,7 +347,7 @@ export class PosService {
   }
 
   /** Seconds after which a ready order counts as picked up by itself; 0 is off. */
-  autoCollectSeconds(): number { return getKv<number>(this.db, 'auto-collect-seconds', 60); }
+  autoCollectSeconds(): number { return getKv<number>(this.db, 'auto-collect-seconds', 0); }
   setAutoCollect(seconds: number, staff: Staff): { seconds: number } {
     return tx(this.db, () => {
       setKv(this.db, 'auto-collect-seconds', seconds);
@@ -469,14 +469,16 @@ export class PosService {
     return (this.db.prepare('SELECT business_date FROM orders WHERE id = ?').get(id) as { business_date: string }).business_date;
   }
 
-  /** What the public pickup board may see: numbers and states only. */
+  /** What the public pickup board may see: numbers, states and the name given to an order. */
   pickupBoard(): PickupBoard {
     const active = this.activeOrders().filter(inKitchen);
     // Ticket numbers restart each day, so work carried over from yesterday can share a number with today's.
     const numbers = (orders: Order[]) => [...new Set(orders.map((o) => o.ticketNumber))];
+    const names = Object.fromEntries(active.filter((o) => o.tabName).map((o) => [String(o.ticketNumber), o.tabName!]));
     return {
       preparing: numbers(active.filter((o) => o.status !== 'ready')),
       ready: numbers(active.filter((o) => o.status === 'ready')),
+      ...(Object.keys(names).length ? { names } : {}),
     };
   }
 }

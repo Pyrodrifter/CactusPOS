@@ -1,0 +1,31 @@
+/* Stock view on the till, and its edit sheet (the sheet renders under .sheet, so it needs its own touch sizes). */
+.stock { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 24px; display: flex; flex-direction: column; gap: 20px; }
+.stock-bar { display: flex; justify-content: flex-end; }
+.stock-group h2 { margin: 0 0 10px; font-size: 20px; line-height: 1.25; }
+.stock-group h2 small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+.stock-group ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.stock-group li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; min-width: 0; }
+.stock-group li.is-low { border-color: var(--warn); box-shadow: inset 4px 0 0 var(--warn); }
+.stock .stock-row-main { flex: 1; min-width: 0; min-height: 64px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 4px 6px; border: 0; background: transparent; color: inherit; text-align: left; }
+.stock-row-main b { font-size: 17px; max-width: 100%; overflow-wrap: anywhere; }
+.stock-row-main small { font-size: 13px; font-weight: 400; color: var(--muted); }
+.stock-count { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.stock .stock-count button { width: 52px; min-width: 52px; height: 52px; padding: 0; border-radius: 13px; background: var(--bg); }
+.stock-count strong { min-width: 58px; display: flex; flex-direction: column; align-items: center; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stock-count strong small { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+
+.stock-form { display: flex; flex-direction: column; gap: 14px; }
+.stock-form label, .stock-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.stock-field > small { font-weight: 400; }
+.stock-form input { min-height: 52px; }
+.stock-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stock-form .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.stock-form .chips button, .stock-form .actions button { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.stock-form .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.stock-form .stock-remove { margin-right: auto; }
+
+@media (max-width: 720px) {
+  .stock { padding: 12px 16px 24px; }
+  .stock-group ul { grid-template-columns: minmax(0, 1fr); }
+  .stock-bar .stock-add { width: 100%; }
+}

@@ -53,7 +53,8 @@ describe('tabs', () => {
     expect(r3.lines.map((l) => l.taxCents)).toEqual([85, 34, 28]);
     expect(r3.taxCents).toBe(147);
     expect(r3.breakdown).toEqual([{ taxCategoryId: 'service_6', name: 'ABB 6%', kind: 'taxed', bps: 600, grossCents: 2600, taxCents: 147, netCents: 2453 }]);
-    expect((await app.inject({ method: 'GET', url: '/api/pickup' })).json()).toEqual({ preparing: [tab.ticketNumber], ready: [] });
+    // The public board shows the name instead of the number, and still nothing about the items or the money.
+    expect((await app.inject({ method: 'GET', url: '/api/pickup' })).json()).toEqual({ preparing: [tab.ticketNumber], ready: [], names: { [tab.ticketNumber]: tab.tabName } });
 
     const paid = Order.parse((await post(`/api/orders/${tab.id}/pay`, { method: 'cash', tenderedCents: 3000 })).json());
     expect(paid).toMatchObject({ paid: true, receiptNumber: 1, totalCents: 2600 });

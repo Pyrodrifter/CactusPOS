@@ -49,7 +49,7 @@ const COPY = {
     preset: { service_6: 'Services 6%', insurance_7: 'Insurance 7%', zero_rated: 'Zero-rated 0% (export)', exempt: 'Exempt', outside_scope: 'Outside scope' } satisfies Record<Preset['id'], string>,
     charge: 'Charge ABB', chargeOn: 'Sales are taxed by the categories below.', chargeOff: (reason: string) => `Off: every new sale is recorded as exempt (${reason}). Earlier sales keep their ABB.`,
     offTitle: 'Switch ABB off', offIntro: 'Only for a business that is allowed to sell without ABB. Check it with the accountant or the Belastingdienst first. Prices stay the same; from now on they hold no ABB.',
-    offReason: 'Why no ABB is charged', offExample: 'e.g. food truck (trukipan) arrangement', offCheck: 'ABB is switched off, so no sale gets ABB. Prices on the menu are what the customer pays.',
+    offReason: 'Why no ABB is charged', offExample: 'e.g. food truck (trukipan) arrangement', offDefault: 'food trucks, fishermen and small food carts are exempt', offCheck: 'ABB is switched off, so no sale gets ABB. Prices on the menu are what the customer pays.',
     grounds: { exempt: ['First necessities of life (staple foods)', 'Prescription medicines and medical aids', 'Water, electricity and gas from a licensed supplier'], outside_scope: ['Resale of goods bought or imported (not a producer)'] },
   },
   nl: {
@@ -67,7 +67,7 @@ const COPY = {
     preset: { service_6: 'Diensten 6%', insurance_7: 'Verzekeringen 7%', zero_rated: 'Nultarief 0% (export)', exempt: 'Vrijgesteld', outside_scope: 'Buiten toepassing' } satisfies Record<Preset['id'], string>,
     charge: 'ABB rekenen', chargeOn: 'Verkopen worden belast volgens de categorieën hieronder.', chargeOff: (reason: string) => `Uit: elke nieuwe verkoop wordt als vrijgesteld vastgelegd (${reason}). Eerdere verkopen houden hun ABB.`,
     offTitle: 'ABB uitzetten', offIntro: 'Alleen voor een bedrijf dat zonder ABB mag verkopen. Controleer dit eerst met de boekhouder of de Belastingdienst. De prijzen blijven gelijk; vanaf nu zit er geen ABB in.',
-    offReason: 'Waarom er geen ABB wordt gerekend', offExample: 'bijv. regeling voor foodtrucks (trukipan)', offCheck: 'ABB staat uit, dus geen enkele verkoop krijgt ABB. De prijzen op het menu zijn wat de klant betaalt.',
+    offReason: 'Waarom er geen ABB wordt gerekend', offExample: 'bijv. regeling voor foodtrucks (trukipan)', offDefault: 'foodtrucks, vissers en kleine eetkarren zijn vrijgesteld', offCheck: 'ABB staat uit, dus geen enkele verkoop krijgt ABB. De prijzen op het menu zijn wat de klant betaalt.',
     grounds: { exempt: ['Eerste levensbehoeften (basisvoedsel)', 'Geneesmiddelen op recept en medische hulpmiddelen', 'Water, elektriciteit en gas van een vergunninghouder'], outside_scope: ['Doorverkoop van ingekochte of ingevoerde goederen (geen producent)'] },
   },
 };
@@ -176,7 +176,7 @@ export function TaxAdmin() {
       {setup && (
         <div className="tax-switch">
           <AdminSwitch on={charged} disabled={busy} label={c.charge} hint={charged ? c.chargeOn : c.chargeOff(setup.exemption.reason)}
-            onChange={(on) => { setErr(''); if (on) void setCharged({ charged: true, reason: '' }); else setSwitching(setup.exemption.reason); }} />
+            onChange={(on) => { setErr(''); if (on) void setCharged({ charged: true, reason: '' }); else setSwitching(setup.exemption.reason || c.offDefault); }} />
         </div>
       )}
       {menu && !charged && <section className="tax-check" aria-label={c.check}><h3>{c.check}</h3><p><Icon name="check" size={16} /> {c.offCheck}</p></section>}

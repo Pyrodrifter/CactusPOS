@@ -116,7 +116,7 @@ function TabSheet({ tab, onClose, onAdd, onPay }: { tab: Order; onClose: () => v
           </section>
         ))}
       </div>
-      <div className="tab-sheet-total"><span>{c.total} <small>{c.inclAbb} {money(tab.taxCents)}</small></span><b>{money(tab.totalCents)}</b></div>
+      <div className="tab-sheet-total"><span>{c.total} {tab.taxCents > 0 && <small>{c.inclAbb} {money(tab.taxCents)}</small>}</span><b>{money(tab.totalCents)}</b></div>
       <div className="tab-sheet-actions">
         <button className="tab-sheet-bill" onClick={() => { void printReceipt(tab); toast(c.billSent); }}><Icon name="printer" />{c.bill}</button>
         <button className="tab-sheet-add" onClick={onAdd}><Icon name="plus" />{c.add}</button>

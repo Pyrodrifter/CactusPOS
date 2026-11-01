@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatMoney, parseMoney, type DayReview, type ZReport } from '@cactus/shared';
+import { formatMoney, parseMoney, type DayReview, type TaxExemption, type ZReport } from '@cactus/shared';
 import { api, ApiError, getSession, serverPrints } from '../../lib/api';
 import { apiPath } from '../../lib/clientMode';
 import { printHtml } from '../../lib/print';
@@ -24,6 +24,7 @@ const copy = {
     expected: 'Expected', difference: 'Over / short', confirmClose: 'Close day', cancel: 'Cancel', badAmount: 'Enter an amount like 152.50',
     earlier: (n: number, amount: string) => `Includes ${n} refund${n === 1 ? '' : 's'} of sales from an earlier day (${amount}). That money left the drawer today, so it is taken off today's sales, ABB and cash.`,
     corrections: (n: number, net: string) => `${n} paid order${n === 1 ? ' was' : 's were'} corrected on this day (${net} in all). The originals are kept as void; the corrected sales are the ones that count.`,
+    exempt2: (reason: string) => `No ABB to pay: ${reason}. New sales stay at $0.00 ABB.`, noAbb: 'no ABB', exemptShort: 'exempt',
     closedToast: (n: number) => `Day closed: Z report #${n}`, history: 'Closed days', receipts: 'Receipts', loading: 'Loading…', sold: 'sold', printed: 'Sent to the printer',
   },
   nl: {
@@ -38,11 +39,13 @@ const copy = {
     expected: 'Verwacht', difference: 'Verschil', confirmClose: 'Dag afsluiten', cancel: 'Annuleren', badAmount: 'Vul een bedrag in zoals 152,50',
     earlier: (n: number, amount: string) => `Inclusief ${n} terugbetaling${n === 1 ? '' : 'en'} van verkopen van een eerdere dag (${amount}). Dat geld ging vandaag uit de lade en is dus van de omzet, ABB en kas van vandaag afgetrokken.`,
     corrections: (n: number, net: string) => `${n} betaalde bestelling${n === 1 ? ' is' : 'en zijn'} op deze dag gecorrigeerd (${net} in totaal). De originelen blijven bewaard als geannuleerd; de gecorrigeerde verkopen tellen mee.`,
+    exempt2: (reason: string) => `Geen ABB af te dragen: ${reason}. Nieuwe verkopen blijven op $0.00 ABB.`, noAbb: 'geen ABB', exemptShort: 'vrijgesteld',
     closedToast: (n: number) => `Dag afgesloten: Z-rapport #${n}`, history: 'Afgesloten dagen', receipts: 'Bonnen', loading: 'Laden…', sold: 'verkocht', printed: 'Naar de printer gestuurd',
   },
 };
 
-type DayView = DayReview;
+/** The till's ABB switch comes with the day, so the page can say why there is none. */
+type DayView = DayReview & { exemption?: TaxExemption };
 const pct = (bps: number) => `${(bps / 100).toFixed(bps % 100 ? 2 : 0)}%`;
 
 export function ReportsAdmin() {
@@ -74,6 +77,7 @@ export function ReportsAdmin() {
 
   if (!view) return <p className={err ? 'error' : 'muted center'} role="status">{err || c.loading}</p>;
   const { report: r, closed } = view;
+  const exempt = view.exemption && !view.exemption.charged ? view.exemption : null;
   const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   const changed = view.changedSinceClose;
   const expectedCash = r.drawer?.expectedCents ?? r.cashExpectedCents;
@@ -119,15 +123,16 @@ export function ReportsAdmin() {
       </div>
 
       {closed && <p className={`reports-status${changed ? ' changed' : ''}`} role="status"><Icon name={changed ? 'warning' : 'check'} /><span>{c.closedAs(closed.number, time(closed.closedAt))}{changed && ` ${c.changedSince}`}</span></p>}
+      {exempt && <p className="notice info reports-exempt" role="status">{c.exempt2(exempt.reason)}</p>}
       {r.orders.unpaid > 0 && <p className="notice" role="status">{c.unpaidWarn(r.orders.unpaid, money(r.orders.unpaidCents))}</p>}
       {r.refundedEarlier && <p className="notice" role="status">{c.earlier(r.refundedEarlier.count, money(r.refundedEarlier.grossCents))}</p>}
       {r.corrections && <p className="notice" role="status">{c.corrections(r.corrections.count, `${r.corrections.addedCents >= r.corrections.removedCents ? '+' : '−'}${money(Math.abs(r.corrections.addedCents - r.corrections.removedCents))}`)}</p>}
       {err && !closing && <div className="error" role="alert">{err}</div>}
 
       <div className="reports-stats">
-        <div className="reports-stat main"><span>{c.sales}</span><b>{money(r.sales.grossCents)}</b><small>{c.inclAbb}</small></div>
+        <div className="reports-stat main"><span>{c.sales}</span><b>{money(r.sales.grossCents)}</b><small>{exempt && !r.sales.taxCents ? c.noAbb : c.inclAbb}</small></div>
         <div className="reports-stat"><span>{c.orders}</span><b>{r.orders.sold}</b><small>{r.receipts.first !== null ? `${c.receipts} #${r.receipts.first}–#${r.receipts.last}` : '—'}</small></div>
-        <div className="reports-stat"><span>{c.abb}</span><b>{money(r.sales.taxCents)}</b><small>{money(r.sales.netCents)} {c.net}</small></div>
+        <div className="reports-stat"><span>{c.abb}</span><b>{money(r.sales.taxCents)}</b><small>{exempt && !r.sales.taxCents ? c.exemptShort : `${money(r.sales.netCents)} ${c.net}`}</small></div>
         <div className="reports-stat"><span>{lang === 'nl' ? 'Verwacht in lade' : 'Expected in drawer'}</span><b>{money(expectedCash)}</b><small>{c.excludesFloat}</small></div>
       </div>
 

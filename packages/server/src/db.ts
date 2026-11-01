@@ -195,6 +195,13 @@ MIGRATIONS.push({ version: 7, name: 'category-color', up: (db) => {
   db.exec('ALTER TABLE menu_categories ADD COLUMN color TEXT;');
 } });
 
+MIGRATIONS.push({ version: 8, name: 'stock', up: (db) => {
+  db.exec(`CREATE TABLE stock_items (id TEXT PRIMARY KEY, data TEXT NOT NULL, archived_at TEXT);
+  CREATE TABLE stock_moves (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, business_date TEXT NOT NULL, delta INTEGER NOT NULL, staff_id TEXT NOT NULL, at TEXT NOT NULL);
+  CREATE INDEX stock_moves_item ON stock_moves(item_id, business_date);
+  ${appendOnly('stock_moves', 'id')}`);
+} });
+
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
 export function schemaVersion(db: DB): number {

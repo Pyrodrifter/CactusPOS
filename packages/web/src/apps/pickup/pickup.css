@@ -1,4 +1,4 @@
-/* Pickup board: two lists of ticket numbers, nothing else. Sized in viewport units so it fills any TV or tablet. */
+/* Pickup board: two lists of ticket numbers or names, nothing else. Sized in viewport units so it fills any TV or tablet. */
 .pickup-board {
   min-height: 100dvh; display: grid; grid-template-columns: 2fr 3fr; grid-template-rows: auto 1fr;
   background: #0b1640; color: #fff; font-variant-numeric: tabular-nums;
@@ -18,6 +18,9 @@
 .pickup-ready li { font-size: clamp(56px, 9vw, 170px); padding: .14em .3em; background: #fff; color: #0b3d29; }
 .pickup-col li.pickup-small { font-size: clamp(32px, 4.6vw, 84px); }
 .pickup-ready li.pickup-small { font-size: clamp(42px, 6.5vw, 120px); }
+/* A name is wider than a number: one size down, and a long one wraps instead of leaving the screen. */
+.pickup-col li.pickup-name { font-size: clamp(32px, 4.6vw, 84px); display: flex; align-items: center; max-width: 100%; overflow-wrap: anywhere; line-height: 1.1; }
+.pickup-ready li.pickup-name { font-size: clamp(40px, 6vw, 110px); }
 
 .pickup-offline { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; padding: 10px 16px; text-align: center; font-weight: 700; background: #e08a1e; color: #fff; }
 

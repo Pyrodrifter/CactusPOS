@@ -24,7 +24,8 @@ import { ServiceSettings, SaveTemplateBody, RestoreTemplateBody, PreviewTemplate
 import { getKv, openDb, setKv, type DB } from './db.js';
 import { seedPractice } from './practice.js';
 import { openingChecks } from './readiness.js';
-import { CashMovementBody, AutoCollect } from '@cactus/shared';
+import { CashMovementBody, AutoCollect, StockAdjustBody, StockItem } from '@cactus/shared';
+import { Stock } from './stock.js';
 
 interface ClientSocket { send(data: string): void; close(code?: number, reason?: string): void; ping(): void; terminate(): void; on(event: string, listener: () => void): unknown }
 interface SocketQuery { token?: string; room?: string; screen?: string }
@@ -74,6 +75,7 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
   app.addHook('onClose', async () => printing.queue.stop());
   const reports = new Reports(db, svc);
   const books = new Books(db, svc);
+  const stock = new Stock(db, svc);
   const backups = new Backups(db, opts.backupDir ?? null);
   app.addHook('onClose', async () => backups.stop());
   const clients = new Set<Client>();
@@ -371,6 +373,25 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     return reply.type('text/html').send(renderReceiptHtml(order, svc.business(), (req.query as { copy?: string }).copy === '1', templates.get(order.templateVersion ?? 0).template.receipt));
   });
 
+  /* ----- stock: any signed-in staff ----- */
+  const stockChanged = <T>(result: T) => { broadcast({ type: 'stock.changed' }); return result; };
+  app.get('/api/stock', async (req) => { authOf(req); return stock.list(); });
+  app.put('/api/stock/items/:id', async (req) => {
+    const by = authOf(req), item = StockItem.parse({ ...(req.body as object), id: idOf(req) });
+    const list = stock.save(item);
+    admin.log('stock.item_saved', item, by);
+    return stockChanged(list);
+  });
+  app.delete('/api/stock/items/:id', async (req) => {
+    const by = authOf(req), list = stock.remove(idOf(req));
+    admin.log('stock.item_removed', { id: idOf(req) }, by);
+    return stockChanged(list);
+  });
+  app.post('/api/stock/items/:id/adjust', async (req) => {
+    const by = authOf(req);
+    return stockChanged(stock.adjust(idOf(req), StockAdjustBody.parse(req.body).delta, by));
+  });
+
   /* ----- day reports: owner only ----- */
   app.get('/api/cash/movements', async (req) => { ownerOf(req); return reports.cash.list(ReportQuery.parse(req.query).date ?? svc.businessDate()); });
   app.get('/api/cash/movements/request/:id', async (req) => { ownerOf(req); return { movement: reports.cash.request(RequestId.parse((req.params as { id: string }).id)) }; });
@@ -386,7 +407,7 @@ export function buildApp(db: DB, opts: AppOptions = {}): { app: FastifyInstance;
     ownerOf(req);
     const date = ReportQuery.parse(req.query).date ?? svc.businessDate();
     const report = reports.day(date), closed = reports.latestFor(date), revision = reportRevision(report);
-    return { report, closed, today: svc.businessDate(), revision, changedSinceClose: !!closed && reportRevision(closed.report) !== revision };
+    return { report, closed, today: svc.businessDate(), revision, changedSinceClose: !!closed && reportRevision(closed.report) !== revision, exemption: svc.taxSetup().exemption };
   });
   app.post('/api/reports/day/close', async (req, reply) => {
     const z = reports.close(CloseDayBody.parse(req.body), ownerOf(req));

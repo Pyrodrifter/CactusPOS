@@ -7,11 +7,15 @@ const staff: Staff = { id: 'staff1', name: 'Staff', role: 'staff' };
 const owner: Staff = { id: 'owner1', name: 'Owner', role: 'owner' };
 let svc: PosService;
 let db: ReturnType<typeof openDb>;
-beforeEach(() => { db = openDb(':memory:'); seedSample(db); svc = new PosService(db); });
+beforeEach(() => { db = openDb(':memory:'); seedSample(db); svc = new PosService(db); svc.setAutoCollect(60, owner); });
 
 const burger = () => ({ lines: [{ itemId: 'burger', qty: 1, modifierOptionIds: [] }], source: 'pos' as const });
 
 describe('ready orders picked up by themselves', () => {
+  it('is off until the owner switches it on, so Order can confirm the pickup', () => {
+    const fresh = new PosService(Object.assign(openDb(':memory:')));
+    expect(fresh.autoCollectSeconds()).toBe(0);
+  });
   it('marks a ready order collected after a minute, not before', () => {
     const o = svc.setStatus(svc.createOrder(burger(), staff).id, 'ready', staff);
     const readyAt = Date.parse(o.readyAt!);

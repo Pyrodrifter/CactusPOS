@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ServerEventSchema, type Order, type ServerEvent } from '@cactus/shared';
+import { ServerEventSchema, type Order, type PickupBoard, type ServerEvent } from '@cactus/shared';
 import { api, getSession } from './api';
 import { openLive } from './liveSocket';
 import { appBase } from './clientMode';
@@ -18,6 +18,7 @@ const socketUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' :
 /** Fired on window when the owner edits the menu or an item is marked sold out. */
 export const MENU_CHANGED = 'cactus:menu-changed';
 export const SERVICE_MODE_CHANGED = 'cactus:service-mode-changed';
+export const STOCK_CHANGED = 'cactus:stock-changed';
 
 /**
  * Live list of orders: initial fetch + WebSocket updates + auto-reconnect (see `openLive` for how a dead
@@ -53,6 +54,7 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
         if (!ev) return;
         if (ev.type === 'menu.changed') window.dispatchEvent(new Event(MENU_CHANGED));
         if (ev.type === 'service-mode.changed') window.dispatchEvent(new Event(SERVICE_MODE_CHANGED));
+        if (ev.type === 'stock.changed') window.dispatchEvent(new Event(STOCK_CHANGED));
         if (ev.type === 'order.changed') {
           const o = ev.order;
           if (scope === 'active' && o.serviceMode === 'counter') {
@@ -70,7 +72,7 @@ export function useOrders(scope: 'active' | 'today' | 'open' = 'active') {
 }
 
 export function usePickup() {
-  const [board, setBoard] = useState<{ preparing: number[]; ready: number[] }>({ preparing: [], ready: [] });
+  const [board, setBoard] = useState<PickupBoard>({ preparing: [], ready: [] });
   const [online, setOnline] = useState(false);
   useEffect(() => openLive({
     url: () => socketUrl('room=pickup'),
@@ -78,7 +80,7 @@ export function usePickup() {
     onOpen: () => { /* the server sends the board as soon as a pickup screen connects */ },
     onMessage: (data) => {
       const ev = readEvent(data);
-      if (ev?.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready });
+      if (ev?.type === 'pickup.changed') setBoard({ preparing: ev.preparing, ready: ev.ready, names: ev.names });
     },
   }), []);
   return { board, online };

@@ -12,6 +12,8 @@ import { TabList, tabLabel } from './Tabs';
 import './pos.css';
 import { ServiceModeControl, useServiceMode } from './ServiceModeControl';
 import { isPractice } from '../../lib/clientMode';
+import { ReadyStrip } from './ReadyStrip';
+import { StockView } from './Stock';
 import { draftKey, emptyDraft, readDraft, saveDraft, type CartLine, type PendingSend, type SavedDraft } from './draftStore';
 
 const copy = {
@@ -50,6 +52,7 @@ function useDraftState(session: Session) {
   const [initial] = useState(() => { try { return readDraft(localStorage, key); } catch { return null; } });
   const [cart, setCart] = useState<CartLine[]>(initial?.cart ?? []);
   const [note, setNote] = useState(initial?.note ?? '');
+  const [pickupName, setPickupName] = useState(initial?.pickupName ?? '');
   const [sending, setSending] = useState(false);
   const placing = useRef(false);
   const request = useRef({ signature: '', id: newRequestId() });
@@ -60,17 +63,17 @@ function useDraftState(session: Session) {
   const [recovered, setRecovered] = useState(!!initial);
   const [storageProblem, setStorageProblem] = useState(false);
   const snapshot = useRef<SavedDraft>(emptyDraft());
-  snapshot.current = { version: 1, cart, note, tab, pendingSend, paymentOrderId };
+  snapshot.current = { version: 1, cart, note, pickupName, tab, pendingSend, paymentOrderId };
   const persist = (patch: Partial<SavedDraft> = {}) => {
     const value = { ...snapshot.current, ...patch };
     let ok = false;
     try { ok = saveDraft(localStorage, key, value); } catch { /* restricted browser storage */ }
     setStorageProblem(!ok); return ok;
   };
-  useLayoutEffect(() => { persist(); }, [cart, note, tab, pendingSend, paymentOrderId]);
+  useLayoutEffect(() => { persist(); }, [cart, note, pickupName, tab, pendingSend, paymentOrderId]);
   useEffect(() => { const flush = () => { try { saveDraft(localStorage, key, snapshot.current); } catch { /* unavailable */ } }; window.addEventListener('pagehide', flush); return () => window.removeEventListener('pagehide', flush); }, [key]);
   const [error, setError] = useState('');
-  return { cart, setCart, note, setNote, sending, setSending, placing, request, tab, setTab, error, setError,
+  return { cart, setCart, note, setNote, pickupName, setPickupName, sending, setSending, placing, request, tab, setTab, error, setError,
     pendingSend, setPendingSend, paymentOrderId, setPaymentOrderId, recovered, setRecovered, storageProblem, persist };
 }
 const DraftContext = createContext<ReturnType<typeof useDraftState> | null>(null);
@@ -93,7 +96,7 @@ export function Pos() {
   const serviceMode = useServiceMode();
   const { t, lang } = useLang();
   const c = copy[lang];
-  const { cart, setCart, note, setNote, sending: transmitting, setSending, placing, request, tab, setTab, error, setError,
+  const { cart, setCart, note, setNote, pickupName, setPickupName, sending: transmitting, setSending, placing, request, tab, setTab, error, setError,
     pendingSend, setPendingSend, paymentOrderId, setPaymentOrderId, recovered, setRecovered, storageProblem, persist } = useContext(DraftContext)!;
   const sending = transmitting || !!pendingSend || !!paymentOrderId;
   const pendingRef = useRef(pendingSend); pendingRef.current = pendingSend;
@@ -105,10 +108,10 @@ export function Pos() {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
-  const [undo, setUndo] = useState<{ cart: CartLine[]; note: string } | null>(null);
+  const [undo, setUndo] = useState<{ cart: CartLine[]; note: string; pickupName?: string } | null>(null);
   const [picking, setPicking] = useState<MenuItem | null>(null);
   const [paying, setPaying] = useState<{ order: Order } | { cartTotal: number } | null>(null);
-  const [view, setView] = useState<'order' | 'tabs' | 'orders'>('order');
+  const [view, setView] = useState<'order' | 'tabs' | 'orders' | 'stock'>('order');
   const [success, setSuccess] = useState('');
   const cartPanel = useRef<HTMLElement>(null);
   const { orders, online } = useOrders('today');
@@ -145,8 +148,8 @@ export function Pos() {
 
   const received = (order: Order) => {
     request.current = { signature: '', id: newRequestId() };
-    persist({ cart: [], note: '', tab: null, pendingSend: null, paymentOrderId: order.id });
-    setCart([]); setNote(''); setTab(null); setPendingSend(null); setPaymentOrderId(order.id); setRecoveredOrder(order); setRecovered(false); setError('');
+    persist({ cart: [], note: '', pickupName: '', tab: null, pendingSend: null, paymentOrderId: order.id });
+    setCart([]); setNote(''); setPickupName(''); setTab(null); setPendingSend(null); setPaymentOrderId(order.id); setRecoveredOrder(order); setRecovered(false); setError('');
   };
   const checkRecovery = async () => {
     setCheckingRecovery(true);
@@ -209,7 +212,7 @@ export function Pos() {
     try {
       const lines = cart.map((l) => ({ itemId: l.item.id, qty: l.qty, modifierOptionIds: l.optionIds, note: l.note, priceCents: l.priceCents }));
       // T29: with a tab selected the cart becomes a new round on that order; otherwise it is a new order.
-      const body = tab ? { lines } : { lines, note: note || undefined, tabName: tabName?.trim() || undefined };
+      const body = tab ? { lines } : { lines, note: note || undefined, tabName: (tabName ?? pickupName).trim() || undefined };
       const signature = JSON.stringify([tab?.id ?? '', body]);
       if (request.current.signature !== signature) request.current = { signature, id: newRequestId() };
       const pending: PendingSend = { id: request.current.id, kind: tab ? 'add' : 'create', orderId: tab?.id, body: JSON.stringify(body), intent: reportSuccess ? 'send' : 'pay' };
@@ -219,9 +222,9 @@ export function Pos() {
       });
       request.current = { signature: '', id: newRequestId() };
       const paymentId = !reportSuccess && !tab ? order.id : null;
-      persist({ cart: [], note: '', tab: null, pendingSend: null, paymentOrderId: paymentId });
+      persist({ cart: [], note: '', pickupName: '', tab: null, pendingSend: null, paymentOrderId: paymentId });
       setPendingSend(null); setPaymentOrderId(paymentId); setRecovered(false);
-      setCart([]); setNote('');
+      setCart([]); setNote(''); setPickupName('');
       if (tab) {
         const message = `${tabUi.addedTo} ${tab.label}`;
         setSuccess(message); toast(message);
@@ -248,16 +251,19 @@ export function Pos() {
       {recovered && !pendingSend && !paymentOrderId && <p className="notice draft-restored" role="status">{lang === 'nl' ? 'Uw onvoltooide bestelling is hersteld. Controleer de huidige prijzen voordat u verstuurt.' : 'Your unfinished cart was restored. Check current prices before sending.'}<button onClick={() => setRecovered(false)}>{lang === 'nl' ? 'Begrepen' : 'Got it'}</button></p>}
       {pendingSend && !transmitting && <section className="draft-recovery notice" role="status"><strong>{lang === 'nl' ? 'Versturen was onderbroken' : 'Sending was interrupted'}</strong><p>{lang === 'nl' ? 'De bestelling kan al zijn ontvangen. Controleer of probeer dezelfde verzending opnieuw; de kassa gebruikt dezelfde sleutel.' : 'The order may already have arrived. Check its status or retry the same send; the till keeps the original request key.'}</p><div className="actions"><button className="draft-check" disabled={checkingRecovery} onClick={() => void checkRecovery()}>{lang === 'nl' ? 'Bevestiging controleren' : 'Check confirmation'}</button><button className="primary draft-retry" disabled={checkingRecovery} onClick={() => void retrySend()}>{lang === 'nl' ? 'Dezelfde verzending herhalen' : 'Retry original send'}</button><button disabled={checkingRecovery} onClick={() => setDiscarding(true)}>{lang === 'nl' ? 'Concept wegdoen' : 'Discard draft'}</button></div></section>}
       {recoveredOrder && <section className="draft-recovery notice" role="status"><strong>{lang === 'nl' ? 'Bestelling teruggevonden' : 'Order recovered'} · #{recoveredOrder.ticketNumber}</strong><p>{recoveredOrder.paid ? (lang === 'nl' ? 'Al betaald. Breng niets opnieuw in rekening.' : 'Already paid. Do not charge again.') : (lang === 'nl' ? 'De bestelling is ontvangen, maar een betaling is niet bevestigd. Controleer de betaalautomaat voordat u een betaling vastlegt.' : 'The order was received, but payment is not confirmed. Check the card terminal before recording a payment.')}</p><div className="actions">{!recoveredOrder.paid && recoveredOrder.status !== 'void' && <button className="primary draft-resume-pay" onClick={() => setPaying({ order: recoveredOrder })}>{lang === 'nl' ? 'Betaling afronden' : 'Continue payment'}</button>}<button onClick={() => { setView('orders'); dismissRecovery(); }}>{lang === 'nl' ? 'Bestellingen bekijken' : 'View Orders'}</button><button className="draft-reviewed" onClick={dismissRecovery}>{lang === 'nl' ? 'Bestelling gecontroleerd' : 'Order checked'}</button></div></section>}
-      {discarding && <Sheet titleId="discard-draft" kind="draft-discard" onCancel={() => setDiscarding(false)}><h2 id="discard-draft">{lang === 'nl' ? 'Concept wegdoen?' : 'Discard this draft?'}</h2><p>{lang === 'nl' ? 'Controleer eerst Bestellingen: een eerdere verzending kan al zijn ontvangen. Dit verwijdert alleen het concept op dit apparaat, nooit een verkoop op de server.' : 'Check Orders first: an earlier send may already have arrived. This clears only this device’s draft, never a server sale.'}</p><div className="actions"><button onClick={() => setDiscarding(false)}>{lang === 'nl' ? 'Bewaren' : 'Keep draft'}</button><button className="primary" onClick={() => { persist(emptyDraft()); setCart([]); setNote(''); setTab(null); setPendingSend(null); setPaymentOrderId(null); setRecovered(false); setDiscarding(false); }}>{lang === 'nl' ? 'Concept wegdoen' : 'Discard draft'}</button></div></Sheet>}
+      {discarding && <Sheet titleId="discard-draft" kind="draft-discard" onCancel={() => setDiscarding(false)}><h2 id="discard-draft">{lang === 'nl' ? 'Concept wegdoen?' : 'Discard this draft?'}</h2><p>{lang === 'nl' ? 'Controleer eerst Bestellingen: een eerdere verzending kan al zijn ontvangen. Dit verwijdert alleen het concept op dit apparaat, nooit een verkoop op de server.' : 'Check Orders first: an earlier send may already have arrived. This clears only this device’s draft, never a server sale.'}</p><div className="actions"><button onClick={() => setDiscarding(false)}>{lang === 'nl' ? 'Bewaren' : 'Keep draft'}</button><button className="primary" onClick={() => { persist(emptyDraft()); setCart([]); setNote(''); setPickupName(''); setTab(null); setPendingSend(null); setPaymentOrderId(null); setRecovered(false); setDiscarding(false); }}>{lang === 'nl' ? 'Concept wegdoen' : 'Discard draft'}</button></div></Sheet>}
       {!online && <div className="banner"><Icon name="wifi-off" />{t('offline')}</div>}
       <div className="pos-toolbar"><div className="tabs">
         <button aria-pressed={view === 'order'} className={view === 'order' ? 'on' : ''} onClick={() => setView('order')}><Icon name="plus" />{t('nav.order')}</button>
         <button aria-pressed={view === 'tabs'} className={view === 'tabs' ? 'on' : ''} onClick={() => setView('tabs')}><Icon name="tabs" />{tabUi.tabs} <span className="pos-count">{openTabs}</span></button>
         <button aria-pressed={view === 'orders'} className={view === 'orders' ? 'on' : ''} onClick={() => setView('orders')}><Icon name="receipt" />{t('nav.orders')} <span className="pos-count">{orders.filter((o) => o.status !== 'void' && (!o.paid || (o.serviceMode !== 'counter' && o.status !== 'collected'))).length}</span></button>
+        <button aria-pressed={view === 'stock'} className={view === 'stock' ? 'on pos-stock-tab' : 'pos-stock-tab'} onClick={() => setView('stock')}><Icon name="box" />{lang === 'nl' ? 'Voorraad' : 'Stock'}</button>
       </div>
       {view === 'order' && <><button className={`pos-search-toggle${searchOpen ? ' on' : ''}`} aria-label={ui.search} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); if (!searchOpen) requestAnimationFrame(() => searchInput.current?.focus()); else setQuery(''); }}><Icon name="search" /></button><div className={`pos-search${searchOpen ? ' is-open' : ''}`}><Icon name="search" /><input ref={searchInput} type="search" aria-label={ui.search} placeholder={ui.search} value={query} onChange={(e) => { setQuery(e.target.value); setCat(''); }} />{query && <button aria-label={ui.clearSearch} onClick={() => setQuery('')}><Icon name="close" /></button>}</div></>}
       </div>
       {success && <div className="pos-success" role="status"><Icon name="check" />{success}<button aria-label={c.close} onClick={() => setSuccess('')}><Icon name="close" /></button></div>}
+
+      {view === 'order' && <ReadyStrip orders={orders} online={online} onPay={(order) => setPaying({ order })} />}
 
       {view === 'order' ? (
         <div className="pos-grid">
@@ -282,9 +288,9 @@ export function Pos() {
           </section>
 
           <aside ref={cartPanel} className="cart">
-            <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></span><button className="pos-clear-order" aria-label={ui.clear} disabled={!cart.length || sending || !!paying} onClick={() => { setUndo({ cart, note }); setCart([]); setNote(''); }}><Icon name="trash" /></button></header>
+            <header className="pos-cart-heading"><span><Icon name="cart" /><h2>{c.current}</h2><span className="pos-count">{cart.reduce((sum, l) => sum + l.qty, 0)}</span></span><button className="pos-clear-order" aria-label={ui.clear} disabled={!cart.length || sending || !!paying} onClick={() => { setUndo({ cart, note, pickupName }); setCart([]); setNote(''); setPickupName(''); }}><Icon name="trash" /></button></header>
             {tab && <div className="pos-tab-banner" role="status"><Icon name="staff" /><span>{tabUi.addingTo} <b>{tab.label}</b></span><button aria-label={tabUi.stop} disabled={sending} onClick={() => setTab(null)}><Icon name="close" /></button></div>}
-            {undo && <div className="pos-undo" role="status"><span>{ui.removed}</span><button disabled={sending || !!paying} onClick={() => { setCart(undo.cart); setNote(undo.note); setUndo(null); }}><Icon name="undo" />{ui.undo}</button></div>}
+            {undo && <div className="pos-undo" role="status"><span>{ui.removed}</span><button disabled={sending || !!paying} onClick={() => { setCart(undo.cart); setNote(undo.note); if (undo.pickupName !== undefined) setPickupName(undo.pickupName); setUndo(null); }}><Icon name="undo" />{ui.undo}</button></div>}
             {cart.length === 0 && <div className="pos-cart-empty"><span><Icon name="cart" size={38} /></span><h3>{c.emptyTitle}</h3><p>{t('cart.empty')}</p></div>}
             <ul>
               {cart.map((l) => {
@@ -303,10 +309,13 @@ export function Pos() {
                 );
               })}
             </ul>
-            {cart.length > 0 && !tab && <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => { setNote(e.target.value); setUndo(null); }} /></label>}
+            {cart.length > 0 && !tab && <div className="pos-cart-fields">
+              {serviceMode !== 'counter' && <label className="pos-note">{lang === 'nl' ? 'Naam voor afhalen' : 'Name for pickup'}<input className="pos-pickup-name" disabled={sending || !!paying} maxLength={40} autoCapitalize="words" autoComplete="off" placeholder={lang === 'nl' ? 'bijv. Mike' : 'e.g. Mike'} value={pickupName} onChange={(e) => { setPickupName(e.target.value); setUndo(null); }} /></label>}
+              <label className="pos-note">{t('cart.note')}<input disabled={sending || !!paying} placeholder={t('cart.note')} value={note} onChange={(e) => { setNote(e.target.value); setUndo(null); }} /></label>
+            </div>}
             {error && <div className="error" role="alert">{error}</div>}
             <div className="total">
-              <span>{t('cart.total')} <small className="muted">{t('cart.abb')}{totals ? ` ${money(totals.taxCents)}` : ''}</small></span>
+              <span>{t('cart.total')} {menu.taxCategories.some((x) => x.kind === 'taxed') && <small className="muted">{t('cart.abb')}{totals ? ` ${money(totals.taxCents)}` : ''}</small>}</span>
               <b>{money(total)}</b>
             </div>
             <div className={`actions${tab ? ' pos-actions-tab' : ''}`}>
@@ -319,6 +328,8 @@ export function Pos() {
             </div>
           </aside>
         </div>
+      ) : view === 'stock' ? (
+        <StockView orders={orders} menu={menu} />
       ) : view === 'tabs' ? (
         <TabList
           onAdd={(order) => { setTab({ id: order.id, label: tabLabel(order, lang) }); setSuccess(''); setView('order'); }}
@@ -334,7 +345,7 @@ export function Pos() {
           ? <button className="primary" disabled={sending} onClick={() => void place(true)}><Icon name="plus" /><span className="pos-add-label">{tabUi.addTo} {tab.label}</span></button>
           : <button className="primary" disabled={sending || !!paying} onClick={() => setPaying({ cartTotal: total })}><Icon name="cash" />{t('orders.pay')}</button>}
       </div>}
-      {naming && <PayLaterSheet busy={sending} onCancel={() => setNaming(false)} onSend={async (name) => { if (await place(true, name)) setNaming(false); }} />}
+      {naming && <PayLaterSheet busy={sending} initialName={pickupName} onCancel={() => setNaming(false)} onSend={async (name) => { if (await place(true, name)) setNaming(false); }} />}
 
       {picking && <ModifierSheet item={picking} onCancel={() => setPicking(null)} onAdd={(ids, price, qty) => { add(picking, ids, price, qty); setPicking(null); }} />}
       {paying && (
@@ -372,9 +383,9 @@ export function Pos() {
 }
 
 /** "Pay later": sends the order to the kitchen unpaid. A name turns it into a tab the guest can add to. */
-function PayLaterSheet({ busy, onSend, onCancel }: { busy: boolean; onSend: (tabName: string) => Promise<void>; onCancel: () => void }) {
+function PayLaterSheet({ busy, initialName, onSend, onCancel }: { busy: boolean; initialName: string; onSend: (tabName: string) => Promise<void>; onCancel: () => void }) {
   const { lang } = useLang();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const ui = lang === 'nl'
     ? { eyebrow: 'Naar de keuken, betalen kan straks', title: 'Later betalen', label: 'Naam voor de rekening (optioneel)', placeholder: 'bijv. Mike', hint: 'Met een naam vindt u de rekening snel terug en kan de gast later bijbestellen.', cancel: 'Annuleren', send: 'Naar de keuken sturen', open: 'Rekening openen voor', sending: 'Versturen…', close: 'Sluiten' }
     : { eyebrow: 'To the kitchen now, payment later', title: 'Pay later', label: 'Name for the tab (optional)', placeholder: 'e.g. Mike', hint: 'A name makes the tab easy to find, and the guest can order more on it later.', cancel: 'Cancel', send: 'Send to the kitchen', open: 'Open tab for', sending: 'Sending…', close: 'Close' };

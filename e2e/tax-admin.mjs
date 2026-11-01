@@ -65,6 +65,7 @@ export default async function (page) {
   /* Switching ABB off for the whole business needs a reason; sales then carry no ABB; switching back restores it. */
   await page.click({ text: 'Tax (ABB)' });
   await page.click({ text: 'Charge ABB' });
+  await page.eval(`(() => { const i = document.querySelector('.admin-dialog input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await page.click('.admin-dialog-actions .primary');
   assert.match(await text('.admin-dialog-foot .error'), /legal ground/, 'Refused without a reason');
   await page.type('.admin-dialog input', 'Food truck arrangement');
