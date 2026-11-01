@@ -13,7 +13,7 @@ receipt-template compatibility and persisted database format stay the same.
 | Route | Notes |
 |---|---|
 | `GET /api/health` | `{ ok, app: 'cactuspos', version, startedAt, business, time }`. `app` identifies the program on the port; `startedAt` is constant for one run of the server (the launcher in `ops/app` uses both) |
-| `GET /api/pickup` | `{ preparing: number[], ready: number[] }` ticket numbers only |
+| `GET /api/pickup` | `{ preparing: number[], ready: number[], names?: { [ticket]: string } }` ticket numbers, and the name given to an order (owner request, UX22). Public: anyone on the truck network can read these first names; never items or amounts |
 | `POST /api/login` `{ pin }` | `{ token, staff, business }`. 5 wrong PINs from one address = 429 for 30 s |
 
 ## Signed-in staff
@@ -74,7 +74,7 @@ Closing the day also makes a backup. Other definitions: the comments in `package
 
 ## WebSocket `/ws`
 - Staff: `/ws?token=...` receives `ServerEvent`: `hello`, `order.changed { order }`, `menu.changed` (refetch `/api/menu`).
-- Public pickup board: `/ws?room=pickup` receives `hello`, then only `pickup.changed { preparing, ready }`.
+- Public pickup board: `/ws?room=pickup` receives `hello`, then only `pickup.changed { preparing, ready, names? }`.
 - Heartbeat: the server repeats `hello` to every connection every 15 s and pings it; a connection that did not answer the previous ping is dropped.
 - Clients must reconnect with backoff and refetch state on every (re)connect, and must treat 40 s without any message as a dead connection (`web/src/lib/liveSocket.ts`).
 

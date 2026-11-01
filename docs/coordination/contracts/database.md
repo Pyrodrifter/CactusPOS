@@ -38,6 +38,7 @@ SQLite, one file. Code: `packages/server/src/db.ts`. Open it only through `openD
 - Events written before v2 carry only a summary (no snapshot); for those orders the `orders` row remains the record and its payments were backfilled into `payments`.
 
 ## Writers and contention
+- Migration 8 adds `stock_items` (id, JSON data, archived_at) and append-only `stock_moves`; see [stock](stock.md).
 - Migration 6 adds append-only `cash_movements` (id, unique request_key, business_date, unique optional
   reverses foreign key, JSON data). Update/delete/replace guards cover the id and every unique key. Entries
   retain positive integer cents, direction, reason, staff id/name and server date/time; reversal is a new row.

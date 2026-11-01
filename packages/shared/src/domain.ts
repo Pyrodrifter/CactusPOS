@@ -214,7 +214,7 @@ export const CreateOrderBody = z.object({
   lines: z.array(OrderLineInput).min(1).max(100),
   note: z.string().max(300).optional(),
   source: OrderSource.default('pos'),
-  /** Name for a tab that will be paid later, e.g. the guest's first name. */
+  /** The guest's name: for a tab that will be paid later, and shown on the pickup board instead of the number. */
   tabName: z.string().trim().min(1).max(40).optional(),
 });
 export type CreateOrderBodyT = z.infer<typeof CreateOrderBody>;
@@ -295,8 +295,8 @@ export const MenuResponse = z.object({
   categories: z.array(MenuCategory), items: z.array(MenuItem), taxCategories: z.array(TaxCategorySchema),
 });
 export type MenuResponse = z.infer<typeof MenuResponse>;
-/** Ticket numbers only: the public board never sees items, names or amounts. */
-export const PickupBoard = z.object({ preparing: z.array(z.number().int()), ready: z.array(z.number().int()) });
+/** Ticket numbers, plus the name given to an order where there is one (ticket number -> name). The public board never sees items or amounts. */
+export const PickupBoard = z.object({ preparing: z.array(z.number().int()), ready: z.array(z.number().int()), names: z.record(z.string(), z.string()).optional() });
 export type PickupBoard = z.infer<typeof PickupBoard>;
 export const OrderList = z.array(Order);
 
@@ -307,6 +307,7 @@ export const ServerEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('menu.changed') }),
   z.object({ type: z.literal('service-mode.changed'), mode: ServiceMode }),
   z.object({ type: z.literal('auto-collect.changed'), seconds: z.number().int().min(0) }),
-  z.object({ type: z.literal('pickup.changed'), preparing: z.array(z.number().int()), ready: z.array(z.number().int()) }),
+  z.object({ type: z.literal('pickup.changed'), preparing: z.array(z.number().int()), ready: z.array(z.number().int()), names: z.record(z.string(), z.string()).optional() }),
+  z.object({ type: z.literal('stock.changed') }),
 ]);
 export type ServerEvent = z.infer<typeof ServerEventSchema>;

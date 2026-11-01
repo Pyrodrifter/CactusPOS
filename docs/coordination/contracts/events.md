@@ -16,7 +16,7 @@ The pickup room never receives orders, items, names or amounts: ticket numbers o
 { "type": "hello", "serverTime": "2026-10-07T18:54:49.589Z" }           // on connecting, then every 15 s as a heartbeat
 { "type": "order.changed", "order": { /* full Order, see domain.ts */ } }   // create, pay, status, void
 { "type": "menu.changed" }                                                    // refetch GET /api/menu
-{ "type": "pickup.changed", "preparing": [12, 13], "ready": [11] }           // status sent|preparing -> preparing
+{ "type": "pickup.changed", "preparing": [12, 13], "ready": [11], "names": { "13": "Mike" } }           // status sent|preparing -> preparing
 ```
 
 ## Client rules

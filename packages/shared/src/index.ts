@@ -6,3 +6,4 @@ export * from './receiptDesign.js';
 export * from './localNetwork.js';
 export * from './serviceReadiness.js';
 export * from './cash.js';
+export * from './stock.js';
