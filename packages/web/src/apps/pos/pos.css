@@ -378,6 +378,8 @@
 .pos-caption-service { display: none; }
 .pos-menu-caption:not(.is-searching) { display: none; }
 .pos .item { min-height: 148px; }
+/* overflow: hidden lets flexbox squeeze a clamped description to half a line; keep whole lines and let the tile grow. */
+.pos .item .pos-item-description { flex-shrink: 0; }
 @media (min-width: 861px) {
   .pos .pos-toolbar .tabs button { padding: 0 16px; }
 }
